@@ -95,6 +95,42 @@
 </head>
 <body>
 
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+  // بيانات مشروعك
+  const firebaseConfig = {
+    apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc",
+    authDomain: "cash-84acc.firebaseapp.com",
+    projectId: "cash-84acc",
+    storageBucket: "cash-84acc.appspot.com",
+    messagingSenderId: "774737678098",
+    appId: "1:774737678098:web:8b918375b4e51692b7edcb",
+    measurementId: "G-GRKNPJ45N1"
+  };
+
+  // التهيئة
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // دالة إضافة فاتورة
+  window.saveInvoiceToCloud = async function(invoiceData) {
+    await addDoc(collection(db, "invoices"), { ...invoiceData, date: serverTimestamp() });
+  }
+
+  // دالة جلب الفواتير لحظياً
+  window.readInvoicesFromCloud = function(callback) {
+    const q = query(collection(db, "invoices"), orderBy("date", "desc"));
+    onSnapshot(q, snapshot => {
+      const invoices = [];
+      snapshot.forEach(doc => invoices.push({ id: doc.id, ...doc.data() }));
+      callback(invoices);
+    });
+  }
+</script>
+
+
 <div id="login-container">
     <form id="login-form">
         <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
@@ -297,29 +333,6 @@
 <div id="notification-container"></div>
 
 
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc",
-    authDomain: "cash-84acc.firebaseapp.com",
-    projectId: "cash-84acc",
-    storageBucket: "cash-84acc.firebasestorage.app",
-    messagingSenderId: "774737678098",
-    appId: "1:774737678098:web:8b918375b4e51692b7edcb",
-    measurementId: "G-GRKNPJ45N1"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
 
 
 
