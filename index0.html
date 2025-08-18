@@ -2,122 +2,122 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>نظام الفاتورة بالباركود</title>
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <title>نظام البيع بالباركود</title>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
   <style>
-    body { font-family: Tahoma, sans-serif; text-align: center; }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    #video { width: 300px; border: 2px solid #333; margin: 10px auto; display: none; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #444; padding: 5px; text-align: center; }
-    #reader { width: 100%; margin: auto; }
-    .controls { margin: 10px 0; }
-    button { padding: 5px 10px; margin: 2px; }
+    table, th, td { border: 1px solid #333; padding: 8px; }
+    th { background: #eee; }
+    .btn { padding: 8px 12px; margin: 5px; cursor: pointer; border: none; border-radius: 6px; }
+    .scan-btn { background: #007bff; color: white; }
+    .del-btn { background: #dc3545; color: white; }
+    .add-btn { background: #28a745; color: white; }
+    .num-btn { background: #ffc107; color: black; }
   </style>
 </head>
 <body>
-  <h2>💳 نظام البيع بالباركود</h2>
 
-  <div id="reader"></div>
+  <h2>📦 نظام البيع بالباركود</h2>
 
-  <h3>الفاتورة</h3>
-  <table>
+  <!-- زر تشغيل الكاميرا -->
+  <button class="btn scan-btn" onclick="startScanner()">📷 مسح بالباركود</button>
+  <video id="video"></video>
+
+  <!-- جدول الفاتورة -->
+  <table id="invoice">
     <thead>
       <tr>
         <th>المنتج</th>
         <th>السعر</th>
-        <th>الكمية</th>
-        <th>الإجمالي</th>
+        <th>إزالة</th>
       </tr>
     </thead>
-    <tbody id="invoice"></tbody>
-    <tfoot>
-      <tr>
-        <td colspan="3">التوصيل</td>
-        <td>
-          <input type="number" id="delivery" value="20" style="width:70px;">
-          <button onclick="changeDelivery(1)">+</button>
-          <button onclick="changeDelivery(-1)">-</button>
-        </td>
-      </tr>
-      <tr>
-        <td colspan="3"><b>الإجمالي الكلي</b></td>
-        <td id="total">0</td>
-      </tr>
-    </tfoot>
+    <tbody></tbody>
   </table>
 
+  <!-- التوصيل -->
+  <div style="margin-top: 15px;">
+    <label>🚚 التوصيل: </label>
+    <button class="btn num-btn" onclick="changeDelivery(-5)">-</button>
+    <input type="number" id="delivery" value="20" style="width:60px;text-align:center;">
+    <button class="btn num-btn" onclick="changeDelivery(5)">+</button>
+  </div>
+
+  <!-- الإجمالي -->
+  <h3 id="total">الإجمالي: 0 جنيه</h3>
+
   <script>
-    // قائمة المنتجات التجريبية (ممكن تتغير لقاعدة بيانات)
-    const products = {
-      "123456789": { name: "بيبسي", price: 10 },
-      "987654321": { name: "شيبسي", price: 5 },
-      "111111111": { name: "شوكولاتة", price: 15 }
+    const productsDB = {
+      "123456789012": { name: "بيبسي 330ml", price: 10 },
+      "111111111111": { name: "شيبسي كبير", price: 15 },
+      "222222222222": { name: "لبن 1 لتر", price: 25 },
+      "333333333333": { name: "سكر 1 كجم", price: 20 }
     };
 
-    let invoice = [];
-    let delivery = 20;
+    const tbody = document.querySelector("#invoice tbody");
+    const totalEl = document.getElementById("total");
+    const deliveryInput = document.getElementById("delivery");
+    let items = [];
 
-    // تحديث الفاتورة على الجدول
-    function renderInvoice() {
-      const tbody = document.getElementById("invoice");
-      tbody.innerHTML = "";
-      let total = 0;
-
-      invoice.forEach(item => {
-        const row = document.createElement("tr");
-        const subtotal = item.price * item.qty;
-        total += subtotal;
-
-        row.innerHTML = `
-          <td>${item.name}</td>
-          <td>${item.price}</td>
-          <td>${item.qty}</td>
-          <td>${subtotal}</td>
-        `;
-        tbody.appendChild(row);
-      });
-
-      total += delivery;
-      document.getElementById("total").innerText = total;
-    }
-
-    // إضافة منتج بالفاتورة
     function addProduct(code) {
-      if (!products[code]) {
-        alert("🚫 المنتج غير موجود!");
-        return;
-      }
-
-      let item = invoice.find(p => p.code === code);
-      if (item) {
-        item.qty++;
+      if (productsDB[code]) {
+        items.push(productsDB[code]);
+        renderInvoice();
       } else {
-        invoice.push({ code, name: products[code].name, price: products[code].price, qty: 1 });
+        alert("🚨 المنتج غير موجود في قاعدة البيانات");
       }
+    }
+
+    function removeProduct(index) {
+      items.splice(index, 1);
       renderInvoice();
     }
 
-    // التحكم في التوصيل
-    document.getElementById("delivery").addEventListener("input", function() {
-      delivery = parseFloat(this.value) || 0;
-      renderInvoice();
-    });
+    function renderInvoice() {
+      tbody.innerHTML = "";
+      let sum = 0;
+      items.forEach((item, i) => {
+        sum += item.price;
+        tbody.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.price} جنيه</td>
+            <td><button class="btn del-btn" onclick="removeProduct(${i})">حذف</button></td>
+          </tr>
+        `;
+      });
+      const delivery = parseInt(deliveryInput.value) || 0;
+      totalEl.innerText = "الإجمالي: " + (sum + delivery) + " جنيه";
+    }
 
-    function changeDelivery(step) {
-      delivery += step;
-      document.getElementById("delivery").value = delivery;
+    function changeDelivery(val) {
+      deliveryInput.value = parseInt(deliveryInput.value) + val;
       renderInvoice();
     }
 
-    // تشغيل الكاميرا وقراءة الباركود
-    function onScanSuccess(decodedText) {
-      addProduct(decodedText);
+    // الكاميرا
+    let codeReader;
+    async function startScanner() {
+      const video = document.getElementById("video");
+      video.style.display = "block";
+      codeReader = new ZXing.BrowserMultiFormatReader();
+      try {
+        const devices = await codeReader.listVideoInputDevices();
+        codeReader.decodeFromVideoDevice(devices[0].deviceId, 'video', (result, err) => {
+          if (result) {
+            addProduct(result.text);
+            codeReader.reset();
+            video.style.display = "none";
+          }
+        });
+      } catch (e) {
+        alert("⚠️ لم يتم العثور على كاميرا");
+      }
     }
 
-    let html5QrcodeScanner = new Html5QrcodeScanner("reader", {
-      fps: 10,
-      qrbox: 250
-    });
-    html5QrcodeScanner.render(onScanSuccess);
+    deliveryInput.addEventListener("input", renderInvoice);
   </script>
 </body>
 </html>
