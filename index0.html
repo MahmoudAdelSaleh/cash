@@ -1,150 +1,122 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>نظام البيع بالباركود</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام بيع بالباركود</title>
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:16px; }
-    h2 { margin-top:0; }
-    button { padding:10px 14px; margin:4px; border:none; border-radius:8px; cursor:pointer; }
-    button.primary { background:#2563eb; color:#fff; }
-    button.danger { background:#dc2626; color:#fff; }
-    table { width:100%; border-collapse:collapse; margin-top:12px; background:#fff; }
-    th,td { border:1px solid #ccc; padding:8px; text-align:center; }
-    video { width:100%; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
+    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #aaa; padding: 8px; text-align: center; }
+    #total { font-weight: bold; font-size: 18px; margin-top: 15px; }
+    .delivery-controls { margin: 10px 0; }
+    button { padding: 5px 10px; margin: 2px; }
   </style>
 </head>
 <body>
-  <h2>فاتورة مبيعات</h2>
-
-  <button id="btnStart" class="primary">📷 مسح باركود</button>
-  <button id="btnStop" class="danger" disabled>⛔ إيقاف</button>
-  <video id="video" playsinline></video>
-
-  <table id="invoice">
+  <h2>📦 نظام البيع بالباركود</h2>
+  
+  <!-- قارئ الباركود -->
+  <div id="reader" style="width:300px; margin:auto;"></div>
+  
+  <!-- جدول الفاتورة -->
+  <table>
     <thead>
       <tr>
-        <th>الباركود</th>
-        <th>اسم المنتج</th>
+        <th>المنتج</th>
         <th>السعر</th>
         <th>الكمية</th>
         <th>الإجمالي</th>
-        <th>إزالة</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="invoice"></tbody>
   </table>
 
-  <h3>إجمالي الفاتورة: <span id="total">0</span> ج.م</h3>
+  <!-- التحكم في التوصيل -->
+  <div class="delivery-controls">
+    <label>🚚 التوصيل: </label>
+    <button onclick="changeDelivery(-5)">-</button>
+    <input type="number" id="delivery" value="20" onchange="updateTotal()" style="width:60px; text-align:center;">
+    <button onclick="changeDelivery(5)">+</button>
+    <span>جنيه</span>
+  </div>
 
-  <script type="module">
-    // قاعدة بيانات مصغرة (تجريبية)
-    const PRODUCTS = {
-      "6223001234567": { name:"أرز مصري 1كجم", price:47.50 },
-      "6224009876543": { name:"زيت نباتي 900مل", price:99.00 },
-      "6294001230012": { name:"مكرونة رقم 27", price:17.00 },
-      "123456789012":  { name:"شاي 200جم", price:65.00 }
+  <!-- الإجمالي -->
+  <div id="total">الإجمالي: 0 جنيه</div>
+
+  <script>
+    // المنتجات (مثال)
+    const products = {
+      "123456789012": { name: "بيبسي", price: 15 },
+      "987654321098": { name: "شيبسي", price: 10 },
+      "111222333444": { name: "مياه معدنية", price: 5 }
     };
 
-    const video = document.getElementById('video');
-    const btnStart = document.getElementById('btnStart');
-    const btnStop  = document.getElementById('btnStop');
-    const tbody = document.querySelector('#invoice tbody');
-    const totalSpan = document.getElementById('total');
+    let invoice = [];
 
-    let stream = null;
-    let scanning = false;
-
-    // إجمالي الفاتورة
-    function updateTotal(){
-      let sum = 0;
-      tbody.querySelectorAll('tr').forEach(tr=>{
-        sum += parseFloat(tr.dataset.total || 0);
-      });
-      totalSpan.textContent = sum.toFixed(2);
+    // تشغيل قارئ الباركود
+    function onScanSuccess(decodedText) {
+      if (products[decodedText]) {
+        addToInvoice(products[decodedText]);
+      } else {
+        alert("❌ منتج غير مسجل: " + decodedText);
+      }
     }
 
-    // إضافة منتج
-    function addProduct(code){
-      const item = PRODUCTS[code];
-      if(!item){ alert("المنتج غير مسجل: " + code); return; }
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
 
-      // لو المنتج مضاف مسبقاً زود الكمية
-      const existing = tbody.querySelector(`tr[data-code="${code}"]`);
-      if(existing){
-        let qtyInput = existing.querySelector('.qty');
-        qtyInput.value = parseInt(qtyInput.value)+1;
-        qtyInput.dispatchEvent(new Event('change'));
-        return;
+    // إضافة منتج للفاتورة
+    function addToInvoice(product) {
+      let existing = invoice.find(p => p.name === product.name);
+      if (existing) {
+        existing.qty++;
+      } else {
+        invoice.push({ ...product, qty: 1 });
       }
+      renderInvoice();
+    }
 
-      const tr = document.createElement('tr');
-      tr.dataset.code = code;
-      tr.innerHTML = `
-        <td>${code}</td>
-        <td>${item.name}</td>
-        <td>${item.price.toFixed(2)}</td>
-        <td><input type="number" class="qty" value="1" min="1" style="width:60px"></td>
-        <td class="rowTotal">${item.price.toFixed(2)}</td>
-        <td><button class="danger remove">🗑️</button></td>
-      `;
-      tbody.appendChild(tr);
+    // عرض الفاتورة
+    function renderInvoice() {
+      let tbody = document.getElementById("invoice");
+      tbody.innerHTML = "";
+      let subtotal = 0;
 
-      const qtyInput = tr.querySelector('.qty');
-      const rowTotal = tr.querySelector('.rowTotal');
-      qtyInput.addEventListener('change', ()=>{
-        const qty = parseInt(qtyInput.value)||1;
-        const total = qty * item.price;
-        tr.dataset.total = total;
-        rowTotal.textContent = total.toFixed(2);
-        updateTotal();
-      });
-      tr.querySelector('.remove').addEventListener('click', ()=>{
-        tr.remove(); updateTotal();
+      invoice.forEach(item => {
+        let total = item.price * item.qty;
+        subtotal += total;
+        tbody.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.price}</td>
+            <td>${item.qty}</td>
+            <td>${total}</td>
+          </tr>`;
       });
 
-      tr.dataset.total = item.price;
+      updateTotal(subtotal);
+    }
+
+    // تحديث التوصيل والإجمالي
+    function changeDelivery(amount) {
+      let deliveryInput = document.getElementById("delivery");
+      let newValue = parseInt(deliveryInput.value) + amount;
+      if (newValue < 0) newValue = 0;
+      deliveryInput.value = newValue;
       updateTotal();
     }
 
-    // استخدام BarcodeDetector (مدعوم في كروم/أندرويد)
-    async function startScan(){
-      if(!('BarcodeDetector' in window)){ alert("المتصفح لا يدعم BarcodeDetector"); return; }
-      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-      video.srcObject = stream;
-      await video.play();
-      scanning = true;
-      btnStart.disabled = true;
-      btnStop.disabled = false;
-
-      const detector = new BarcodeDetector({formats:['ean_13','upc_a','code_128','qr_code']});
-
-      async function scanFrame(){
-        if(!scanning) return;
-        try{
-          const codes = await detector.detect(video);
-          if(codes.length>0){
-            const code = codes[0].rawValue;
-            addProduct(code);
-            // لو عايز مسح مستمر خلي التعليق
-            // scanning = false; stopScan();
-          }
-        }catch(e){}
-        requestAnimationFrame(scanFrame);
+    function updateTotal(subtotal = null) {
+      if (subtotal === null) {
+        subtotal = invoice.reduce((sum, item) => sum + item.price * item.qty, 0);
       }
-      scanFrame();
+      let delivery = parseInt(document.getElementById("delivery").value) || 0;
+      let total = subtotal + delivery;
+      document.getElementById("total").innerText = `الإجمالي: ${total} جنيه`;
     }
-
-    async function stopScan(){
-      scanning = false;
-      btnStart.disabled = false;
-      btnStop.disabled = true;
-      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-    }
-
-    btnStart.addEventListener('click', startScan);
-    btnStop.addEventListener('click', stopScan);
   </script>
 </body>
 </html>
