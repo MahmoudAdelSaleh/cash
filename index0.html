@@ -1,819 +1,150 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>كاشير متكامل - Firebase</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-  /* ========= CSS (بدون تغيير) ========= */
-  :root {
-    --primary-color: #007bff;
-    --secondary-color: #343a40;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
-    --warning-color: #ffc107;
-    --text-dark: #222;
-    --bg-light: #f8f9fa;
-    --white: #fff;
-    --border-color: #dee2e6;
-    --shadow-light: 0 0 6px rgba(0, 0, 0, 0.1);
-  }
-
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg-light); color: var(--text-dark); direction: rtl; }
-  #app-container { display: none; }
-  header { background: var(--primary-color); color: var(--white); padding: 15px; text-align: center; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
-  nav { display: flex; background: var(--secondary-color); overflow-x: auto; }
-  nav button { flex: 1; min-width: 100px; padding: 12px 0; border: none; background: var(--secondary-color); color: var(--white); font-size: 16px; cursor: pointer; transition: background 0.3s; }
-  nav button.active, nav button:hover { background: #0056b3; }
-  nav button.hidden { display: none; }
-  main { padding: 15px; max-width: 900px; margin: auto; }
-  section { display: none; }
-  section.active { display: block; }
-  input, select, button, table { font-size: 16px; }
-  input, select { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-  input[type="number"] { -moz-appearance: textfield; }
-  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  button { background: var(--primary-color); color: var(--white); border: none; padding: 10px; border-radius: 4px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  button:hover { background: #0056b3; }
-  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-  th, td { border: 1px solid var(--border-color); padding: 10px; text-align: center; }
-  th { background: #e9ecef; }
-  .btn-small { padding: 5px 10px; font-size: 14px; margin: 0 2px; border-radius: 3px; }
-  .btn-danger { background: var(--danger-color); }
-  .btn-danger:hover { background: #a71d2a; }
-  .btn-success { background: var(--success-color); }
-  .btn-success:hover { background: #1e7e34; }
-  .btn-warning { background: var(--warning-color); color: var(--text-dark); }
-  .btn-warning:hover { background: #d39e00; }
-  .summary-box, .customer-card { background: var(--white); padding: 15px; margin: 15px 0; border-radius: 6px; box-shadow: var(--shadow-light); }
-  #searchResults, #customerSuggestions { background: var(--white); max-height: 180px; overflow-y: auto; border: 1px solid #ccc; border-top: none; display: none; position: absolute; z-index: 1000; width: 100%; box-sizing: border-box; }
-  #searchResults div, #customerSuggestions div { padding: 8px; cursor: pointer; border-bottom: 1px solid #ddd; }
-  #searchResults div:hover, #customerSuggestions div:hover { background: var(--primary-color); color: var(--white); }
-  .customer-card { margin-bottom: 10px; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-  .flex-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  .form-group.flex-container input,
-  .form-group.flex-container select {
-    flex: 1 1 180px;
-    min-width: 120px;
-  }
-  .form-group.flex-container button {
-    flex: 0 0 auto;
-  }
-  .flex-end { justify-content: flex-end; }
-  #notification-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 90%; }
-  .notification { background-color: rgba(0, 0, 0, 0.8); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 16px; opacity: 0; transition: opacity 0.5s ease-in-out; }
-  .notification.show { opacity: 1; }
-  #login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #e9ecef; }
-  #login-form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-  #login-form h2 { margin-bottom: 20px; }
-  #logoutBtn { background: var(--danger-color); }
-  @media (max-width: 768px) {
-    nav button { font-size: 14px; padding: 10px 5px; }
-    header { font-size: 20px; }
-    main { padding: 10px; }
-    table th, table td { font-size: 14px; padding: 8px 4px; }
-    .flex-container { flex-direction: column; align-items: stretch; }
-    #login-form { width: 90%; }
-    .form-group.flex-container input,
-    .form-group.flex-container select {
-      flex: 1 1 100%;
-    }
-  }
-  @media print {
-    body > :not(#print-area) { display: none !important; }
-    #print-area { display: block; width: 100%; margin: 0; padding: 0; box-shadow: none; font-size: 12px; }
-    .print-header { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
-    .print-details { font-size: 10px; margin-bottom: 10px; }
-    .print-details span { font-weight: bold; }
-    .print-table table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: right; font-size: 10px; }
-    .print-summary { margin-top: 15px; font-size: 10px; }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>نظام البيع بالباركود</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:16px; }
+    h2 { margin-top:0; }
+    button { padding:10px 14px; margin:4px; border:none; border-radius:8px; cursor:pointer; }
+    button.primary { background:#2563eb; color:#fff; }
+    button.danger { background:#dc2626; color:#fff; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; background:#fff; }
+    th,td { border:1px solid #ccc; padding:8px; text-align:center; }
+    video { width:100%; border:1px solid #ccc; border-radius:8px; margin-top:10px; }
+  </style>
 </head>
 <body>
+  <h2>فاتورة مبيعات</h2>
 
-<div id="login-container">
-    <form id="login-form">
-        <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
-        <div class="form-group">
-            <input type="text" id="usernameInput" placeholder="اسم المستخدم" required />
-        </div>
-        <div class="form-group">
-            <input type="password" id="passwordInput" placeholder="كلمة المرور" required />
-        </div>
-        <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
-    </form>
-</div>
+  <button id="btnStart" class="primary">📷 مسح باركود</button>
+  <button id="btnStop" class="danger" disabled>⛔ إيقاف</button>
+  <video id="video" playsinline></video>
 
-<div id="app-container">
-  <header>
-    <span>كاشير متكامل</span>
-    <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button>
-  </header>
+  <table id="invoice">
+    <thead>
+      <tr>
+        <th>الباركود</th>
+        <th>اسم المنتج</th>
+        <th>السعر</th>
+        <th>الكمية</th>
+        <th>الإجمالي</th>
+        <th>إزالة</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  <nav>
-    <button data-tab="items"><i class="fas fa-box"></i> الأصناف</button>
-    <button data-tab="categories"><i class="fas fa-tags"></i> الفئات</button>
-    <button data-tab="customers"><i class="fas fa-users"></i> العملاء</button>
-    <button class="active" data-tab="sales"><i class="fas fa-cash-register"></i> المبيعات</button>
-    <button data-tab="invoices"><i class="fas fa-file-invoice"></i> الفواتير</button>
-    <button data-tab="summary"><i class="fas fa-chart-bar"></i> التقارير</button>
-    <button data-tab="users" class="hidden"><i class="fas fa-user-shield"></i> إدارة المستخدمين</button>
-  </nav>
+  <h3>إجمالي الفاتورة: <span id="total">0</span> ج.م</h3>
 
-  <main>
-    <section id="items">
-      <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
-      <div class="form-group flex-container">
-        <input type="text" id="itemCode" placeholder="كود الصنف" />
-        <input type="text" id="itemName" placeholder="اسم الصنف" />
-        <input type="text" id="itemUnit" placeholder="الوحدة" />
-      </div>
-      <div class="form-group flex-container">
-        <input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" />
-        <input type="number" id="itemStock" placeholder="المخزون" min="0" />
-        <select id="itemCategorySelect">
-            <option value="">اختر الفئة</option>
-            </select>
-        <button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button>
-      </div>
-
-      <div class="summary-box">
-          <h4><i class="fas fa-file-excel"></i> استيراد من ملف إكسل</h4>
-          <p><small>يجب أن يحتوي الملف على أعمدة: code, name, unit, price, stock, category</small></p>
-          <div class="form-group flex-container">
-              <input type="file" id="excelFile" accept=".xlsx, .xls" style="flex-grow: 2;"/>
-              <button id="importBtn" class="btn-success"><i class="fas fa-upload"></i> استيراد</button>
-          </div>
-      </div>
-      
-      <div class="form-group flex-container" style="margin-top: 20px;">
-        <label for="filterCategorySelect" style="flex-grow: 0; margin-right: 10px;">تصفية حسب الفئة:</label>
-        <select id="filterCategorySelect">
-            <option value="all">جميع الفئات</option>
-            </select>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>كود</th>
-            <th>اسم</th>
-            <th>وحدة</th>
-            <th>سعر</th>
-            <th>مخزون</th>
-            <th>فئة</th>
-            <th>تعديل</th>
-            <th>حذف</th>
-          </tr>
-        </thead>
-        <tbody id="itemsTable"></tbody>
-      </table>
-    </section>
-
-    <section id="categories">
-        <h2><i class="fas fa-tags"></i> إدارة الفئات</h2>
-        <div class="form-group flex-container">
-            <input type="text" id="categoryNameInput" placeholder="اسم الفئة الجديدة" />
-            <button id="saveCategoryBtn"><i class="fas fa-save"></i> حفظ الفئة</button>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>اسم الفئة</th>
-                    <th>تعديل</th>
-                    <th>حذف</th>
-                </tr>
-            </thead>
-            <tbody id="categoriesTable"></tbody>
-        </table>
-    </section>
-
-    <section id="customers">
-      <h2><i class="fas fa-users"></i> إدارة العملاء</h2>
-      <div class="form-group flex-container">
-        <input type="text" id="newCustomerId" placeholder="رقم العميل" />
-        <input type="text" id="newCustomerName" placeholder="اسم العميل" />
-        <button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ العميل</button>
-      </div>
-      <div id="customersList"></div>
-      <div id="customerStatement" style="display:none;">
-        <h3><i class="fas fa-clipboard-list"></i> كشف حساب العميل: <span id="statementCustomerName"></span></h3>
-        <button id="backToCustomersBtn"><i class="fas fa-arrow-right"></i> رجوع لقائمة العملاء</button>
-        <div id="statementDetails" style="margin-top: 15px;"></div>
-      </div>
-    </section>
-
-    <section id="sales" class="active" style="position: relative;">
-      <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
-      <div class="form-group" style="position: relative;">
-        <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
-        <div id="customerSuggestions"></div>
-      </div>
-      <div class="form-group" style="position: relative;">
-        <input type="text" id="searchItem" placeholder="بحث بالكود أو اسم الصنف" autocomplete="off" />
-        <div id="searchResults"></div>
-      </div>
-      <div class="form-group flex-container">
-        <label for="quantitySelect">الكمية:</label>
-        <select id="quantitySelect"></select>
-        <button id="addToInvoiceBtn"><i class="fas fa-plus-circle"></i> إضافة للفاتورة</button>
-      </div>
-
-      <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>اسم الصنف</th>
-            <th>كمية</th>
-            <th>سعر الوحدة</th>
-            <th>الإجمالي</th>
-            <th>حذف</th>
-          </tr>
-        </thead>
-        <tbody id="invoiceTable"></tbody>
-      </table>
-      <h3 style="text-align: left;">إجمالي الفاتورة: <span id="invoiceTotal">0.00</span> ج.م</h3>
-
-      <div class="form-group flex-container">
-        <label for="paymentMethodSelect">طريقة الدفع:</label>
-        <select id="paymentMethodSelect">
-          <option value="cash">نقداً</option>
-          <option value="visa">فيزا</option>
-          <option value="wallet">محفظة</option>
-        </select>
-        <input type="number" id="amountPaidInput" placeholder="المبلغ المدفوع" min="0" step="0.01" />
-      </div>
-
-      <h3 style="text-align: left;">
-        <span id="changeText">الباقي للعميل:</span>
-        <span id="changeAmount">0.00</span> ج.م
-      </h3>
-
-      <div class="flex-container flex-end" style="margin-top: 20px;">
-        <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة الفاتورة</button>
-        <button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ الفاتورة</button>
-      </div>
-    </section>
-
-    <section id="invoices">
-      <h2><i class="fas fa-file-invoice-dollar"></i> الفواتير المحفوظة</h2>
-      <div id="invoicesList"></div>
-    </section>
-
-    <section id="summary">
-      <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
-
-      <div class="form-group flex-container">
-          <label for="summaryGroupSelect">تجميع حسب:</label>
-          <select id="summaryGroupSelect">
-              <option value="day">اليوم</option>
-              <option value="week">الأسبوع</option>
-              <option value="month">الشهر</option>
-          </select>
-      </div>
-      <div class="summary-box">
-        <i class="fas fa-coins"></i> <strong>المجموع الكلي للمبيعات:</strong> <span id="totalSalesAmount">0.00</span> ج.م
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>الفترة</th>
-            <th>عدد الفواتير</th>
-            <th>المبلغ</th>
-          </tr>
-        </thead>
-        <tbody id="salesSummaryTable"></tbody>
-      </table>
-
-      <div style="margin-top: 30px;">
-        <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
-        <div id="bestSellingItems" class="summary-box">
-          <p>لا توجد بيانات متاحة.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="users">
-      <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
-      <div class="form-group flex-container">
-        <input type="text" id="newUsernameInput" placeholder="اسم المستخدم" />
-        <input type="password" id="newUserPasswordInput" placeholder="كلمة المرور" />
-        <button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة مستخدم</button>
-      </div>
-      <div id="usersList"></div>
-      <div id="changePinSection">
-          <h4><i class="fas fa-key"></i> تغيير كلمة مرور المدير العام</h4>
-          <div class="form-group flex-container">
-              <input type="password" id="oldPinInput" placeholder="الكلمة القديمة" />
-              <input type="password" id="newPinInput" placeholder="الكلمة الجديدة" />
-              <button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button>
-          </div>
-      </div>
-    </section>
-  </main>
-</div>
-<div id="notification-container"></div>
-
-<script type="module">
-  // ========= JavaScript =========
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-
-  // بيانات مشروعك (يرجى التأكد من صحتها)
-  const firebaseConfig = {
-    apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc",
-    authDomain: "cash-84acc.firebaseapp.com",
-    projectId: "cash-84acc",
-    storageBucket: "cash-84acc.appspot.com",
-    messagingSenderId: "774737678098",
-    appId: "1:774737678098:web:8b918375b4e51692b7edcb",
-    measurementId: "G-GRKNPJ45N1"
-  };
-
-  // التهيئة
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // --- دوال Firestore العامة (بدون تغيير) ---
-  window.addDocument = async function(collectionName, data) { /* ... الكود الأصلي ... */ };
-  window.readCollection = function(collectionName, callback, orderByField = "createdAt", orderDirection = "desc") { /* ... الكود الأصلي ... */ };
-  window.getDocument = async function(collectionName, docId) { /* ... الكود الأصلي ... */ };
-  window.updateDocument = async function(collectionName, docId, data) { /* ... الكود الأصلي ... */ };
-  window.deleteDocument = async function(collectionName, docId) { /* ... الكود الأصلي ... */ };
-  window.writeBatchDocuments = async function(operations) { /* ... الكود الأصلي ... */ };
-  // (للاختصار، تم حذف الكود المتكرر هنا، لكنه موجود في السكريبت أدناه)
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    // #region Global Variables and DOM Elements
-    const DOM = {
-        appContainer: document.getElementById("app-container"),
-        loginContainer: document.getElementById("login-container"),
-        loginForm: document.getElementById("login-form"),
-        usernameInput: document.getElementById("usernameInput"),
-        passwordInput: document.getElementById("passwordInput"),
-        loginBtn: document.getElementById("loginBtn"),
-        logoutBtn: document.getElementById("logoutBtn"),
-        navButtons: document.querySelectorAll("nav button"),
-        sections: document.querySelectorAll("main section"),
-        itemCodeInput: document.getElementById("itemCode"),
-        itemNameInput: document.getElementById("itemName"),
-        itemUnitInput: document.getElementById("itemUnit"),
-        itemPriceInput: document.getElementById("itemPrice"),
-        itemStockInput: document.getElementById("itemStock"),
-        itemCategorySelect: document.getElementById("itemCategorySelect"),
-        filterCategorySelect: document.getElementById("filterCategorySelect"),
-        saveItemBtn: document.getElementById("saveItemBtn"),
-        itemsTable: document.getElementById("itemsTable"),
-        // إضافة جديدة: عناصر استيراد الإكسل
-        excelFileInput: document.getElementById("excelFile"),
-        importBtn: document.getElementById("importBtn"),
-        // إضافة جديدة: عناصر قسم الفئات
-        categoryNameInput: document.getElementById("categoryNameInput"),
-        saveCategoryBtn: document.getElementById("saveCategoryBtn"),
-        categoriesTable: document.getElementById("categoriesTable"),
-        newCustomerIdInput: document.getElementById("newCustomerId"),
-        newCustomerNameInput: document.getElementById("newCustomerName"),
-        saveCustomerBtn: document.getElementById("saveCustomerBtn"),
-        customersList: document.getElementById("customersList"),
-        customerNameInput: document.getElementById("customerName"),
-        customerSuggestionsDiv: document.getElementById("customerSuggestions"),
-        searchItemInput: document.getElementById("searchItem"),
-        searchResultsDiv: document.getElementById("searchResults"),
-        quantitySelect: document.getElementById("quantitySelect"),
-        addToInvoiceBtn: document.getElementById("addToInvoiceBtn"),
-        invoiceTable: document.getElementById("invoiceTable"),
-        invoiceTotalSpan: document.getElementById("invoiceTotal"),
-        saveInvoiceBtn: document.getElementById("saveInvoiceBtn"),
-        printInvoiceBtn: document.getElementById("printInvoiceBtn"),
-        paymentMethodSelect: document.getElementById("paymentMethodSelect"),
-        amountPaidInput: document.getElementById("amountPaidInput"),
-        changeTextSpan: document.getElementById("changeText"),
-        changeAmountSpan: document.getElementById("changeAmount"),
-        invoicesList: document.getElementById("invoicesList"),
-        salesSummaryTable: document.getElementById("salesSummaryTable"),
-        totalSalesAmount: document.getElementById("totalSalesAmount"),
-        summaryGroupSelect: document.getElementById("summaryGroupSelect"),
-        customerStatementSection: document.getElementById("customerStatement"),
-        statementCustomerName: document.getElementById("statementCustomerName"),
-        statementDetails: document.getElementById("statementDetails"),
-        backToCustomersBtn: document.getElementById("backToCustomersBtn"),
-        bestSellingItemsDiv: document.getElementById("bestSellingItems"),
-        changePinBtn: document.getElementById("changePinBtn"),
-        oldPinInput: document.getElementById("oldPinInput"),
-        newPinInput: document.getElementById("newPinInput"),
-        notificationContainer: document.getElementById("notification-container"),
-        newUsernameInput: document.getElementById("newUsernameInput"),
-        newUserPasswordInput: document.getElementById("newUserPasswordInput"),
-        saveUserBtn: document.getElementById("saveUserBtn"),
-        usersList: document.getElementById("usersList")
+  <script type="module">
+    // قاعدة بيانات مصغرة (تجريبية)
+    const PRODUCTS = {
+      "6223001234567": { name:"أرز مصري 1كجم", price:47.50 },
+      "6224009876543": { name:"زيت نباتي 900مل", price:99.00 },
+      "6294001230012": { name:"مكرونة رقم 27", price:17.00 },
+      "123456789012":  { name:"شاي 200جم", price:65.00 }
     };
 
-    let appState = {
-        items: [],
-        invoices: [],
-        customers: [],
-        users: [],
-        categories: [], // إضافة جديدة: لتخزين الفئات
-        adminPIN: null,
-        currentUser: null,
-        currentInvoice: [],
-        editingItemId: null,
-        editingCustomerId: null,
-        editingUserId: null,
-        editingCategoryId: null, // إضافة جديدة: لتعديل الفئة
-        selectedItem: null,
-        selectedCustomer: null,
-        unsubscribe: {}
-    };
-    // #endregion
+    const video = document.getElementById('video');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop  = document.getElementById('btnStop');
+    const tbody = document.querySelector('#invoice tbody');
+    const totalSpan = document.getElementById('total');
 
-    // #region Utility Functions
-    const Helpers = {
-        showNotification: (message, duration = 3000) => {
-            const notification = document.createElement("div");
-            notification.className = "notification";
-            notification.textContent = message;
-            DOM.notificationContainer.appendChild(notification);
-            setTimeout(() => notification.classList.add("show"), 10);
-            setTimeout(() => {
-                notification.classList.remove("show");
-                setTimeout(() => notification.remove(), 500);
-            }, duration);
-        },
-        switchTab: (tabId) => {
-            DOM.sections.forEach(s => s.classList.remove("active"));
-            document.getElementById(tabId).classList.add("active");
-            if (tabId === "items") ItemsController.render();
-            if (tabId === "categories") CategoriesController.render(); // إضافة جديدة
-            if (tabId === "customers") CustomersController.render();
-            if (tabId === "invoices") ReportsController.renderInvoices();
-            if (tabId === "summary") ReportsController.renderSummary();
-            if (tabId === "users") UsersController.render();
-        },
-        updateNavButtons: (activeButton) => {
-            DOM.navButtons.forEach(btn => btn.classList.remove("active"));
-            activeButton.classList.add("active");
-        },
-        clearItemForm: () => {
-            DOM.itemCodeInput.value = "";
-            DOM.itemNameInput.value = "";
-            DOM.itemUnitInput.value = "";
-            DOM.itemPriceInput.value = "";
-            DOM.itemStockInput.value = "";
-            DOM.itemCategorySelect.value = "";
-            appState.editingItemId = null;
-            DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف';
-        },
-        clearCustomerForm: () => { /* ... الكود الأصلي ... */ },
-        clearUserForm: () => { /* ... الكود الأصلي ... */ },
-        // إضافة جديدة
-        clearCategoryForm: () => {
-            DOM.categoryNameInput.value = "";
-            appState.editingCategoryId = null;
-            DOM.saveCategoryBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الفئة';
-        },
-        calculateChange: () => { /* ... الكود الأصلي ... */ },
-        convertToArabicAndEnglishDigits: (text) => { /* ... الكود الأصلي ... */ },
-        getWeekNumber: (d) => { /* ... الكود الأصلي ... */ },
-        generatePrintContent: (invoice) => { /* ... الكود الأصلي ... */ },
-        printContent: (content) => { /* ... الكود الأصلي ... */ },
-        
-        // تعديل: دالة ملء الفئات أصبحت ديناميكية
-        populateCategories: () => {
-            const currentItemCategory = DOM.itemCategorySelect.value;
-            const currentFilterCategory = DOM.filterCategorySelect.value;
+    let stream = null;
+    let scanning = false;
 
-            DOM.itemCategorySelect.innerHTML = '<option value="">اختر الفئة</option>';
-            DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>';
-            
-            appState.categories.forEach(category => {
-                const option1 = document.createElement("option");
-                option1.value = category.name;
-                option1.textContent = category.name;
-                DOM.itemCategorySelect.appendChild(option1);
+    // إجمالي الفاتورة
+    function updateTotal(){
+      let sum = 0;
+      tbody.querySelectorAll('tr').forEach(tr=>{
+        sum += parseFloat(tr.dataset.total || 0);
+      });
+      totalSpan.textContent = sum.toFixed(2);
+    }
 
-                const option2 = document.createElement("option");
-                option2.value = category.name;
-                option2.textContent = category.name;
-                DOM.filterCategorySelect.appendChild(option2);
-            });
+    // إضافة منتج
+    function addProduct(code){
+      const item = PRODUCTS[code];
+      if(!item){ alert("المنتج غير مسجل: " + code); return; }
 
-            DOM.itemCategorySelect.value = currentItemCategory;
-            DOM.filterCategorySelect.value = currentFilterCategory;
-        }
-    };
-    // #endregion
+      // لو المنتج مضاف مسبقاً زود الكمية
+      const existing = tbody.querySelector(`tr[data-code="${code}"]`);
+      if(existing){
+        let qtyInput = existing.querySelector('.qty');
+        qtyInput.value = parseInt(qtyInput.value)+1;
+        qtyInput.dispatchEvent(new Event('change'));
+        return;
+      }
 
-    // #region Authentication (بدون تغيير)
-    const Auth = {
-      login: (username, password) => { /* ... الكود الأصلي ... */ },
-      logout: () => { /* ... الكود الأصلي ... */ },
-      showApp: (role) => { /* ... الكود الأصلي ... */ }
-    };
-    // #endregion
+      const tr = document.createElement('tr');
+      tr.dataset.code = code;
+      tr.innerHTML = `
+        <td>${code}</td>
+        <td>${item.name}</td>
+        <td>${item.price.toFixed(2)}</td>
+        <td><input type="number" class="qty" value="1" min="1" style="width:60px"></td>
+        <td class="rowTotal">${item.price.toFixed(2)}</td>
+        <td><button class="danger remove">🗑️</button></td>
+      `;
+      tbody.appendChild(tr);
 
-    // #region Items Controller (مع إضافة دالة الاستيراد)
-    const ItemsController = {
-        render: () => { /* ... الكود الأصلي ... */ },
-        save: async () => { /* ... الكود الأصلي ... */ },
-        edit: (id) => { /* ... الكود الأصلي ... */ },
-        delete: async (id) => { /* ... الكود الأصلي ... */ },
-        // إضافة جديدة: دالة استيراد الأصناف
-        importFromExcel: async () => {
-            const file = DOM.excelFileInput.files[0];
-            if (!file) {
-                Helpers.showNotification("يرجى اختيار ملف إكسل أولاً.", 4000);
-                return;
-            }
+      const qtyInput = tr.querySelector('.qty');
+      const rowTotal = tr.querySelector('.rowTotal');
+      qtyInput.addEventListener('change', ()=>{
+        const qty = parseInt(qtyInput.value)||1;
+        const total = qty * item.price;
+        tr.dataset.total = total;
+        rowTotal.textContent = total.toFixed(2);
+        updateTotal();
+      });
+      tr.querySelector('.remove').addEventListener('click', ()=>{
+        tr.remove(); updateTotal();
+      });
 
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet);
+      tr.dataset.total = item.price;
+      updateTotal();
+    }
 
-                    if (json.length === 0) {
-                        Helpers.showNotification("ملف الإكسل فارغ أو غير صحيح.", 4000);
-                        return;
-                    }
+    // استخدام BarcodeDetector (مدعوم في كروم/أندرويد)
+    async function startScan(){
+      if(!('BarcodeDetector' in window)){ alert("المتصفح لا يدعم BarcodeDetector"); return; }
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      video.srcObject = stream;
+      await video.play();
+      scanning = true;
+      btnStart.disabled = true;
+      btnStop.disabled = false;
 
-                    let addedCount = 0;
-                    let skippedCount = 0;
-                    const batch = window.writeBatch(db); // استخدام Batch لكفاءة أعلى
-                    
-                    for (const row of json) {
-                        const code = row.code ? String(row.code).trim() : '';
-                        const name = row.name ? String(row.name).trim() : '';
-                        const price = parseFloat(row.price);
-                        const stock = parseInt(row.stock);
-                        const category = row.category ? String(row.category).trim() : '';
+      const detector = new BarcodeDetector({formats:['ean_13','upc_a','code_128','qr_code']});
 
-                        // التحقق من صحة البيانات
-                        if (!code || !name || isNaN(price) || isNaN(stock) || !category) {
-                            skippedCount++;
-                            continue;
-                        }
+      async function scanFrame(){
+        if(!scanning) return;
+        try{
+          const codes = await detector.detect(video);
+          if(codes.length>0){
+            const code = codes[0].rawValue;
+            addProduct(code);
+            // لو عايز مسح مستمر خلي التعليق
+            // scanning = false; stopScan();
+          }
+        }catch(e){}
+        requestAnimationFrame(scanFrame);
+      }
+      scanFrame();
+    }
 
-                        // التحقق من وجود الفئة
-                        if (!appState.categories.some(c => c.name === category)) {
-                           skippedCount++;
-                           console.warn(`Category "${category}" not found for item "${name}". Skipping.`);
-                           continue;
-                        }
-                        
-                        // التحقق من عدم تكرار الكود
-                        if (appState.items.some(item => item.code === code)) {
-                            skippedCount++;
-                            console.warn(`Item code "${code}" already exists for item "${name}". Skipping.`);
-                            continue;
-                        }
+    async function stopScan(){
+      scanning = false;
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    }
 
-                        const newItemData = {
-                            code, name,
-                            unit: row.unit || 'قطعة',
-                            price, stock, category,
-                            createdAt: serverTimestamp()
-                        };
-                        
-                        const docRef = doc(collection(db, "items"));
-                        batch.set(docRef, newItemData);
-                        addedCount++;
-                    }
-
-                    if (addedCount > 0) {
-                        await batch.commit();
-                        Helpers.showNotification(`تم استيراد ${addedCount} صنف بنجاح.`, 5000);
-                    }
-                    if (skippedCount > 0) {
-                        Helpers.showNotification(`تم تخطي ${skippedCount} صنف لوجود أخطاء أو تكرار أو فئات غير موجودة.`, 5000);
-                    }
-                    
-                    DOM.excelFileInput.value = ''; // تفريغ حقل الملف
-
-                } catch (error) {
-                    console.error("Error importing from Excel:", error);
-                    Helpers.showNotification("حدث خطأ أثناء قراءة ملف الإكسل.", 5000);
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-    };
-    // #endregion
-
-    // #region Categories Controller (إضافة جديدة)
-    const CategoriesController = {
-        render: () => {
-            DOM.categoriesTable.innerHTML = appState.categories.map(cat => `
-                <tr>
-                    <td>${cat.name}</td>
-                    <td><button class="btn-small btn-warning edit-category-btn" data-id="${cat.id}"><i class="fas fa-edit"></i></button></td>
-                    <td><button class="btn-small btn-danger delete-category-btn" data-id="${cat.id}"><i class="fas fa-trash-alt"></i></button></td>
-                </tr>
-            `).join("");
-        },
-        save: async () => {
-            const name = DOM.categoryNameInput.value.trim();
-            if (!name) {
-                Helpers.showNotification("يرجى إدخال اسم الفئة.", 4000);
-                return;
-            }
-
-            const isDuplicate = appState.categories.some(
-                cat => cat.name.toLowerCase() === name.toLowerCase() && cat.id !== appState.editingCategoryId
-            );
-
-            if (isDuplicate) {
-                Helpers.showNotification("هذه الفئة موجودة بالفعل.", 4000);
-                return;
-            }
-
-            try {
-                if (appState.editingCategoryId) { // تعديل
-                    await window.updateDocument("categories", appState.editingCategoryId, { name });
-                    Helpers.showNotification("تم تعديل الفئة بنجاح.");
-                } else { // إضافة
-                    await window.addDocument("categories", { name });
-                    Helpers.showNotification("تم حفظ الفئة بنجاح.");
-                }
-                Helpers.clearCategoryForm();
-            } catch (error) {
-                console.error("Error saving category:", error);
-                Helpers.showNotification("حدث خطأ أثناء حفظ الفئة.", 5000);
-            }
-        },
-        edit: (id) => {
-            const category = appState.categories.find(c => c.id === id);
-            if (!category) return;
-            DOM.categoryNameInput.value = category.name;
-            appState.editingCategoryId = id;
-            DOM.saveCategoryBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الفئة';
-            DOM.categoryNameInput.focus();
-        },
-        delete: async (id) => {
-            const category = appState.categories.find(c => c.id === id);
-            if (!category) return;
-            
-            // تحقق إذا كانت الفئة مستخدمة في أي صنف
-            const isUsed = appState.items.some(item => item.category === category.name);
-            if (isUsed) {
-                Helpers.showNotification("لا يمكن حذف هذه الفئة لأنها مستخدمة في بعض الأصناف.", 5000);
-                return;
-            }
-
-            if (confirm(`هل أنت متأكد من حذف الفئة "${category.name}"؟`)) {
-                try {
-                    await window.deleteDocument("categories", id);
-                    Helpers.showNotification("تم حذف الفئة بنجاح.");
-                } catch (error) {
-                    console.error("Error deleting category:", error);
-                    Helpers.showNotification("حدث خطأ أثناء حذف الفئة.", 5000);
-                }
-            }
-        }
-    };
-    // #endregion
-
-    // #region Customers Controller (بدون تغيير)
-    const CustomersController = { /* ... الكود الأصلي ... */ };
-    // #endregion
-
-    // #region Sales Controller (بدون تغيير)
-    const SalesController = { /* ... الكود الأصلي ... */ };
-    // #endregion
-
-    // #region Reports Controller (بدون تغيير)
-    const ReportsController = { /* ... الكود الأصلي ... */ };
-    // #endregion
-
-    // #region User Management Controller (بدون تغيير)
-    const UsersController = { /* ... الكود الأصلي ... */ };
-    // #endregion
-
-    // #region App Logic & Event Listeners
-    const App = {
-        init: () => {
-            App.bindEvents();
-            App.listenToFirebase();
-
-            const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) { /* ... الكود الأصلي ... */ }
-
-            for (let i = 1; i <= 100; i++) { /* ... الكود الأصلي ... */ }
-        },
-        listenToFirebase: () => {
-            Object.values(appState.unsubscribe).forEach(unsub => unsub());
-
-            appState.unsubscribe.items = window.readCollection("items", (items) => {
-                appState.items = items;
-                if (document.getElementById('items').classList.contains('active')) ItemsController.render();
-            }, "name", "asc");
-
-            // إضافة جديدة: الاستماع لتغييرات الفئات
-            appState.unsubscribe.categories = window.readCollection("categories", (categories) => {
-                appState.categories = categories;
-                Helpers.populateCategories(); // تحديث قوائم الفئات في كل مرة تتغير فيها
-                if (document.getElementById('categories').classList.contains('active')) CategoriesController.render();
-            }, "name", "asc");
-
-            appState.unsubscribe.customers = window.readCollection("customers", (customers) => { /* ... الكود الأصلي ... */ });
-            appState.unsubscribe.invoices = window.readCollection("invoices", (invoices) => { /* ... الكود الأصلي ... */ });
-            appState.unsubscribe.users = window.readCollection("users", (users) => { /* ... الكود الأصلي ... */ });
-            window.getDocument("config", "admin").then(doc => { /* ... الكود الأصلي ... */ });
-        },
-        bindEvents: () => {
-            document.addEventListener('click', (e) => { /* ... الكود الأصلي ... */ });
-            DOM.loginForm.addEventListener("submit", (e) => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
-            DOM.logoutBtn.addEventListener("click", Auth.logout);
-            DOM.navButtons.forEach(btn => { /* ... الكود الأصلي ... */ });
-
-            // Items Events
-            DOM.saveItemBtn.addEventListener("click", ItemsController.save);
-            DOM.itemsTable.addEventListener("click", (e) => { /* ... الكود الأصلي ... */ });
-            DOM.filterCategorySelect.addEventListener("change", ItemsController.render);
-            // إضافة جديدة: ربط زر الاستيراد
-            DOM.importBtn.addEventListener("click", ItemsController.importFromExcel);
-            
-            // إضافة جديدة: ربط أحداث قسم الفئات
-            DOM.saveCategoryBtn.addEventListener("click", CategoriesController.save);
-            DOM.categoriesTable.addEventListener("click", (e) => {
-                const target = e.target.closest("button");
-                if (!target) return;
-                const id = target.getAttribute("data-id");
-                if (target.classList.contains("edit-category-btn")) { CategoriesController.edit(id); } 
-                else if (target.classList.contains("delete-category-btn")) { CategoriesController.delete(id); }
-            });
-
-            // Customers Events
-            DOM.saveCustomerBtn.addEventListener("click", CustomersController.saveCustomer);
-            /* ... باقي الأحداث الأصلية ... */
-        },
-    };
-
-    // هذا الجزء فقط لملء الكود المحذوف للاختصار في الأعلى
-    // --- دوال Firestore العامة ---
-    window.addDocument = async function(collectionName, data) { const dataWithTimestamp = { ...data, createdAt: serverTimestamp() }; return await addDoc(collection(db, collectionName), dataWithTimestamp); };
-    window.readCollection = function(collectionName, callback, orderByField = "createdAt", orderDirection = "desc") { const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection)); return onSnapshot(q, snapshot => { const docs = []; snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() })); callback(docs); }); };
-    window.getDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { return { id: docSnap.id, ...docSnap.data() }; } else { console.log("No such document!"); return null; }};
-    window.updateDocument = async function(collectionName, docId, data) { const docRef = doc(db, collectionName, docId); return await updateDoc(docRef, data); };
-    window.deleteDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); return await deleteDoc(docRef); };
-    window.writeBatchDocuments = async function(operations) { const batch = writeBatch(db); operations.forEach(op => { const docRef = doc(db, op.collection, op.id); if (op.type === 'update') { batch.update(docRef, op.data); } }); await batch.commit(); };
-    window.db = db;
-    window.writeBatch = writeBatch;
-    window.doc = doc;
-    window.collection = collection;
-    window.serverTimestamp = serverTimestamp;
-    
-    // ربط الأحداث المتبقية التي لم تتغير
-    const originalBindEvents = App.bindEvents;
-    App.bindEvents = () => {
-        originalBindEvents(); // استدعاء الأحداث التي تم ربطها بالفعل
-        // Customers
-        DOM.backToCustomersBtn.addEventListener("click", CustomersController.render);
-        DOM.customersList.addEventListener("click", (e) => { const target = e.target.closest("button"); if (!target) return; const id = target.getAttribute("data-id"); if (target.classList.contains("show-statement-btn")) { CustomersController.showStatement(id); } else if (target.classList.contains("delete-customer-btn")) { CustomersController.deleteCustomer(id); } else if (target.classList.contains("edit-customer-btn")) { CustomersController.edit(id); } });
-        DOM.customerStatementSection.addEventListener("click", (e) => { const target = e.target.closest("button"); if (!target) return; if (target.classList.contains("settle-invoice-btn")) { ReportsController.settleInvoice(target.getAttribute("data-invoice-id")); } });
-        // Sales
-        DOM.searchItemInput.addEventListener("input", (e) => { const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase()); DOM.searchResultsDiv.innerHTML = ""; if (q.length > 0) { const matched = appState.items.filter(item => item.code.toLowerCase().includes(q) || item.name.toLowerCase().includes(q)).filter(item => item.stock > 0); if (matched.length > 0) { DOM.searchResultsDiv.style.display = "block"; DOM.searchResultsDiv.innerHTML = matched.slice(0, 10).map((item) => `<div data-id="${item.id}">${item.code} - ${item.name} (${item.stock} متوفر)</div>`).join(""); } else { DOM.searchResultsDiv.style.display = "none"; } } else { DOM.searchResultsDiv.style.display = "none"; appState.selectedItem = null; } });
-        DOM.searchResultsDiv.addEventListener("click", (e) => { const div = e.target.closest("div"); if (div) { const id = div.getAttribute("data-id"); appState.selectedItem = appState.items.find(item => item.id === id); DOM.searchItemInput.value = `${appState.selectedItem.name}`; DOM.searchResultsDiv.style.display = "none"; } });
-        DOM.customerNameInput.addEventListener("input", (e) => { const q = e.target.value.trim().toLowerCase(); DOM.customerSuggestionsDiv.innerHTML = ""; if (q.length > 0) { const matched = appState.customers.filter(cust => cust.name.toLowerCase().includes(q) || cust.customerId.includes(q)); if (matched.length > 0) { DOM.customerSuggestionsDiv.style.display = "block"; DOM.customerSuggestionsDiv.innerHTML = matched.map(cust => `<div data-id="${cust.id}">${cust.name} (${cust.customerId})</div>`).join(""); } else { DOM.customerSuggestionsDiv.style.display = "none"; } } else { DOM.customerSuggestionsDiv.style.display = "none"; appState.selectedCustomer = null; } });
-        DOM.customerSuggestionsDiv.addEventListener("click", (e) => { const div = e.target.closest("div"); if (div) { const id = div.getAttribute("data-id"); appState.selectedCustomer = appState.customers.find(cust => cust.id === id); DOM.customerNameInput.value = appState.selectedCustomer.name; DOM.customerSuggestionsDiv.style.display = "none"; } });
-        DOM.addToInvoiceBtn.addEventListener("click", SalesController.addToInvoice);
-        DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
-        DOM.invoiceTable.addEventListener("click", (e) => { const target = e.target.closest("button"); if (!target || !target.classList.contains("remove-from-invoice-btn")) return; SalesController.removeFromInvoice(target.getAttribute("data-index")); });
-        // Reports
-        DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
-        DOM.summaryGroupSelect.addEventListener("change", ReportsController.renderSummary);
-        DOM.invoicesList.addEventListener("click", (e) => { const target = e.target.closest("button"); if (!target) return; const id = target.getAttribute("data-id") || target.getAttribute("data-invoice-id"); if (target.classList.contains("print-saved-invoice-btn")) { ReportsController.printSavedInvoice(id); } else if (target.classList.contains("settle-invoice-btn")) { ReportsController.settleInvoice(id); } });
-        // Users
-        DOM.saveUserBtn.addEventListener("click", UsersController.saveUser);
-        DOM.usersList.addEventListener("click", (e) => { const target = e.target.closest("button"); if (!target) return; const id = target.getAttribute("data-id"); if (target.classList.contains("edit-user-btn")) { UsersController.edit(id); } else if (target.classList.contains("delete-user-btn")) { UsersController.delete(id); } });
-        DOM.changePinBtn.addEventListener("click", async () => { const oldPin = Helpers.convertToArabicAndEnglishDigits(DOM.oldPinInput.value); const newPin = Helpers.convertToArabicAndEnglishDigits(DOM.newPinInput.value); if (oldPin === appState.adminPIN) { if (newPin && newPin.length > 3) { try { await window.updateDocument("config", "admin", { pin: newPin }); appState.adminPIN = newPin; DOM.oldPinInput.value = ""; DOM.newPinInput.value = ""; Helpers.showNotification("تم تغيير كلمة مرور المدير العام بنجاح!"); } catch (error) { console.error("Error changing PIN:", error); Helpers.showNotification("حدث خطأ أثناء تغيير كلمة المرور.", 5000); } } else { Helpers.showNotification("يجب أن تكون كلمة المرور الجديدة مكونة من 4 أرقام على الأقل.", 5000); } } else { Helpers.showNotification("كلمة المرور القديمة غير صحيحة.", 5000); } });
-        DOM.printInvoiceBtn.addEventListener("click", () => { if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا توجد فاتورة للطباعة.", 5000); return; } const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent); const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0; const changeOrBalance = amountPaid - invoiceTotal; const dummyInvoice = { id: 'مسودة', date: new Date().toISOString(), createdAt: new Date(), customerName: appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim(), paymentMethod: DOM.paymentMethodSelect.value, amountPaid: amountPaid, changeOrBalance: changeOrBalance, items: [...appState.currentInvoice], total: invoiceTotal }; const printContent = Helpers.generatePrintContent(dummyInvoice); Helpers.printContent(printContent); });
-    };
-
-    // هذا الجزء فقط لملء الكود المحذوف للاختصار في الأعلى
-    // Controllers
-    Object.assign(Auth, { login: (username, password) => { const pin = Helpers.convertToArabicAndEnglishDigits(password); if (pin === appState.adminPIN) { appState.currentUser = { username: "المدير العام", role: "admin" }; localStorage.setItem('currentUser', JSON.stringify(appState.currentUser)); Helpers.showNotification("تم تسجيل الدخول كمدير عام."); Auth.showApp("admin"); return; } const user = appState.users.find(u => u.username === username && u.password === pin); if (user) { appState.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); Helpers.showNotification(`أهلاً بك, ${user.username}!`); Auth.showApp("user"); } else { Helpers.showNotification("اسم المستخدم أو كلمة المرور غير صحيحة.", 5000); } }, logout: () => { appState.currentUser = null; localStorage.removeItem('currentUser'); DOM.appContainer.style.display = "none"; DOM.loginContainer.style.display = "flex"; DOM.usernameInput.value = ""; DOM.passwordInput.value = ""; Helpers.showNotification("تم تسجيل الخروج بنجاح."); }, showApp: (role) => { DOM.loginContainer.style.display = "none"; DOM.appContainer.style.display = "block"; const usersTab = document.querySelector('[data-tab="users"]'); usersTab.classList.toggle("hidden", role !== "admin"); document.querySelector('[data-tab="sales"]').click(); }});
-    Object.assign(ItemsController, { render: () => { const filterCategory = DOM.filterCategorySelect.value; const filteredItems = filterCategory === "all" ? appState.items : appState.items.filter(item => item.category === filterCategory); DOM.itemsTable.innerHTML = filteredItems.map(item => `<tr><td>${item.code}</td><td>${item.name}</td><td>${item.unit}</td><td>${parseFloat(item.price).toFixed(2)}</td><td>${item.stock}</td><td>${item.category || 'غير محدد'}</td><td><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button></td><td><button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td></tr>`).join(""); }, save: async () => { const { itemCodeInput, itemNameInput, itemUnitInput, itemPriceInput, itemStockInput, itemCategorySelect } = DOM; const code = Helpers.convertToArabicAndEnglishDigits(itemCodeInput.value.trim()); const name = itemNameInput.value.trim(); const unit = itemUnitInput.value.trim(); const price = parseFloat(Helpers.convertToArabicAndEnglishDigits(itemPriceInput.value)); const stock = parseInt(Helpers.convertToArabicAndEnglishDigits(itemStockInput.value)); const category = itemCategorySelect.value; if (!code || !name || isNaN(price) || isNaN(stock) || !category) { Helpers.showNotification("يرجى إدخال جميع البيانات بشكل صحيح واختيار الفئة.", 5000); return; } const itemData = { code, name, unit, price, stock, category }; try { if (appState.editingItemId) { const isDuplicate = appState.items.some(item => item.code === code && item.id !== appState.editingItemId); if (isDuplicate) { Helpers.showNotification("هذا الكود مستخدم بالفعل لصنف آخر.", 5000); return; } await window.updateDocument("items", appState.editingItemId, itemData); Helpers.showNotification("تم تعديل الصنف بنجاح."); } else { const isDuplicate = appState.items.some(item => item.code === code); if (isDuplicate) { Helpers.showNotification("هذا الكود موجود بالفعل. يرجى استخدام كود مختلف.", 5000); return; } await window.addDocument("items", itemData); Helpers.showNotification("تم حفظ الصنف بنجاح."); } Helpers.clearItemForm(); } catch (error) { console.error("Error saving item: ", error); Helpers.showNotification("حدث خطأ أثناء حفظ الصنف.", 5000); } }, edit: (id) => { const item = appState.items.find(i => i.id === id); if (!item) return; DOM.itemCodeInput.value = item.code; DOM.itemNameInput.value = item.name; DOM.itemUnitInput.value = item.unit; DOM.itemPriceInput.value = item.price; DOM.itemStockInput.value = item.stock; DOM.itemCategorySelect.value = item.category || ""; appState.editingItemId = id; DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف'; }, delete: async (id) => { if (confirm("هل أنت متأكد من حذف هذا الصنف؟ سيتم حذفه نهائياً.")) { try { await window.deleteDocument("items", id); Helpers.showNotification("تم حذف الصنف بنجاح."); } catch (error) { console.error("Error deleting item: ", error); Helpers.showNotification("حدث خطأ أثناء حذف الصنف.", 5000); } } } });
-    Object.assign(Helpers, { clearCustomerForm: () => { DOM.newCustomerIdInput.value = ""; DOM.newCustomerNameInput.value = ""; appState.editingCustomerId = null; DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العميل'; }, clearUserForm: () => { DOM.newUsernameInput.value = ""; DOM.newUserPasswordInput.value = ""; appState.editingUserId = null; DOM.saveUserBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إضافة مستخدم'; }, calculateChange: () => { const total = parseFloat(DOM.invoiceTotalSpan.textContent) || 0; const paid = parseFloat(DOM.amountPaidInput.value) || 0; const change = paid - total; if (change >= 0) { DOM.changeTextSpan.textContent = "الباقي للعميل:"; DOM.changeAmountSpan.textContent = change.toFixed(2); } else { DOM.changeTextSpan.textContent = "المطلوب منه:"; DOM.changeAmountSpan.textContent = Math.abs(change).toFixed(2); } }, convertToArabicAndEnglishDigits: (text) => { if (!text) return ""; const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']; const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']; let convertedText = text.toString(); for (let i = 0; i < arabicDigits.length; i++) { convertedText = convertedText.replace(new RegExp(arabicDigits[i], 'g'), englishDigits[i]); } return convertedText; }, getWeekNumber: (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7); return [d.getUTCFullYear(), weekNo]; }, generatePrintContent: (invoice) => { const itemsHtml = invoice.items.map(item => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.price * item.qty).toFixed(2)}</td></tr>`).join(""); const customerInfo = invoice.customerName ? `<span>العميل: ${invoice.customerName}</span>` : `<span>العميل: .......................................</span>`; const paymentMethodText = invoice.paymentMethod === 'cash' ? 'نقداً' : invoice.paymentMethod === 'visa' ? 'فيزا' : 'محفظة'; const dateObject = invoice.createdAt && typeof invoice.createdAt.toDate === 'function' ? invoice.createdAt.toDate() : new Date(invoice.date); const formattedDate = dateObject.toLocaleString('ar-EG', { dateStyle: 'long', timeStyle: 'short' }); const changeText = invoice.changeOrBalance >= 0 ? 'الباقي للعميل' : 'المطلوب منه'; return `<div style="direction:rtl; font-family: 'Segoe UI', sans-serif;" id="print-area"><h2 class="print-header">فاتورة مبيعات</h2><div class="print-details"><p>رقم الفاتورة: <span>${invoice.id.substring(0, 8)}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div><div class="print-table"><table><thead><tr style="background-color:#eee;"><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table></div><div class="print-summary"><p><strong>إجمالي الفاتورة:</strong> ${invoice.total.toFixed(2)} ج.م</p><p><strong>طريقة الدفع:</strong> ${paymentMethodText}</p><p><strong>المبلغ المدفوع:</strong> ${invoice.amountPaid.toFixed(2)} ج.م</p><p><strong>${changeText}:</strong> ${Math.abs(invoice.changeOrBalance).toFixed(2)} ج.م</p></div></div>`; }, printContent: (content) => { const printWindow = window.open('', '', 'height=600,width=800'); printWindow.document.write('<html><head><title>طباعة</title>'); printWindow.document.write('<style>@media print { body { -webkit-print-color-adjust: exact; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid black; padding: 8px; text-align: right; } th { background-color: #f2f2f2; } }</style>'); printWindow.document.write('</head><body>'); printWindow.document.write(content); printWindow.document.write('</body></html>'); printWindow.document.close(); printWindow.focus(); setTimeout(() => { printWindow.print(); printWindow.close(); }, 250); } });
-    Object.assign(CustomersController, { render: () => { DOM.customersList.style.display = 'block'; DOM.customerStatementSection.style.display = 'none'; DOM.customersList.innerHTML = appState.customers.map(cust => `<div class="customer-card"><div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"><div><b>${cust.name}</b><br/><small>رقم: ${cust.customerId}</small></div><div class="flex-container"><button class="btn-small btn-success show-statement-btn" data-id="${cust.id}"><i class="fas fa-clipboard-list"></i> كشف حساب</button><button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button></div></div></div>`).join(""); }, saveCustomer: async () => { const customerId = Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerIdInput.value.trim()); const name = DOM.newCustomerNameInput.value.trim(); if (!customerId || !name) { Helpers.showNotification("يرجى إدخال رقم واسم العميل.", 5000); return; } const customerData = { customerId, name }; try { if (appState.editingCustomerId) { const isDuplicate = appState.customers.some(cust => cust.customerId === customerId && cust.id !== appState.editingCustomerId); if (isDuplicate) { Helpers.showNotification("هذا الرقم مستخدم بالفعل لعميل آخر.", 5000); return; } await window.updateDocument("customers", appState.editingCustomerId, customerData); Helpers.showNotification("تم تعديل العميل بنجاح."); } else { const isDuplicate = appState.customers.some(cust => cust.customerId === customerId); if (isDuplicate) { Helpers.showNotification("هذا العميل موجود بالفعل.", 5000); return; } await window.addDocument("customers", customerData); Helpers.showNotification("تم حفظ العميل بنجاح."); } Helpers.clearCustomerForm(); } catch (error) { console.error("Error saving customer: ", error); Helpers.showNotification("حدث خطأ أثناء حفظ العميل.", 5000); } }, edit: (id) => { const customer = appState.customers.find(c => c.id === id); if (!customer) return; DOM.newCustomerIdInput.value = customer.customerId; DOM.newCustomerNameInput.value = customer.name; appState.editingCustomerId = id; DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل العميل'; }, deleteCustomer: async (id) => { const customer = appState.customers.find(c => c.id === id); if (!customer) return; const hasInvoices = appState.invoices.some(inv => inv.customerId === customer.id); if (hasInvoices) { Helpers.showNotification("لا يمكن حذف هذا العميل لوجود فواتير مسجلة باسمه.", 5000); return; } if (confirm("هل أنت متأكد من حذف هذا العميل؟")) { try { await window.deleteDocument("customers", id); Helpers.showNotification("تم حذف العميل بنجاح."); } catch (error) { console.error("Error deleting customer: ", error); Helpers.showNotification("حدث خطأ أثناء حذف العميل.", 5000); } } }, showStatement: (customerId) => { const customer = appState.customers.find(c => c.id === customerId); if (!customer) return; DOM.customersList.style.display = 'none'; DOM.customerStatementSection.style.display = 'block'; DOM.statementCustomerName.textContent = customer.name; DOM.statementDetails.innerHTML = ""; const customerInvoices = appState.invoices.filter(inv => inv.customerId === customerId); if (customerInvoices.length === 0) { DOM.statementDetails.innerHTML = "<p>لا توجد فواتير لهذا العميل.</p>"; return; } let totalDue = 0; let totalPaid = 0; const statementHtml = customerInvoices.map(inv => { const remaining = inv.total - inv.amountPaid; const status = remaining > 0.01 ? "عليه" : remaining < -0.01 ? "له" : "صافي"; const statusColor = remaining > 0.01 ? 'var(--danger-color)' : remaining < -0.01 ? 'var(--success-color)' : 'var(--primary-color)'; totalDue += inv.total; totalPaid += inv.amountPaid; const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة'; const settlementButton = Math.abs(remaining) > 0.01 ? `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : ''; return `<div class="customer-card"><div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"><b>فاتورة رقم: ${inv.id.substring(0, 8)}</b>${settlementButton}</div><small>التاريخ: ${inv.createdAt.toDate().toLocaleDateString('ar-EG')}</small><br/><small>إجمالي الفاتورة: <b>${inv.total.toFixed(2)} ج.م</b></small><br/><small>المبلغ المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</small><br/><small>طريقة الدفع: ${paymentMethodText}</small><br/><small>الحالة: <span style="font-weight:bold; color:${statusColor};">${status} ${Math.abs(remaining).toFixed(2)} ج.م</span></small></div>`; }).join(""); const balance = totalDue - totalPaid; const balanceStatus = balance > 0.01 ? 'عليه' : balance < -0.01 ? 'له' : 'صافي'; const balanceColor = balance > 0.01 ? 'var(--danger-color)' : balance < -0.01 ? 'var(--success-color)' : 'var(--primary-color)'; DOM.statementDetails.innerHTML = statementHtml + `<div class="summary-box" style="border: 2px solid ${balanceColor};"><b>إجمالي الحساب:</b><br/>المطلوب: ${totalDue.toFixed(2)} ج.م<br/>المدفوع: ${totalPaid.toFixed(2)} ج.م<br/><b style="color:${balanceColor};">الصافي: ${balanceStatus} ${Math.abs(balance).toFixed(2)} ج.م</b></div>`; }, });
-    Object.assign(SalesController, { renderInvoice: () => { DOM.invoiceTable.innerHTML = ""; let total = 0; appState.currentInvoice.forEach((item, index) => { const subtotal = item.price * item.qty; total += subtotal; DOM.invoiceTable.innerHTML += `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${subtotal.toFixed(2)}</td><td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td></tr>`; }); DOM.invoiceTotalSpan.textContent = total.toFixed(2); Helpers.calculateChange(); }, addToInvoice: () => { const { selectedItem } = appState; const qty = parseInt(DOM.quantitySelect.value); if (!selectedItem) { Helpers.showNotification("يرجى اختيار صنف من قائمة البحث.", 5000); return; } if (qty <= 0) { Helpers.showNotification("يرجى إدخال كمية صحيحة.", 5000); return; } const itemInStock = appState.items.find(i => i.id === selectedItem.id); const existingItemInInvoice = appState.currentInvoice.find(i => i.id === selectedItem.id); const currentQtyInInvoice = existingItemInInvoice ? existingItemInInvoice.qty : 0; if (itemInStock.stock < qty + currentQtyInInvoice) { Helpers.showNotification(`المخزون غير كافٍ. المتوفر: ${itemInStock.stock}`, 5000); return; } if (existingItemInInvoice) { existingItemInInvoice.qty += qty; } else { appState.currentInvoice.push({ id: selectedItem.id, code: selectedItem.code, name: selectedItem.name, qty: qty, price: selectedItem.price, }); } SalesController.renderInvoice(); DOM.searchItemInput.value = ""; appState.selectedItem = null; DOM.quantitySelect.value = 1; Helpers.showNotification(`تم إضافة ${qty} من ${itemInStock.name} للفاتورة.`); }, removeFromInvoice: (index) => { const removedItem = appState.currentInvoice.splice(index, 1)[0]; SalesController.renderInvoice(); Helpers.showNotification(`تم حذف ${removedItem.name} من الفاتورة.`); }, saveInvoice: async () => { if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا يمكن حفظ فاتورة فارغة.", 5000); return; } for (const itemInInvoice of appState.currentInvoice) { const itemInStock = appState.items.find(i => i.id === itemInInvoice.id); if (!itemInStock || itemInStock.stock < itemInInvoice.qty) { Helpers.showNotification(`فشل الحفظ، المخزون غير كافٍ للصنف: ${itemInInvoice.name}`, 5000); return; } } const stockUpdateOperations = appState.currentInvoice.map(itemInInvoice => { const itemInStock = appState.items.find(i => i.id === itemInInvoice.id); return { collection: 'items', id: itemInInvoice.id, type: 'update', data: { stock: itemInStock.stock - itemInInvoice.qty } }; }); const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent); const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0; const changeOrBalance = amountPaid - invoiceTotal; const customerId = appState.selectedCustomer ? appState.selectedCustomer.id : null; const customerName = appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim(); const newInvoice = { customerId: customerId, customerName: customerName, paymentMethod: DOM.paymentMethodSelect.value, amountPaid: amountPaid, changeOrBalance: changeOrBalance, items: [...appState.currentInvoice], total: invoiceTotal, }; try { await window.addDocument("invoices", newInvoice); await window.writeBatchDocuments(stockUpdateOperations); Helpers.showNotification("تم حفظ الفاتورة وتحديث المخزون بنجاح!"); appState.currentInvoice = []; SalesController.renderInvoice(); DOM.customerNameInput.value = ""; DOM.amountPaidInput.value = ""; appState.selectedCustomer = null; Helpers.calculateChange(); } catch (error) { console.error("Error saving invoice and updating stock: ", error); Helpers.showNotification("حدث خطأ فادح أثناء حفظ الفاتورة. لم يتم تحديث المخزون.", 5000); } } });
-    Object.assign(ReportsController, { renderInvoices: () => { const { invoicesList } = DOM; invoicesList.innerHTML = ""; if (appState.invoices.length === 0) { invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>"; return; } appState.invoices.forEach(inv => { const date = inv.createdAt.toDate(); const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة'; const changeText = inv.changeOrBalance >= 0.01 ? 'الباقي للعميل' : inv.changeOrBalance < -0.01 ? 'المطلوب منه' : 'صافي'; const settlementButton = Math.abs(inv.changeOrBalance) > 0.01 ? `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : ''; invoicesList.innerHTML += `<div class="summary-box"><div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"><b>فاتورة رقم: ${inv.id.substring(0, 8)}</b><div class="flex-container"><button class="btn-small btn-success print-saved-invoice-btn" data-id="${inv.id}"><i class="fas fa-print"></i> طباعة</button>${settlementButton}</div></div><p style="margin: 5px 0;"><small>التاريخ: ${date.toLocaleString('ar-EG', { dateStyle: 'long', timeStyle: 'short' })}</small></p><p style="margin: 5px 0;"><small>العميل: ${inv.customerName || "بدون اسم"}</small></p><p style="margin: 5px 0;"><strong>الإجمالي: ${inv.total.toFixed(2)} ج.م</strong></p><p style="margin: 5px 0;"><small>المبلغ المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</small></p><p style="margin: 5px 0;"><small>${changeText}: ${Math.abs(inv.changeOrBalance).toFixed(2)} ج.م</small></p><table style="margin-top:10px;"><thead><tr><th>اسم الصنف</th><th>كمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${inv.items.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price.toFixed(2)}</td><td>${(i.price * i.qty).toFixed(2)}</td></tr>`).join("")}</tbody></table></div>`; }); }, renderSummary: () => { const { salesSummaryTable, totalSalesAmount, bestSellingItemsDiv } = DOM; const groupBy = DOM.summaryGroupSelect.value; let summary = {}; let itemSales = {}; let totalAmount = 0; appState.invoices.forEach(inv => { const invDate = inv.createdAt.toDate(); let key, displayKey; if (groupBy === 'day') { key = invDate.toISOString().slice(0, 10); displayKey = invDate.toLocaleDateString('ar-EG', { dateStyle: 'long' }); } else if (groupBy === 'week') { const [year, week] = Helpers.getWeekNumber(invDate); key = `${year}-${week}`; displayKey = `الأسبوع ${week} من عام ${year}`; } else if (groupBy === 'month') { key = invDate.toISOString().slice(0, 7); displayKey = invDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' }); } if (!summary[key]) { summary[key] = { count: 0, amount: 0, display: displayKey }; } summary[key].count++; summary[key].amount += inv.total; totalAmount += inv.total; inv.items.forEach(item => { if (!itemSales[item.code]) { itemSales[item.code] = { name: item.name, totalQty: 0 }; } itemSales[item.code].totalQty += item.qty; }); }); const summaryData = Object.values(summary).sort((a,b) => b.display.localeCompare(a.display)); totalSalesAmount.textContent = totalAmount.toFixed(2); salesSummaryTable.innerHTML = summaryData.map(row => `<tr><td>${row.display}</td><td>${row.count}</td><td>${row.amount.toFixed(2)}</td></tr>`).join(""); const sortedItems = Object.values(itemSales).sort((a, b) => b.totalQty - a.totalQty).slice(0, 10); if (sortedItems.length > 0) { bestSellingItemsDiv.innerHTML = `<table style="margin-top:0;"><thead><tr><th>اسم الصنف</th><th>الكمية المباعة</th></tr></thead><tbody>${sortedItems.map(item => `<tr><td>${item.name}</td><td>${item.totalQty}</td></tr>`).join("")}</tbody></table>`; } else { bestSellingItemsDiv.innerHTML = "<p>لا توجد بيانات متاحة.</p>"; } }, printSavedInvoice: (id) => { const invoiceToPrint = appState.invoices.find(inv => inv.id === id); if(invoiceToPrint) { const printContent = Helpers.generatePrintContent(invoiceToPrint); Helpers.printContent(printContent); } }, settleInvoice: async (invoiceId) => { const invoice = appState.invoices.find(inv => inv.id === invoiceId); if (!invoice) { Helpers.showNotification("الفاتورة غير موجودة.", 5000); return; } const remaining = invoice.total - invoice.amountPaid; let newPayment = prompt(`الرصيد المتبقي على الفاتورة هو: ${remaining.toFixed(2)} ج.م.\nأدخل المبلغ الجديد للتسوية:`); if (newPayment === null || newPayment.trim() === "") return; newPayment = parseFloat(Helpers.convertToArabicAndEnglishDigits(newPayment)); if (isNaN(newPayment)) { Helpers.showNotification("يرجى إدخال مبلغ صحيح.", 5000); return; } const updatedData = { amountPaid: invoice.amountPaid + newPayment, changeOrBalance: (invoice.amountPaid + newPayment) - invoice.total }; try { await window.updateDocument("invoices", invoiceId, updatedData); Helpers.showNotification("تمت التسوية بنجاح!"); } catch (error) { console.error("Error settling invoice: ", error); Helpers.showNotification("حدث خطأ أثناء التسوية.", 5000); } } });
-    Object.assign(UsersController, { render: () => { DOM.usersList.innerHTML = appState.users.map(user => `<div class="customer-card"><div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"><div><b>${user.username}</b><br/></div><div class="flex-container"><button class="btn-small btn-warning edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i> تعديل</button><button class="btn-small btn-danger delete-user-btn" data-id="${user.id}"><i class="fas fa-trash-alt"></i> حذف</button></div></div></div>`).join(""); }, saveUser: async () => { const username = DOM.newUsernameInput.value.trim(); const password = Helpers.convertToArabicAndEnglishDigits(DOM.newUserPasswordInput.value.trim()); if (!username || !password) { Helpers.showNotification("يرجى إدخال اسم المستخدم وكلمة المرور.", 5000); return; } const userData = { username, password, role: 'user' }; try { if (appState.editingUserId) { await window.updateDocument("users", appState.editingUserId, userData); Helpers.showNotification("تم تعديل المستخدم بنجاح."); } else { if (appState.users.some(u => u.username === username)) { Helpers.showNotification("اسم المستخدم موجود بالفعل.", 5000); return; } await window.addDocument("users", userData); Helpers.showNotification("تم إضافة مستخدم جديد بنجاح."); } Helpers.clearUserForm(); } catch(error) { console.error("Error saving user:", error); Helpers.showNotification("حدث خطأ أثناء حفظ المستخدم.", 5000); } }, edit: (id) => { const user = appState.users.find(u => u.id === id); if (!user) return; DOM.newUsernameInput.value = user.username; DOM.newUserPasswordInput.value = user.password; appState.editingUserId = id; DOM.saveUserBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل مستخدم'; }, delete: async (id) => { if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) { try { await window.deleteDocument("users", id); Helpers.showNotification("تم حذف المستخدم بنجاح."); } catch(error) { console.error("Error deleting user:", error); Helpers.showNotification("حدث خطأ أثناء حذف المستخدم.", 5000); } } } });
-    Object.assign(App, {init: () => { App.bindEvents(); App.listenToFirebase(); const savedUser = localStorage.getItem('currentUser'); if (savedUser) { appState.currentUser = JSON.parse(savedUser); Helpers.showNotification(`أهلاً بعودتك, ${appState.currentUser.username}!`); Auth.showApp(appState.currentUser.role || 'user'); } for (let i = 1; i <= 100; i++) { const opt = document.createElement("option"); opt.value = i; opt.textContent = i; DOM.quantitySelect.appendChild(opt); } }});
-    
-    // تشغيل التطبيق
-    App.init();
-});
-</script>
+    btnStart.addEventListener('click', startScan);
+    btnStop.addEventListener('click', stopScan);
+  </script>
 </body>
 </html>
