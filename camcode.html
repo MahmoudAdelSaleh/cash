@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>فاتورة المبيعات</title>
+  <style>
+    body {
+      font-family: Tahoma, Arial;
+      margin: 20px;
+      background: #f4f4f4;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    h2 { color: #444; margin-bottom: 15px; }
+    .field {
+      margin: 10px 0;
+    }
+    input, select, button {
+      padding: 8px 12px;
+      margin: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      background: #2196f3;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #0b7dda; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th { background: #f0f0f0; }
+    tfoot td {
+      font-weight: bold;
+      background: #fafafa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>فاتورة مبيعات</h2>
+
+    <!-- إدخال بيانات العميل -->
+    <div class="field">
+      <input type="text" id="customerName" placeholder="اسم العميل">
+      <input type="text" id="customerPhone" placeholder="رقم الموبايل">
+    </div>
+
+    <!-- إدخال الباركود -->
+    <div class="field">
+      <input type="text" id="barcodeInput" placeholder="أدخل الباركود" onkeydown="if(event.key==='Enter'){addByBarcode()}">
+      <button onclick="addByBarcode()">➕ إضافة بالباركود</button>
+    </div>
+
+    <!-- إضافة صنف يدوي -->
+    <div class="field">
+      <label>إضافة صنف يدوي</label>
+      <select id="manualProduct">
+        <option value="">-- اختر الصنف --</option>
+      </select>
+      <button onclick="addManualProduct()">➕ إضافة يدوي</button>
+    </div>
+
+    <!-- جدول الفاتورة -->
+    <table>
+      <thead>
+        <tr>
+          <th>الصنف</th>
+          <th>الوحدة</th>
+          <th>السعر</th>
+          <th>الكمية</th>
+          <th>الإجمالي</th>
+          <th>حذف</th>
+        </tr>
+      </thead>
+      <tbody id="invoiceBody"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4">الإجمالي</td>
+          <td id="total">0</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- إرسال الواتساب -->
+    <div class="field">
+      <button onclick="sendWhatsApp()">📲 إرسال عبر واتساب</button>
+    </div>
+  </div>
+
+  <script>
+    let productsDB = [];
+    let invoice = {};
+
+    // تحميل قاعدة البيانات
+    fetch("p.json")
+      .then(r => r.json())
+      .then(data => {
+        productsDB = data;
+        fillManualDropdown();
+      })
+      .catch(err => alert("⚠️ لم يتم تحميل قاعدة البيانات، افتح الصفحة عبر سيرفر محلي"));
+
+    // تعبئة قائمة المنتجات اليدوية
+    function fillManualDropdown() {
+      const select = document.getElementById("manualProduct");
+      productsDB.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.barcode;
+        opt.textContent = `${p.name} (${p.unit}) - ${p.price} ج.م`;
+        select.appendChild(opt);
+      });
+    }
+
+    // إضافة بالباركود
+    function addByBarcode() {
+      const code = document.getElementById("barcodeInput").value.trim();
+      if (!code) return;
+      const prod = productsDB.find(p => p.barcode === code);
+      if (!prod) { alert("❌ المنتج غير موجود"); return; }
+      if (!invoice[code]) invoice[code] = { ...prod, qty: 0 };
+      invoice[code].qty++;
+      document.getElementById("barcodeInput").value = "";
+      renderInvoice();
+    }
+
+    // إضافة يدوي
+    function addManualProduct() {
+      const select = document.getElementById("manualProduct");
+      const barcode = select.value;
+      if (!barcode) return alert("⚠️ اختر صنفًا من القائمة");
+      const prod = productsDB.find(p => p.barcode === barcode);
+      if (!invoice[barcode]) invoice[barcode] = { ...prod, qty: 0 };
+      invoice[barcode].qty++;
+      renderInvoice();
+    }
+
+    // عرض الفاتورة
+    function renderInvoice() {
+      const tbody = document.getElementById("invoiceBody");
+      tbody.innerHTML = "";
+      let total = 0;
+      for (let code in invoice) {
+        const item = invoice[code];
+        const row = document.createElement("tr");
+        const subTotal = item.price * item.qty;
+        total += subTotal;
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td>${item.unit}</td>
+          <td>${item.price}</td>
+          <td>${item.qty}</td>
+          <td>${subTotal}</td>
+          <td><button onclick="removeItem('${code}')">❌</button></td>
+        `;
+        tbody.appendChild(row);
+      }
+      document.getElementById("total").textContent = total;
+    }
+
+    // حذف صنف
+    function removeItem(code) {
+      delete invoice[code];
+      renderInvoice();
+    }
+
+    // إرسال عبر واتساب
+    function sendWhatsApp() {
+      const name = document.getElementById("customerName").value.trim();
+      const phone = document.getElementById("customerPhone").value.trim();
+      if (!phone) return alert("⚠️ أدخل رقم الموبايل");
+
+      let msg = `🧾 فاتورة باسم: ${name || "بدون اسم"}\n\n`;
+      let total = 0;
+      for (let code in invoice) {
+        const item = invoice[code];
+        const subTotal = item.price * item.qty;
+        total += subTotal;
+        msg += `• ${item.name} x ${item.qty} = ${subTotal} ج.م\n`;
+      }
+      msg += `\nالإجمالي: ${total} ج.م`;
+
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank");
+    }
+  </script>
+</body>
+</html>
