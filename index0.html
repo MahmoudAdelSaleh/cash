@@ -2,122 +2,193 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>نظام البيع بالباركود</title>
-  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>فاتورة المبيعات</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-    #video { width: 300px; border: 2px solid #333; margin: 10px auto; display: none; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    table, th, td { border: 1px solid #333; padding: 8px; }
-    th { background: #eee; }
-    .btn { padding: 8px 12px; margin: 5px; cursor: pointer; border: none; border-radius: 6px; }
-    .scan-btn { background: #007bff; color: white; }
-    .del-btn { background: #dc3545; color: white; }
-    .add-btn { background: #28a745; color: white; }
-    .num-btn { background: #ffc107; color: black; }
+    body {
+      font-family: Tahoma, Arial, sans-serif;
+      margin: 10px;
+      background: #fdfdfd;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      background: #28a745;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    #reader {
+      width: 100%;
+      margin: 10px auto;
+    }
   </style>
 </head>
 <body>
 
-  <h2>📦 نظام البيع بالباركود</h2>
+  <h2>🛒 متجر MAS</h2>
 
-  <!-- زر تشغيل الكاميرا -->
-  <button class="btn scan-btn" onclick="startScanner()">📷 مسح بالباركود</button>
-  <video id="video"></video>
+  <div class="field">
+    <label>اسم العميل</label>
+    <input type="text" id="customerName" placeholder="اكتب اسم العميل">
+  </div>
 
-  <!-- جدول الفاتورة -->
-  <table id="invoice">
+  <div class="field">
+    <label>رقم الموبايل</label>
+    <input type="tel" id="customerPhone" placeholder="01xxxxxxxxx">
+  </div>
+
+  <!-- زر فتح الكاميرا -->
+  <button onclick="startScanner()">📷 مسح الباركود</button>
+  <div id="reader"></div>
+
+  <table id="invoiceTable">
     <thead>
       <tr>
-        <th>المنتج</th>
+        <th>الصنف</th>
+        <th>الوحدة</th>
         <th>السعر</th>
-        <th>إزالة</th>
+        <th>الكمية</th>
+        <th>الإجمالي</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
-  <!-- التوصيل -->
-  <div style="margin-top: 15px;">
-    <label>🚚 التوصيل: </label>
-    <button class="btn num-btn" onclick="changeDelivery(-5)">-</button>
-    <input type="number" id="delivery" value="20" style="width:60px;text-align:center;">
-    <button class="btn num-btn" onclick="changeDelivery(5)">+</button>
+  <div class="field">
+    <label>خدمة التوصيل</label>
+    <input type="number" id="delivery" value="10" min="0">
   </div>
 
-  <!-- الإجمالي -->
-  <h3 id="total">الإجمالي: 0 جنيه</h3>
+  <h3>إجمالي الفاتورة: <span id="total">0</span> ج.م</h3>
+
+  <button onclick="sendInvoice()">📩 إرسال الفاتورة واتساب</button>
 
   <script>
-    const productsDB = {
-      "123456789012": { name: "بيبسي 330ml", price: 10 },
-      "111111111111": { name: "شيبسي كبير", price: 15 },
-      "222222222222": { name: "لبن 1 لتر", price: 25 },
-      "333333333333": { name: "سكر 1 كجم", price: 20 }
-    };
+    let productsDB = [];
+    let cart = {};
 
-    const tbody = document.querySelector("#invoice tbody");
-    const totalEl = document.getElementById("total");
-    const deliveryInput = document.getElementById("delivery");
-    let items = [];
+    // تحميل قاعدة البيانات
+    fetch("p.json")
+      .then(res => res.json())
+      .then(data => productsDB = data);
 
-    function addProduct(code) {
-      if (productsDB[code]) {
-        items.push(productsDB[code]);
-        renderInvoice();
-      } else {
-        alert("🚨 المنتج غير موجود في قاعدة البيانات");
+    // تشغيل الماسح بالكاميرا الخلفية
+    function startScanner() {
+      const html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" }, // كاميرا خلفية
+        { fps: 10, qrbox: 250 },
+        (barcode) => {
+          addProduct(barcode);
+        },
+        (error) => {}
+      ).catch(err => console.log(err));
+    }
+
+    // إضافة المنتج للفاتورة
+    function addProduct(barcode) {
+      const product = productsDB.find(p => p.barcode === barcode);
+      if (!product) {
+        alert("المنتج غير موجود في قاعدة البيانات");
+        return;
       }
+
+      if (!cart[barcode]) {
+        cart[barcode] = { ...product, qty: 1 };
+      } else {
+        cart[barcode].qty += 1;
+      }
+      renderTable();
     }
 
-    function removeProduct(index) {
-      items.splice(index, 1);
-      renderInvoice();
-    }
-
-    function renderInvoice() {
+    // عرض الفاتورة
+    function renderTable() {
+      const tbody = document.querySelector("#invoiceTable tbody");
       tbody.innerHTML = "";
-      let sum = 0;
-      items.forEach((item, i) => {
-        sum += item.price;
-        tbody.innerHTML += `
+      let total = 0;
+      for (const code in cart) {
+        const item = cart[code];
+        const row = `
           <tr>
             <td>${item.name}</td>
-            <td>${item.price} جنيه</td>
-            <td><button class="btn del-btn" onclick="removeProduct(${i})">حذف</button></td>
+            <td>${item.unit}</td>
+            <td>${item.price}</td>
+            <td>${item.qty}</td>
+            <td>${(item.price * item.qty).toFixed(2)}</td>
           </tr>
         `;
-      });
-      const delivery = parseInt(deliveryInput.value) || 0;
-      totalEl.innerText = "الإجمالي: " + (sum + delivery) + " جنيه";
-    }
-
-    function changeDelivery(val) {
-      deliveryInput.value = parseInt(deliveryInput.value) + val;
-      renderInvoice();
-    }
-
-    // الكاميرا
-    let codeReader;
-    async function startScanner() {
-      const video = document.getElementById("video");
-      video.style.display = "block";
-      codeReader = new ZXing.BrowserMultiFormatReader();
-      try {
-        const devices = await codeReader.listVideoInputDevices();
-        codeReader.decodeFromVideoDevice(devices[0].deviceId, 'video', (result, err) => {
-          if (result) {
-            addProduct(result.text);
-            codeReader.reset();
-            video.style.display = "none";
-          }
-        });
-      } catch (e) {
-        alert("⚠️ لم يتم العثور على كاميرا");
+        tbody.innerHTML += row;
+        total += item.price * item.qty;
       }
+      total += parseFloat(document.getElementById("delivery").value || 0);
+      document.getElementById("total").textContent = total.toFixed(2);
     }
 
-    deliveryInput.addEventListener("input", renderInvoice);
+    // إرسال الفاتورة عبر واتساب
+    function sendInvoice() {
+      const name = document.getElementById("customerName").value.trim();
+      const phone = document.getElementById("customerPhone").value.trim();
+      if (!name || !phone) {
+        alert("ادخل اسم العميل ورقم الموبايل");
+        return;
+      }
+
+      let message = `🛒 *فاتورة متجر MAS* \n\n👤 العميل: ${name}\n📱 ${phone}\n\n`;
+
+      let total = 0;
+      for (const code in cart) {
+        const item = cart[code];
+        message += `- ${item.name} (${item.unit}) x${item.qty} = ${(item.price * item.qty).toFixed(2)} ج.م\n`;
+        total += item.price * item.qty;
+      }
+
+      const delivery = parseFloat(document.getElementById("delivery").value || 0);
+      total += delivery;
+
+      message += `\n🚚 التوصيل: ${delivery} ج.م\n`;
+      message += `💰 الإجمالي: ${total.toFixed(2)} ج.م\n\nشكراً لتسوقك من متجر MAS 🌹`;
+
+      // فتح واتساب
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank");
+    }
   </script>
 </body>
 </html>
