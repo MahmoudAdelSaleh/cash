@@ -2,25 +2,23 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام بيع بالباركود</title>
+  <title>نظام الفاتورة بالباركود</title>
   <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+    body { font-family: Tahoma, sans-serif; text-align: center; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #aaa; padding: 8px; text-align: center; }
-    #total { font-weight: bold; font-size: 18px; margin-top: 15px; }
-    .delivery-controls { margin: 10px 0; }
+    th, td { border: 1px solid #444; padding: 5px; text-align: center; }
+    #reader { width: 100%; margin: auto; }
+    .controls { margin: 10px 0; }
     button { padding: 5px 10px; margin: 2px; }
   </style>
 </head>
 <body>
-  <h2>📦 نظام البيع بالباركود</h2>
-  
-  <!-- قارئ الباركود -->
-  <div id="reader" style="width:300px; margin:auto;"></div>
-  
-  <!-- جدول الفاتورة -->
+  <h2>💳 نظام البيع بالباركود</h2>
+
+  <div id="reader"></div>
+
+  <h3>الفاتورة</h3>
   <table>
     <thead>
       <tr>
@@ -31,92 +29,95 @@
       </tr>
     </thead>
     <tbody id="invoice"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3">التوصيل</td>
+        <td>
+          <input type="number" id="delivery" value="20" style="width:70px;">
+          <button onclick="changeDelivery(1)">+</button>
+          <button onclick="changeDelivery(-1)">-</button>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3"><b>الإجمالي الكلي</b></td>
+        <td id="total">0</td>
+      </tr>
+    </tfoot>
   </table>
 
-  <!-- التحكم في التوصيل -->
-  <div class="delivery-controls">
-    <label>🚚 التوصيل: </label>
-    <button onclick="changeDelivery(-5)">-</button>
-    <input type="number" id="delivery" value="20" onchange="updateTotal()" style="width:60px; text-align:center;">
-    <button onclick="changeDelivery(5)">+</button>
-    <span>جنيه</span>
-  </div>
-
-  <!-- الإجمالي -->
-  <div id="total">الإجمالي: 0 جنيه</div>
-
   <script>
-    // المنتجات (مثال)
+    // قائمة المنتجات التجريبية (ممكن تتغير لقاعدة بيانات)
     const products = {
-      "123456789012": { name: "بيبسي", price: 15 },
-      "987654321098": { name: "شيبسي", price: 10 },
-      "111222333444": { name: "مياه معدنية", price: 5 }
+      "123456789": { name: "بيبسي", price: 10 },
+      "987654321": { name: "شيبسي", price: 5 },
+      "111111111": { name: "شوكولاتة", price: 15 }
     };
 
     let invoice = [];
+    let delivery = 20;
 
-    // تشغيل قارئ الباركود
-    function onScanSuccess(decodedText) {
-      if (products[decodedText]) {
-        addToInvoice(products[decodedText]);
-      } else {
-        alert("❌ منتج غير مسجل: " + decodedText);
-      }
+    // تحديث الفاتورة على الجدول
+    function renderInvoice() {
+      const tbody = document.getElementById("invoice");
+      tbody.innerHTML = "";
+      let total = 0;
+
+      invoice.forEach(item => {
+        const row = document.createElement("tr");
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td>${item.price}</td>
+          <td>${item.qty}</td>
+          <td>${subtotal}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      total += delivery;
+      document.getElementById("total").innerText = total;
     }
 
-    let html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader", { fps: 10, qrbox: 250 });
-    html5QrcodeScanner.render(onScanSuccess);
+    // إضافة منتج بالفاتورة
+    function addProduct(code) {
+      if (!products[code]) {
+        alert("🚫 المنتج غير موجود!");
+        return;
+      }
 
-    // إضافة منتج للفاتورة
-    function addToInvoice(product) {
-      let existing = invoice.find(p => p.name === product.name);
-      if (existing) {
-        existing.qty++;
+      let item = invoice.find(p => p.code === code);
+      if (item) {
+        item.qty++;
       } else {
-        invoice.push({ ...product, qty: 1 });
+        invoice.push({ code, name: products[code].name, price: products[code].price, qty: 1 });
       }
       renderInvoice();
     }
 
-    // عرض الفاتورة
-    function renderInvoice() {
-      let tbody = document.getElementById("invoice");
-      tbody.innerHTML = "";
-      let subtotal = 0;
+    // التحكم في التوصيل
+    document.getElementById("delivery").addEventListener("input", function() {
+      delivery = parseFloat(this.value) || 0;
+      renderInvoice();
+    });
 
-      invoice.forEach(item => {
-        let total = item.price * item.qty;
-        subtotal += total;
-        tbody.innerHTML += `
-          <tr>
-            <td>${item.name}</td>
-            <td>${item.price}</td>
-            <td>${item.qty}</td>
-            <td>${total}</td>
-          </tr>`;
-      });
-
-      updateTotal(subtotal);
+    function changeDelivery(step) {
+      delivery += step;
+      document.getElementById("delivery").value = delivery;
+      renderInvoice();
     }
 
-    // تحديث التوصيل والإجمالي
-    function changeDelivery(amount) {
-      let deliveryInput = document.getElementById("delivery");
-      let newValue = parseInt(deliveryInput.value) + amount;
-      if (newValue < 0) newValue = 0;
-      deliveryInput.value = newValue;
-      updateTotal();
+    // تشغيل الكاميرا وقراءة الباركود
+    function onScanSuccess(decodedText) {
+      addProduct(decodedText);
     }
 
-    function updateTotal(subtotal = null) {
-      if (subtotal === null) {
-        subtotal = invoice.reduce((sum, item) => sum + item.price * item.qty, 0);
-      }
-      let delivery = parseInt(document.getElementById("delivery").value) || 0;
-      let total = subtotal + delivery;
-      document.getElementById("total").innerText = `الإجمالي: ${total} جنيه`;
-    }
+    let html5QrcodeScanner = new Html5QrcodeScanner("reader", {
+      fps: 10,
+      qrbox: 250
+    });
+    html5QrcodeScanner.render(onScanSuccess);
   </script>
 </body>
 </html>
