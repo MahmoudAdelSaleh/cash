@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام الفاتورة - متجرك</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 10px; }
+    #reader { width: 100%; max-width: 400px; margin: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f4f4f4; }
+    .total { font-weight: bold; margin-top: 10px; font-size: 18px; }
+    .actions { margin-top: 20px; }
+    button { padding: 10px 15px; margin: 5px; font-size: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>📦 نظام الفاتورة - متجرك</h2>
+
+  <div id="reader"></div>
+
+  <table id="invoice">
+    <thead>
+      <tr>
+        <th>المنتج</th>
+        <th>السعر</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="total">الإجمالي: <span id="total">0</span> ج.م</div>
+
+  <div>
+    <label><input type="checkbox" id="delivery"> خدمة التوصيل (+20 ج.م)</label>
+  </div>
+
+  <div class="actions">
+    <button onclick="sendWhatsApp()">📲 إرسال واتس</button>
+    <button onclick="resetInvoice()">🗑️ مسح الفاتورة</button>
+  </div>
+
+  <script>
+    let products = [];
+    let total = 0;
+
+    // تحميل ملف JSON
+    fetch("p.json")
+      .then(res => res.json())
+      .then(data => products = data);
+
+    // بدء الماسح
+    function onScanSuccess(decodedText) {
+      let product = products.find(p => p.barcode == decodedText);
+      if (product) {
+        addToInvoice(product);
+      } else {
+        alert("❌ المنتج غير موجود: " + decodedText);
+      }
+    }
+
+    function onScanError(errorMessage) {
+      console.log(errorMessage);
+    }
+
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader",
+      { fps: 10, qrbox: { width: 400, height: 100 } }, // مستطيل شريطي
+      false
+    );
+    html5QrcodeScanner.render(onScanSuccess, onScanError);
+
+    function addToInvoice(product) {
+      let tbody = document.querySelector("#invoice tbody");
+      let row = document.createElement("tr");
+      row.innerHTML = `<td>${product.name}</td><td>${product.price} ج.م</td>`;
+      tbody.appendChild(row);
+
+      total += product.price;
+      document.getElementById("total").innerText = total;
+    }
+
+    function sendWhatsApp() {
+      let rows = document.querySelectorAll("#invoice tbody tr");
+      if (rows.length === 0) {
+        alert("لا توجد منتجات في الفاتورة");
+        return;
+      }
+
+      let msg = "🧾 فاتورة متجرك:\n";
+      rows.forEach(r => {
+        let cols = r.querySelectorAll("td");
+        msg += `- ${cols[0].innerText}: ${cols[1].innerText}\n`;
+      });
+
+      let finalTotal = total;
+      if (document.getElementById("delivery").checked) {
+        finalTotal += 20;
+        msg += "🚚 خدمة التوصيل: 20 ج.م\n";
+      }
+
+      msg += `\nالإجمالي: ${finalTotal} ج.م`;
+
+      let phone = "201000000000"; // رقمك هنا
+      let url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank");
+    }
+
+    function resetInvoice() {
+      document.querySelector("#invoice tbody").innerHTML = "";
+      total = 0;
+      document.getElementById("total").innerText = total;
+      document.getElementById("delivery").checked = false;
+    }
+  </script>
+</body>
+</html>
