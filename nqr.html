@@ -73,6 +73,7 @@
 <button onclick="sendWhatsApp()">  إرسال الفاتورة عبر واتساب</button>
 
 <script type="module">
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
   import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
   import { Html5Qrcode } from "https://unpkg.com/html5-qrcode@2.3.4/dist/html5-qrcode.min.js";
@@ -96,9 +97,14 @@
   
   // جلب كل العملاء مرة واحدة عند تحميل الصفحة
   async function fetchAllCustomers() {
-    const customersRef = collection(db, "customers");
-    const querySnapshot = await getDocs(customersRef);
-    allCustomers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    try {
+      const customersRef = collection(db, "customers");
+      const querySnapshot = await getDocs(customersRef);
+      allCustomers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Error fetching customers: ", error);
+      alert("حدث خطأ أثناء جلب بيانات العملاء. يرجى التحقق من اتصالك بالإنترنت.");
+    }
   }
 
   // دالة البحث عن العملاء
