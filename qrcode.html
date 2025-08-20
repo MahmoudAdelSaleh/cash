@@ -1,165 +1,164 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام الفاتورة - متجرك</title>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <style>
-    body { font-family: Tahoma, sans-serif; margin:0; padding:10px; background:#f5f5f5; }
-    header { text-align:center; padding:10px; font-size:22px; background:#007bff; color:#fff; }
-    .field { margin-bottom:10px; }
-    label { display:block; margin-bottom:4px; font-weight:bold; }
-    input { width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; font-size:16px; }
-    button { width:100%; padding:10px; margin-top:8px; font-size:18px; border:none; border-radius:5px; background:#28a745; color:#fff; cursor:pointer; }
-    button:hover { opacity:0.9; }
-    table { width:100%; border-collapse:collapse; margin-top:15px; font-size:16px; }
-    th, td { border:1px solid #ddd; padding:8px; text-align:center; }
-    th { background:#007bff; color:#fff; }
-    #reader { width:100%; max-width:400px; margin:10px auto; }
-    .delivery { margin-top:10px; display:flex; align-items:center; gap:5px; }
-    .delivery input { width:100px !important; }
-    .total { margin-top:15px; font-size:20px; text-align:center; font-weight:bold; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام الفاتورة - متجرك</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: Tahoma, sans-serif; margin:0; padding:10px; background:#f5f5f5; }
+    header { text-align:center; padding:10px; font-size:22px; background:#007bff; color:#fff; }
+    .field { margin-bottom:10px; }
+    label { display:block; margin-bottom:4px; font-weight:bold; }
+    input { width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; font-size:16px; }
+    button { width:100%; padding:10px; margin-top:8px; font-size:18px; border:none; border-radius:5px; background:#28a745; color:#fff; cursor:pointer; }
+    button:hover { opacity:0.9; }
+    table { width:100%; border-collapse:collapse; margin-top:15px; font-size:16px; }
+    th, td { border:1px solid #ddd; padding:8px; text-align:center; }
+    th { background:#007bff; color:#fff; }
+    #reader { width:100%; max-width:400px; margin:10px auto; }
+    .delivery { margin-top:10px; display:flex; align-items:center; gap:5px; }
+    .delivery input { width:100px !important; }
+    .total { margin-top:15px; font-size:20px; text-align:center; font-weight:bold; }
+  </style>
 </head>
 <body>
 
 <header>
-  <img src="logo.png" alt="شعار المتجر" style="max-height:50px; vertical-align:middle;">
-  <span> فاتورة البيع</span>
+  <img src="logo.png" alt="شعار المتجر" style="max-height:50px; vertical-align:middle;">
+  <span> فاتورة البيع</span>
 </header>
 
 <div class="field">
-  <label>اسم العميل</label>
-  <input type="text" id="customerName" placeholder="مثلاً: أحمد علي">
+  <label>اسم العميل</label>
+  <input type="text" id="customerName" placeholder="مثلاً: أحمد علي">
 </div>
 
 <div class="field">
-  <label>رقم الهاتف</label>
-  <input type="tel" id="customerPhone" placeholder="201xxxxxxxxx">
+  <label>رقم الهاتف</label>
+  <input type="tel" id="customerPhone" placeholder="201xxxxxxxxx">
 </div>
 
 <button onclick="startScanner()">  📷 مسح باركود المنتج</button>
 <div id="reader"></div>
 
 <table>
-  <thead>
-    <tr>
-      <th>الصنف</th>
-      <th>الوحدة</th>
-      <th>السعر</th>
-      <th>الكمية</th>
-      <th>الإجمالي</th>
-    </tr>
-  </thead>
-  <tbody id="invoiceBody"></tbody>
+  <thead>
+    <tr>
+      <th>الصنف</th>
+      <th>الوحدة</th>
+      <th>السعر</th>
+      <th>الكمية</th>
+      <th>الإجمالي</th>
+    </tr>
+  </thead>
+  <tbody id="invoiceBody"></tbody>
 </table>
 
 <div class="delivery">
-  <label>خدمة التوصيل (جنيه):</label>
-  <button onclick="changeDelivery(-5)">-5</button>
-  <input type="number" id="delivery" value="10" min="0" onchange="updateTotal()">
-  <button onclick="changeDelivery(5)">+5</button>
+  <label>خدمة التوصيل (جنيه):</label>
+  <button onclick="changeDelivery(-5)">-5</button>
+  <input type="number" id="delivery" value="10" min="0" onchange="updateTotal()">
+  <button onclick="changeDelivery(5)">+5</button>
 </div>
 
 <div class="total">
-  الإجمالي الكلي: <span id="totalAmount">0.00</span> ج.م
+  الإجمالي الكلي: <span id="totalAmount">0.00</span> ج.م
 </div>
 
 <button onclick="sendWhatsApp()">  إرسال الفاتورة عبر واتساب</button>
 
 <script>
-  let productsDB = [];
-  let invoice = {};
+  let productsDB = [];
+  let invoice = {};
 
-  fetch("p.json")
-    .then(r => r.json())
-    .then(data => productsDB = data)
-    .catch(err => alert("لم يتم تحميل قاعدة البيانات، افتح الصفحة عبر سيرفر"));
+  fetch("p.json")
+    .then(r => r.json())
+    .then(data => productsDB = data)
+    .catch(err => alert("لم يتم تحميل قاعدة البيانات، افتح الصفحة عبر سيرفر"));
 
-  function startScanner() {
-    const qr = new Html5Qrcode("reader");
-    qr.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      code => {
-        addProduct(code);
-        qr.stop();
-      },
-      err => {}
-    );
-  }
+  function startScanner() {
+    const qr = new Html5Qrcode("reader");
+    qr.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      code => {
+        addProduct(code);
+        qr.stop();
+      },
+      err => {}
+    );
+  }
 
-  function addProduct(barcode) {
-    // تحويل الباركود النصي الذي تم قراءته إلى رقم للمطابقة
+  function addProduct(barcode) {
     const numericBarcode = parseInt(barcode);
-    const prod = productsDB.find(p => p.barcode === numericBarcode);
-    if (!prod) return alert("المنتج غير موجود في القاعدة");
-    if (!invoice[numericBarcode]) {
+    const prod = productsDB.find(p => p.barcode === numericBarcode);
+    if (!prod) return alert("المنتج غير موجود في القاعدة");
+    if (!invoice[numericBarcode]) {
       invoice[numericBarcode] = { ...prod, qty: 0 };
     }
-    invoice[numericBarcode].qty++;
-    renderInvoice();
-  }
+    invoice[numericBarcode].qty++;
+    renderInvoice();
+  }
 
-  function renderInvoice() {
-    const tbody = document.getElementById("invoiceBody");
-    tbody.innerHTML = "";
-    let total = 0;
-    for (const code in invoice) {
-      const item = invoice[code];
-      const rowTotal = item.price * item.qty;
-      total += rowTotal;
-      tbody.innerHTML += `<tr>
-        <td>${item.name}</td>
-        <td>${item.unit ? item.unit : '-'}</td>
-        <td>${item.price.toFixed(2)}</td>
-        <td>${item.qty}</td>
-        <td>${rowTotal.toFixed(2)}</td>
-      </tr>`;
-    }
-    const delivery = parseFloat(document.getElementById("delivery").value) || 0;
-    document.getElementById("totalAmount").innerText = (total + delivery).toFixed(2);
-  }
+  function renderInvoice() {
+    const tbody = document.getElementById("invoiceBody");
+    tbody.innerHTML = "";
+    let total = 0;
+    for (const code in invoice) {
+      const item = invoice[code];
+      const rowTotal = item.price * item.qty;
+      total += rowTotal;
+      tbody.innerHTML += `<tr>
+        <td>${item.name}</td>
+        <td>${item.unit ? item.unit : '-'}</td>
+        <td>${item.price.toFixed(2)}</td>
+        <td>${item.qty}</td>
+        <td>${rowTotal.toFixed(2)}</td>
+      </tr>`;
+    }
+    const delivery = parseFloat(document.getElementById("delivery").value) || 0;
+    document.getElementById("totalAmount").innerText = (total + delivery).toFixed(2);
+  }
 
-  function changeDelivery(val) {
-    const inp = document.getElementById("delivery");
-    inp.value = Math.max(0, parseFloat(inp.value) + val);
-    updateTotal();
-  }
+  function changeDelivery(val) {
+    const inp = document.getElementById("delivery");
+    inp.value = Math.max(0, parseFloat(inp.value) + val);
+    updateTotal();
+  }
 
-  function updateTotal() {
-    renderInvoice();
-  }
+  function updateTotal() {
+    renderInvoice();
+  }
 
-  function sendWhatsApp() {
-    const name = document.getElementById("customerName").value.trim();
-    const phone = document.getElementById("customerPhone").value.trim();
-    if (!name || !phone) return alert("أدخل اسم العميل ورقم الهاتف");
+  function sendWhatsApp() {
+    const name = document.getElementById("customerName").value.trim();
+    const phone = document.getElementById("customerPhone").value.trim();
+    if (!name || !phone) return alert("أدخل اسم العميل ورقم الهاتف");
 
-    let msg = `*فاتورة من متجرك* \n🧾 عميل: ${name}\n📞 ${phone}\n\n`;
-    let total = 0;
-    for (const code in invoice) {
-      const item = invoice[code];
-      const rowT = item.price * item.qty;
-      msg += `${item.name} (${item.unit}) x${item.qty} = ${rowT.toFixed(2)} ج.م\n`;
-      total += rowT;
-    }
+    let msg = `*فاتورة من متجرك* \n🧾 عميل: ${name}\n📞 ${phone}\n\n`;
+    let total = 0;
+    for (const code in invoice) {
+      const item = invoice[code];
+      const rowT = item.price * item.qty;
+      msg += `${item.name} (${item.unit ? item.unit : '-'}) x${item.qty} = ${rowT.toFixed(2)} ج.م\n`;
+      total += rowT;
+    }
 
-    const delivery = parseFloat(document.getElementById("delivery").value) || 0;
-    total += delivery;
-    msg += `\n🚚 التوصيل: ${delivery.toFixed(2)} ج.م\n💰 الإجمالي: ${total.toFixed(2)} ج.م\n`;
-    msg += "\nشكرًا لاختيارك متجرنا 🌹";
+    const delivery = parseFloat(document.getElementById("delivery").value) || 0;
+    total += delivery;
+    msg += `\n🚚 التوصيل: ${delivery.toFixed(2)} ج.م\n💰 الإجمالي: ${total.toFixed(2)} ج.م\n`;
+    msg += "\nشكرًا لاختيارك متجرنا 🌹";
 
-    const url = `https://wa.me/${phone.replace(/^0/, "20")}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
-  }
+    const url = `https://wa.me/${phone.replace(/^0/, "20")}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  }
 
-  // إتاحة الدوال على النطاق العام (global scope)
-  window.startScanner = startScanner;
-  window.changeDelivery = changeDelivery;
-  window.updateTotal = updateTotal;
-  window.sendWhatsApp = sendWhatsApp;
+  // إتاحة الدوال على النطاق العام (global scope)
+  window.startScanner = startScanner;
+  window.changeDelivery = changeDelivery;
+  window.updateTotal = updateTotal;
+  window.sendWhatsApp = sendWhatsApp;
 </script>
 </body>
 </html>
