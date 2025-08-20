@@ -91,7 +91,7 @@
   }
 
   function addProduct(barcode) {
-    const prod = productsDB.find(p => p.barcode1 === barcode);
+    const prod = productsDB.find(p => p.barcode === barcode);
     if (!prod) return alert("المنتج غير موجود في القاعدة");
     if (!invoice[barcode]) invoice[barcode] = { ...prod, qty: 0 };
     invoice[barcode].qty++;
