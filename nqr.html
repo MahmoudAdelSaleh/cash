@@ -4,111 +4,183 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>نظام الفاتورة - متجرك</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background: #f4f4f4; }
-    #reader { width: 300px; margin: auto; }
-    .delivery-box { margin: 20px 0; font-size: 18px; }
-    button { padding: 5px 10px; margin: 5px; }
+    body { font-family: Tahoma, sans-serif; margin:0; padding:10px; background:#f5f5f5; }
+    header { text-align:center; padding:10px; font-size:22px; background:#007bff; color:#fff; }
+    .field { margin-bottom:10px; }
+    label { display:block; margin-bottom:4px; font-weight:bold; }
+    input { width:100%; padding:8px; border-radius:5px; border:1px solid #ccc; font-size:16px; }
+    button { width:100%; padding:10px; margin-top:8px; font-size:18px; border:none; border-radius:5px; background:#28a745; color:#fff; cursor:pointer; }
+    button:hover { opacity:0.9; }
+    table { width:100%; border-collapse:collapse; margin-top:15px; font-size:16px; }
+    th, td { border:1px solid #ddd; padding:8px; text-align:center; }
+    th { background:#007bff; color:#fff; }
+    #reader { width:100%; max-width:400px; margin:10px auto; }
+    .delivery { margin-top:10px; display:flex; align-items:center; gap:5px; }
+    .delivery input { width:100px !important; }
+    .total { margin-top:15px; font-size:20px; text-align:center; font-weight:bold; }
   </style>
 </head>
 <body>
 
-  <h2>🧾 نظام الفاتورة</h2>
+<header>
+  <img src="logo.png" alt="شعار المتجر" style="max-height:50px; vertical-align:middle;">
+  <span> فاتورة البيع</span>
+</header>
 
-  <!-- الكاميرا -->
-  <div id="reader"></div>
+<div class="field">
+  <label>اسم العميل</label>
+  <input type="text" id="customerName" placeholder="مثلاً: أحمد علي">
+</div>
 
-  <!-- جدول المنتجات -->
-  <table id="invoiceTable">
-    <thead>
-      <tr>
-        <th>الباركود</th>
-        <th>المنتج</th>
-        <th>السعر</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<div class="field">
+  <label>رقم الهاتف</label>
+  <input type="tel" id="customerPhone" placeholder="201xxxxxxxxx">
+</div>
 
-  <!-- خدمة التوصيل -->
-  <div class="delivery-box">
-    <button onclick="changeDelivery(-5)">➖</button>
-    خدمة التوصيل: <span id="deliveryFee">30</span> ج.م
-    <button onclick="changeDelivery(5)">➕</button>
-  </div>
+<button onclick="startScanner()">  📷 مسح باركود المنتج</button>
+<div id="reader"></div>
 
-  <!-- الإجمالي -->
-  <h3>الإجمالي: <span id="total">0</span> ج.م</h3>
+<table>
+  <thead>
+    <tr>
+      <th>الصنف</th>
+      <th>الوحدة</th>
+      <th>السعر</th>
+      <th>الكمية</th>
+      <th>الإجمالي</th>
+    </tr>
+  </thead>
+  <tbody id="invoiceBody"></tbody>
+</table>
 
-  <!-- إرسال واتس -->
-  <button onclick="sendWhatsApp()">إرسال عبر واتساب</button>
+<div class="delivery">
+  <label>خدمة التوصيل (جنيه):</label>
+  <button onclick="changeDelivery(-5)">-5</button>
+  <input type="number" id="delivery" value="10" min="0" onchange="updateTotal()">
+  <button onclick="changeDelivery(5)">+5</button>
+</div>
 
-  <script>
-    // المنتجات المخزنة (مثال)
-    const products = {
-      "32894022011": { name: "امريكانا فول مدمس الطعم الاصلي ،400غم", price: 23 },
-      "123456789": { name: "بيبسي كان", price: 10 },
-      "987654321": { name: "شيبسي كبير", price: 15 }
-    };
+<div class="total">
+  الإجمالي الكلي: <span id="totalAmount">0.00</span> ج.م
+</div>
 
-    let items = [];
-    let deliveryFee = 30;
+<button onclick="sendWhatsApp()">  إرسال الفاتورة عبر واتساب</button>
 
-    // تحديث الجدول والإجمالي
-    function renderTable() {
-      const tbody = document.querySelector("#invoiceTable tbody");
-      tbody.innerHTML = "";
-      let subtotal = 0;
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-      items.forEach(item => {
-        subtotal += item.price;
-        tbody.innerHTML += `
-          <tr>
-            <td>${item.barcode}</td>
-            <td>${item.name}</td>
-            <td>${item.price} ج.م</td>
-          </tr>`;
-      });
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc",
+    authDomain: "cash-84acc.firebaseapp.com",
+    projectId: "cash-84acc",
+    storageBucket: "cash-84acc.appspot.com",
+    messagingSenderId: "774737678098",
+    appId: "1:774737678098:web:8b918375b4e51692b7edcb"
+  };
 
-      document.getElementById("total").innerText = subtotal + deliveryFee;
-      document.getElementById("deliveryFee").innerText = deliveryFee;
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let invoice = {};
+
+  async function getProductByBarcode(barcode) {
+    const productsRef = collection(db, "items");
+    const q = query(productsRef, where("code", "==", barcode));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs[0].data();
     }
+    return null;
+  }
 
-    // تغيير رسوم التوصيل
-    function changeDelivery(value) {
-      deliveryFee = Math.max(0, deliveryFee + value);
-      renderTable();
-    }
-
-    // تشغيل الكاميرا
-    function onScanSuccess(decodedText) {
-      if (products[decodedText]) {
-        items.push({ barcode: decodedText, ...products[decodedText] });
-        renderTable();
-      } else {
-        alert("المنتج غير موجود بالمخزن: " + decodedText);
-      }
-    }
-
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader", { fps: 10, qrbox: 250 }
+  function startScanner() {
+    const qr = new Html5Qrcode("reader");
+    qr.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      async (code) => {
+        const product = await getProductByBarcode(code);
+        if (product) {
+          addProduct(product, code);
+        } else {
+          alert("المنتج غير موجود في قاعدة البيانات");
+        }
+        qr.stop();
+      },
+      (err) => {}
     );
-    html5QrcodeScanner.render(onScanSuccess);
+  }
 
-    // إرسال الفاتورة عبر واتساب
-    function sendWhatsApp() {
-      let msg = "🧾 فاتورتك:\n";
-      items.forEach(item => msg += `${item.name} - ${item.price} ج.م\n`);
-      msg += `\nخدمة التوصيل: ${deliveryFee} ج.م\n`;
-      msg += `الإجمالي: ${document.getElementById("total").innerText} ج.م\n`;
+  function addProduct(product, barcode) {
+    if (!invoice[barcode]) invoice[barcode] = { ...product, qty: 0 };
+    invoice[barcode].qty++;
+    renderInvoice();
+  }
 
-      const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-      window.open(url, "_blank");
+  function renderInvoice() {
+    const tbody = document.getElementById("invoiceBody");
+    tbody.innerHTML = "";
+    let total = 0;
+    for (const code in invoice) {
+      const item = invoice[code];
+      const rowTotal = item.price * item.qty;
+      total += rowTotal;
+      tbody.innerHTML += `<tr>
+        <td>${item.name}</td>
+        <td>${item.unit}</td>
+        <td>${item.price.toFixed(2)}</td>
+        <td>${item.qty}</td>
+        <td>${rowTotal.toFixed(2)}</td>
+      </tr>`;
     }
-  </script>
+    const delivery = parseFloat(document.getElementById("delivery").value) || 0;
+    document.getElementById("totalAmount").innerText = (total + delivery).toFixed(2);
+  }
+
+  function changeDelivery(val) {
+    const inp = document.getElementById("delivery");
+    inp.value = Math.max(0, parseFloat(inp.value) + val);
+    updateTotal();
+  }
+
+  function updateTotal() {
+    renderInvoice();
+  }
+
+  function sendWhatsApp() {
+    const name = document.getElementById("customerName").value.trim();
+    const phone = document.getElementById("customerPhone").value.trim();
+    if (!name || !phone) return alert("أدخل اسم العميل ورقم الهاتف");
+
+    let msg = `*فاتورة من متجرك* \n🧾 عميل: ${name}\n📞 ${phone}\n\n`;
+    let total = 0;
+    for (const code in invoice) {
+      const item = invoice[code];
+      const rowT = item.price * item.qty;
+      msg += `${item.name} (${item.unit}) x${item.qty} = ${rowT.toFixed(2)} ج.م\n`;
+      total += rowT;
+    }
+
+    const delivery = parseFloat(document.getElementById("delivery").value) || 0;
+    total += delivery;
+    msg += `\n🚚 التوصيل: ${delivery.toFixed(2)} ج.م\n💰 الإجمالي: ${total.toFixed(2)} ج.م\n`;
+    msg += "\nشكرًا لاختيارك متجرنا 🌹";
+
+    const url = `https://wa.me/${phone.replace(/^0/, "20")}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  }
+
+  // Expose functions to the global scope for event handlers
+  window.startScanner = startScanner;
+  window.changeDelivery = changeDelivery;
+  window.updateTotal = updateTotal;
+  window.sendWhatsApp = sendWhatsApp;
+</script>
 </body>
 </html>
