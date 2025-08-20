@@ -4,220 +4,123 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>نظام الفاتورة - متجرك</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
   <style>
-    body {
-      font-family: "Tahoma", sans-serif;
-      direction: rtl;
-      text-align: center;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      background: #007bff;
-      color: #fff;
-      padding: 10px;
-      border-radius: 10px;
-    }
-    .container {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      margin: auto;
-      max-width: 600px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    input, select, button {
-      width: 90%;
-      padding: 8px;
-      margin: 5px 0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 8px;
-      text-align: center;
-    }
-    .total {
-      margin-top: 15px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .btn {
-      background: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    .btn:hover {
-      background: #0056b3;
-    }
+    body { font-family: Tahoma, sans-serif; margin: 10px; background: #f9f9f9; }
+    h1 { text-align: center; }
+    #reader { width: 100%; margin: auto; }
+    .product-list, .invoice-summary { background: #fff; padding: 10px; margin-top: 15px; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
+    .product-item { display: flex; justify-content: space-between; margin: 5px 0; }
+    .btn { background: #007bff; color: #fff; padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #0056b3; }
+    .delivery-charge { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    .delivery-charge button { width: 30px; height: 30px; font-size: 18px; border-radius: 50%; border: none; background: #444; color: white; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>🧾 نظام الفاتورة - متجرك</h1>
-  <div class="container">
+  <h1>📦 نظام الفاتورة</h1>
 
-    <!-- اختيار العميل -->
-    <label for="clientSelect">اختر العميل:</label>
-    <select id="clientSelect">
-      <option value="">-- اختر عميل --</option>
-    </select>
+  <div id="reader"></div>
 
-    <!-- بيانات العميل -->
-    <label for="customerName">اسم العميل</label>
-    <input type="text" id="customerName" placeholder="اسم العميل">
-
-    <label for="customerPhone">رقم الهاتف</label>
-    <input type="text" id="customerPhone" placeholder="رقم الهاتف">
-
-    <!-- إدخال بيانات المنتج -->
-    <label for="barcode">الباركود</label>
-    <input type="text" id="barcode" placeholder="ادخل الباركود">
-
-    <label for="productName">اسم المنتج</label>
-    <input type="text" id="productName" placeholder="اسم المنتج">
-
-    <label for="price">السعر</label>
-    <input type="number" id="price" placeholder="السعر">
-
-    <label for="quantity">الكمية</label>
-    <input type="number" id="quantity" value="1">
-
-    <button class="btn" onclick="addItem()">➕ إضافة للفاتورة</button>
-
-    <!-- جدول الفاتورة -->
-    <table id="invoiceTable">
-      <thead>
-        <tr>
-          <th>المنتج</th>
-          <th>الكمية</th>
-          <th>السعر</th>
-          <th>الإجمالي</th>
-          <th>حذف</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div class="total">الإجمالي الكلي: <span id="total">0</span> جنيه</div>
-
-    <button class="btn" onclick="sendWhatsApp()">📲 إرسال عبر واتساب</button>
+  <div class="product-list">
+    <h3>المنتجات</h3>
+    <div id="items"></div>
   </div>
 
-  <!-- Firebase + منطق تحميل العملاء -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <div class="invoice-summary">
+    <h3>الإجمالي</h3>
+    <p>الإجمالي الفرعي: <span id="subtotal">0</span> جنيه</p>
 
-    // إعدادات Firebase الخاصة بك
+    <div class="delivery-charge">
+      <label>خدمة التوصيل:</label>
+      <button onclick="updateDelivery(-5)">-</button>
+      <span id="deliveryFee">30</span> جنيه
+      <button onclick="updateDelivery(5)">+</button>
+    </div>
+
+    <p>الإجمالي الكلي: <span id="total">0</span> جنيه</p>
+    <button class="btn" onclick="sendWhatsApp()">إرسال الفاتورة واتساب</button>
+  </div>
+
+  <script>
+    // إعداد Firebase
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "XXXX",
+      authDomain: "XXXX.firebaseapp.com",
+      databaseURL: "https://XXXX-default-rtdb.firebaseio.com",
+      projectId: "XXXX",
+      storageBucket: "XXXX.appspot.com",
+      messagingSenderId: "XXXX",
+      appId: "XXXX"
     };
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database(app);
 
-    // تهيئة Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    let products = [];
+    let subtotal = 0;
+    let deliveryFee = 30; // الافتراضي
 
-    // تحميل العملاء من Firestore
-    async function loadClients() {
-      const clientSelect = document.getElementById("clientSelect");
-      const querySnapshot = await getDocs(collection(db, "clients"));
-      
-      querySnapshot.forEach((doc) => {
-        const client = doc.data();
-        const option = document.createElement("option");
-        option.value = JSON.stringify(client);
-        option.textContent = client.name + " - " + client.phone;
-        clientSelect.appendChild(option);
+    async function loadProducts() {
+      const res = await fetch("p.json");
+      products = await res.json();
+    }
+    loadProducts();
+
+    function onScanSuccess(decodedText) {
+      let product = products.find(p => p.barcode == decodedText);
+      if (product) {
+        subtotal += product.price;
+        document.getElementById("items").innerHTML += `
+          <div class="product-item">
+            <span>${product.name}</span>
+            <span>${product.price} جنيه</span>
+          </div>`;
+        document.getElementById("subtotal").innerText = subtotal;
+        calculateTotal();
+        saveInvoice(product);
+      } else {
+        alert("المنتج غير موجود!");
+      }
+    }
+
+    function saveInvoice(product) {
+      const ref = db.ref("invoices").push();
+      ref.set({
+        name: product.name,
+        price: product.price,
+        time: new Date().toISOString()
       });
     }
 
-    // عند اختيار عميل
-    document.getElementById("clientSelect").addEventListener("change", function() {
-      if (this.value) {
-        const client = JSON.parse(this.value);
-        document.getElementById("customerName").value = client.name || "";
-        document.getElementById("customerPhone").value = client.phone || "";
-      } else {
-        document.getElementById("customerName").value = "";
-        document.getElementById("customerPhone").value = "";
-      }
-    });
+    function updateDelivery(amount) {
+      deliveryFee = Math.max(0, deliveryFee + amount);
+      document.getElementById("deliveryFee").innerText = deliveryFee;
+      calculateTotal();
+    }
 
-    window.onload = loadClients;
-  </script>
-
-  <!-- منطق الفاتورة -->
-  <script>
-    let total = 0;
-
-    function addItem() {
-      const productName = document.getElementById("productName").value;
-      const price = parseFloat(document.getElementById("price").value);
-      const quantity = parseInt(document.getElementById("quantity").value);
-
-      if (!productName || !price || !quantity) {
-        alert("يرجى إدخال بيانات صحيحة");
-        return;
-      }
-
-      const table = document.getElementById("invoiceTable").getElementsByTagName("tbody")[0];
-      const row = table.insertRow();
-
-      row.insertCell(0).textContent = productName;
-      row.insertCell(1).textContent = quantity;
-      row.insertCell(2).textContent = price;
-      row.insertCell(3).textContent = price * quantity;
-      const deleteCell = row.insertCell(4);
-      const btn = document.createElement("button");
-      btn.textContent = "❌";
-      btn.className = "btn";
-      btn.onclick = function () {
-        total -= price * quantity;
-        document.getElementById("total").textContent = total;
-        row.remove();
-      };
-      deleteCell.appendChild(btn);
-
-      total += price * quantity;
-      document.getElementById("total").textContent = total;
-
-      // إعادة تعيين المدخلات
-      document.getElementById("barcode").value = "";
-      document.getElementById("productName").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("quantity").value = 1;
+    function calculateTotal() {
+      let total = subtotal + deliveryFee;
+      document.getElementById("total").innerText = total;
     }
 
     function sendWhatsApp() {
-      const name = document.getElementById("customerName").value;
-      const phone = document.getElementById("customerPhone").value;
-      const totalText = document.getElementById("total").textContent;
-      let msg = `فاتورة جديدة\nالعميل: ${name}\nرقم: ${phone}\nالإجمالي: ${totalText} جنيه`;
-
-      let url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-      window.open(url, "_blank");
+      let total = document.getElementById("total").innerText;
+      let msg = `فاتورتك من متجرك:\nالإجمالي الفرعي: ${subtotal} جنيه\nخدمة التوصيل: ${deliveryFee} جنيه\nالإجمالي الكلي: ${total} جنيه`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
     }
+
+    const html5QrCode = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+        html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 250 },
+          onScanSuccess
+        );
+      }
+    });
   </script>
 </body>
 </html>
