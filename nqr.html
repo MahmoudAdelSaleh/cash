@@ -4,123 +4,139 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>نظام الفاتورة - متجرك</title>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
-  <style>
-    body { font-family: Tahoma, sans-serif; margin: 10px; background: #f9f9f9; }
-    h1 { text-align: center; }
-    #reader { width: 100%; margin: auto; }
-    .product-list, .invoice-summary { background: #fff; padding: 10px; margin-top: 15px; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
-    .product-item { display: flex; justify-content: space-between; margin: 5px 0; }
-    .btn { background: #007bff; color: #fff; padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; }
-    .btn:hover { background: #0056b3; }
-    .delivery-charge { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
-    .delivery-charge button { width: 30px; height: 30px; font-size: 18px; border-radius: 50%; border: none; background: #444; color: white; cursor: pointer; }
-  </style>
-</head>
-<body>
-  <h1>📦 نظام الفاتورة</h1>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script type="module">
+    // استدعاء الفايربيز
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  <div id="reader"></div>
-
-  <div class="product-list">
-    <h3>المنتجات</h3>
-    <div id="items"></div>
-  </div>
-
-  <div class="invoice-summary">
-    <h3>الإجمالي</h3>
-    <p>الإجمالي الفرعي: <span id="subtotal">0</span> جنيه</p>
-
-    <div class="delivery-charge">
-      <label>خدمة التوصيل:</label>
-      <button onclick="updateDelivery(-5)">-</button>
-      <span id="deliveryFee">30</span> جنيه
-      <button onclick="updateDelivery(5)">+</button>
-    </div>
-
-    <p>الإجمالي الكلي: <span id="total">0</span> جنيه</p>
-    <button class="btn" onclick="sendWhatsApp()">إرسال الفاتورة واتساب</button>
-  </div>
-
-  <script>
-    // إعداد Firebase
     const firebaseConfig = {
-      apiKey: "XXXX",
-      authDomain: "XXXX.firebaseapp.com",
-      databaseURL: "https://XXXX-default-rtdb.firebaseio.com",
-      projectId: "XXXX",
-      storageBucket: "XXXX.appspot.com",
-      messagingSenderId: "XXXX",
-      appId: "XXXX"
+      apiKey: "YOUR_KEY",
+      authDomain: "YOUR_DOMAIN",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER",
+      appId: "YOUR_APPID"
     };
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database(app);
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
     let products = [];
-    let subtotal = 0;
-    let deliveryFee = 30; // الافتراضي
+    let delivery = 30; // القيمة الافتراضية للتوصيل
 
     async function loadProducts() {
       const res = await fetch("p.json");
       products = await res.json();
     }
-    loadProducts();
 
-    function onScanSuccess(decodedText) {
-      let product = products.find(p => p.barcode == decodedText);
-      if (product) {
-        subtotal += product.price;
-        document.getElementById("items").innerHTML += `
-          <div class="product-item">
-            <span>${product.name}</span>
-            <span>${product.price} جنيه</span>
-          </div>`;
-        document.getElementById("subtotal").innerText = subtotal;
-        calculateTotal();
-        saveInvoice(product);
-      } else {
-        alert("المنتج غير موجود!");
-      }
-    }
-
-    function saveInvoice(product) {
-      const ref = db.ref("invoices").push();
-      ref.set({
-        name: product.name,
-        price: product.price,
-        time: new Date().toISOString()
+    async function loadClients() {
+      const snap = await getDocs(collection(db, "clients"));
+      const clientSelect = document.getElementById("client");
+      snap.forEach(doc => {
+        const opt = document.createElement("option");
+        opt.value = doc.id;
+        opt.textContent = doc.data().name;
+        clientSelect.appendChild(opt);
       });
     }
 
-    function updateDelivery(amount) {
-      deliveryFee = Math.max(0, deliveryFee + amount);
-      document.getElementById("deliveryFee").innerText = deliveryFee;
-      calculateTotal();
+    window.onload = () => {
+      loadProducts();
+      loadClients();
+      updateDelivery();
+    };
+
+    function addItem(barcode) {
+      const product = products.find(p => p.barcode == barcode);
+      if (!product) return alert("الصنف غير موجود");
+
+      const table = document.getElementById("invoiceBody");
+      const row = table.insertRow();
+      row.insertCell(0).innerText = product.name;
+      row.insertCell(1).innerText = product.price;
+      row.insertCell(2).innerHTML = `<input type="number" value="1" min="1" onchange="updateTotal()">`;
+      row.insertCell(3).innerText = product.price;
+      updateTotal();
     }
 
-    function calculateTotal() {
-      let total = subtotal + deliveryFee;
-      document.getElementById("total").innerText = total;
+    function updateTotal() {
+      let total = 0;
+      const table = document.getElementById("invoiceBody");
+      for (let i = 0; i < table.rows.length; i++) {
+        const price = parseFloat(table.rows[i].cells[1].innerText);
+        const qty = parseInt(table.rows[i].cells[2].children[0].value);
+        const subtotal = price * qty;
+        table.rows[i].cells[3].innerText = subtotal;
+        total += subtotal;
+      }
+      total += delivery;
+      document.getElementById("total").innerText = total + " جنيه";
+    }
+
+    function increaseDelivery() {
+      delivery += 5;
+      updateDelivery();
+    }
+
+    function decreaseDelivery() {
+      if (delivery > 0) {
+        delivery -= 5;
+        updateDelivery();
+      }
+    }
+
+    function updateDelivery() {
+      document.getElementById("deliveryValue").innerText = delivery + " جنيه";
+      updateTotal();
     }
 
     function sendWhatsApp() {
-      let total = document.getElementById("total").innerText;
-      let msg = `فاتورتك من متجرك:\nالإجمالي الفرعي: ${subtotal} جنيه\nخدمة التوصيل: ${deliveryFee} جنيه\nالإجمالي الكلي: ${total} جنيه`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-    }
-
-    const html5QrCode = new Html5Qrcode("reader");
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 250 },
-          onScanSuccess
-        );
+      let msg = "فاتورتك:\n";
+      const table = document.getElementById("invoiceBody");
+      for (let i = 0; i < table.rows.length; i++) {
+        msg += `${table.rows[i].cells[0].innerText} × ${table.rows[i].cells[2].children[0].value} = ${table.rows[i].cells[3].innerText}\n`;
       }
-    });
+      msg += `خدمة التوصيل: ${delivery} جنيه\n`;
+      msg += `الإجمالي: ${document.getElementById("total").innerText}`;
+      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+    }
   </script>
+</head>
+<body>
+  <h2>فاتورة المبيعات</h2>
+
+  <label>العميل:</label>
+  <select id="client">
+    <option value="">-- اختر عميل --</option>
+  </select>
+  <br><br>
+
+  <div id="reader" style="width:250px"></div>
+  <br>
+
+  <table border="1" width="100%">
+    <thead>
+      <tr>
+        <th>الصنف</th>
+        <th>السعر</th>
+        <th>الكمية</th>
+        <th>الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody id="invoiceBody"></tbody>
+  </table>
+
+  <br>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button onclick="decreaseDelivery()">-</button>
+    <span>خدمة التوصيل: <span id="deliveryValue">30 جنيه</span></span>
+    <button onclick="increaseDelivery()">+</button>
+  </div>
+  <br>
+
+  <h3>الإجمالي: <span id="total">0 جنيه</span></h3>
+
+  <button onclick="sendWhatsApp()">إرسال للواتساب</button>
 </body>
 </html>
