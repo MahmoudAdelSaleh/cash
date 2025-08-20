@@ -20,6 +20,9 @@
     .delivery { margin-top:10px; display:flex; align-items:center; gap:5px; }
     .delivery input { width:100px !important; }
     .total { margin-top:15px; font-size:20px; text-align:center; font-weight:bold; }
+    #customerSuggestions { background:#fff; max-height:150px; overflow-y:auto; border:1px solid #ccc; position:absolute; z-index:100; width:90%; display:none; }
+    #customerSuggestions div { padding:8px; cursor:pointer; border-bottom:1px solid #eee; }
+    #customerSuggestions div:hover { background:#f5f5f5; }
   </style>
 </head>
 <body>
@@ -29,14 +32,15 @@
   <span> فاتورة البيع</span>
 </header>
 
-<div class="field">
+<div class="field" style="position:relative;">
   <label>اسم العميل</label>
-  <input type="text" id="customerName" placeholder="مثلاً: أحمد علي">
+  <input type="text" id="customerName" placeholder="اكتب أول أحرف من اسم العميل">
+  <div id="customerSuggestions"></div>
 </div>
 
 <div class="field">
   <label>رقم الهاتف</label>
-  <input type="tel" id="customerPhone" placeholder="201xxxxxxxxx">
+  <input type="tel" id="customerPhone" placeholder="201xxxxxxxxx" disabled>
 </div>
 
 <button onclick="startScanner()">  📷 مسح باركود المنتج</button>
@@ -69,11 +73,11 @@
 <button onclick="sendWhatsApp()">  إرسال الفاتورة عبر واتساب</button>
 
 <script type="module">
-  // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
   import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  import { Html5Qrcode } from "https://unpkg.com/html5-qrcode@2.3.4/dist/html5-qrcode.min.js";
 
-  // Your web app's Firebase configuration
+  // بيانات مشروعك (يرجى التأكد من صحتها)
   const firebaseConfig = {
     apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc",
     authDomain: "cash-84acc.firebaseapp.com",
@@ -83,11 +87,64 @@
     appId: "1:774737678098:web:8b918375b4e51692b7edcb"
   };
 
-  // Initialize Firebase
+  // تهيئة Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
   let invoice = {};
+  let allCustomers = [];
+  
+  // جلب كل العملاء مرة واحدة عند تحميل الصفحة
+  async function fetchAllCustomers() {
+    const customersRef = collection(db, "customers");
+    const querySnapshot = await getDocs(customersRef);
+    allCustomers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  // دالة البحث عن العملاء
+  async function searchCustomers() {
+    const searchTerm = document.getElementById('customerName').value.trim().toLowerCase();
+    const suggestionsDiv = document.getElementById('customerSuggestions');
+    suggestionsDiv.innerHTML = '';
+    
+    if (searchTerm.length > 0) {
+      const matchedCustomers = allCustomers.filter(customer =>
+        customer.name.toLowerCase().includes(searchTerm)
+      );
+
+      if (matchedCustomers.length > 0) {
+        suggestionsDiv.style.display = 'block';
+        matchedCustomers.forEach(customer => {
+          const div = document.createElement('div');
+          div.textContent = `${customer.name} - ${customer.phone || 'لا يوجد هاتف'}`;
+          div.onclick = () => {
+            document.getElementById('customerName').value = customer.name;
+            document.getElementById('customerPhone').value = customer.phone || '';
+            suggestionsDiv.style.display = 'none';
+          };
+          suggestionsDiv.appendChild(div);
+        });
+      } else {
+        suggestionsDiv.style.display = 'none';
+      }
+    } else {
+      suggestionsDiv.style.display = 'none';
+    }
+  }
+
+  // ربط حقل البحث بدالة البحث
+  document.addEventListener('DOMContentLoaded', () => {
+    fetchAllCustomers();
+    document.getElementById('customerName').addEventListener('input', searchCustomers);
+
+    // إخفاء قائمة الاقتراحات عند النقر خارجها
+    document.addEventListener('click', (e) => {
+        const suggestionsDiv = document.getElementById('customerSuggestions');
+        if (!e.target.closest('.field')) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+  });
 
   async function getProductByBarcode(barcode) {
     const productsRef = collection(db, "items");
@@ -176,7 +233,6 @@
     window.open(url, "_blank");
   }
 
-  // Expose functions to the global scope for event handlers
   window.startScanner = startScanner;
   window.changeDelivery = changeDelivery;
   window.updateTotal = updateTotal;
