@@ -18,6 +18,7 @@
     --border-color: #dee2e6;
     --shadow-light: 0 0 6px rgba(0, 0, 0, 0.1);
   }
+
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg-light); color: var(--text-dark); direction: rtl; }
   #app-container { display: none; }
   header { background: var(--primary-color); color: var(--white); padding: 15px; text-align: center; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
@@ -68,7 +69,7 @@
   #login-form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
   #login-form h2 { margin-bottom: 20px; }
   #logoutBtn { background: var(--danger-color); }
-  
+ 
   .item-card {
       border: 1px solid var(--border-color);
       border-radius: 6px;
@@ -116,6 +117,12 @@
   #salesCategoryContainer button {
     flex: 0 0 auto;
   }
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
   @media (max-width: 768px) {
     nav button { font-size: 14px; padding: 10px 5px; }
     header { font-size: 20px; }
@@ -141,6 +148,7 @@
 </style>
 </head>
 <body>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
   import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -149,8 +157,9 @@
   const firebaseConfig = {
     apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc",
     authDomain: "cash-84acc.firebaseapp.com",
+    databaseURL: "https://cash-84acc-default-rtdb.firebaseio.com",
     projectId: "cash-84acc",
-    storageBucket: "cash-84acc.appspot.com",
+    storageBucket: "cash-84acc.firebasestorage.app",
     messagingSenderId: "774737678098",
     appId: "1:774737678098:web:8b918375b4e51692b7edcb",
     measurementId: "G-GRKNPJ45N1"
@@ -162,13 +171,10 @@
 
   // --- دوال Firestore العامة ---
 
-  // دالة لإضافة مستند جديد
   window.addDocument = async function(collectionName, data) {
     const dataWithTimestamp = { ...data, createdAt: serverTimestamp() };
     return await addDoc(collection(db, collectionName), dataWithTimestamp);
   }
-
-  // دالة لقراءة مجموعة من المستندات بشكل لحظي
   window.readCollection = function(collectionName, callback, orderByField = "createdAt", orderDirection = "desc") {
     const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection));
     return onSnapshot(q, snapshot => {
@@ -177,8 +183,6 @@
       callback(docs);
     });
   }
-
-  // دالة لجلب مستند واحد
   window.getDocument = async function(collectionName, docId) {
       const docRef = doc(db, collectionName, docId);
       const docSnap = await getDoc(docRef);
@@ -189,7 +193,6 @@
           return null;
       }
   }
-  
   window.getCollection = async function(collectionName, orderByField = "createdAt", orderDirection = "desc") {
     const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection));
     const querySnapshot = await getDocs(q);
@@ -197,20 +200,14 @@
     querySnapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
     return docs;
   }
-
-  // دالة لتحديث مستند
   window.updateDocument = async function(collectionName, docId, data) {
     const docRef = doc(db, collectionName, docId);
     return await updateDoc(docRef, data);
   }
-
-  // دالة لحذف مستند
   window.deleteDocument = async function(collectionName, docId) {
     const docRef = doc(db, collectionName, docId);
     return await deleteDoc(docRef);
   }
-
-  // دالة لتنفيذ عمليات متعددة دفعة واحدة (مفيدة لتحديث المخزون)
   window.writeBatchDocuments = async function(operations) {
       const batch = writeBatch(db);
       operations.forEach(op => {
@@ -223,8 +220,8 @@
       });
       await batch.commit();
   }
-
 </script>
+
 <div id="login-container">
     <form id="login-form">
         <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
@@ -314,13 +311,12 @@
 
     <section id="sales" class="active" style="position: relative;">
       <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
-      <div id="salesCategoryContainer">
+      <div id="salesCategoryContainer" style="display: flex; justify-content: space-between; align-items: center;">
         <button id="prevCategoryBtn" class="btn-small"><i class="fas fa-chevron-right"></i></button>
         <div id="salesCategoryFilters" class="flex-container"></div>
         <button id="nextCategoryBtn" class="btn-small"><i class="fas fa-chevron-left"></i></button>
       </div>
-      <div id="itemGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;">
-        </div>
+      <div id="itemGrid" class="product-grid"></div>
       <div class="form-group" style="position: relative;">
         <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
         <div id="customerSuggestions"></div>
@@ -332,11 +328,10 @@
       <div class="form-group flex-container">
         <label for="quantityInput">الكمية:</label>
         <button id="decrementQtyBtn" class="btn-small">-1</button>
-        <input type="number" id="quantityInput" value="1" min="1" />
+        <input type="number" id="quantityInput" value="1" min="1" style="flex: 1; text-align: center;" />
         <button id="incrementQtyBtn" class="btn-small">+1</button>
         <button id="addToInvoiceBtn"><i class="fas fa-plus-circle"></i> إضافة للفاتورة</button>
       </div>
-
       <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
       <table>
         <thead>
@@ -351,7 +346,6 @@
         <tbody id="invoiceTable"></tbody>
       </table>
       <h3 style="text-align: left;">إجمالي الفاتورة: <span id="invoiceTotal">0.00</span> ج.م</h3>
-
       <div class="form-group">
         <label>طريقة الدفع:</label>
         <div style="display: flex; gap: 15px;">
@@ -360,27 +354,24 @@
           <label><input type="radio" name="paymentMethod" value="wallet"> محفظة</label>
         </div>
       </div>
-
       <div class="form-group flex-container">
         <label for="amountPaidInput">المبلغ المدفوع:</label>
         <input type="number" id="amountPaidInput" placeholder="المبلغ المدفوع" min="0" step="0.01" />
       </div>
-
       <div class="form-group flex-container">
         <label for="deliveryFeeInput">خدمة التوصيل:</label>
         <button id="decrementDeliveryBtn" class="btn-small">-5</button>
-        <input type="number" id="deliveryFeeInput" value="20" min="0" step="1" />
+        <input type="number" id="deliveryFeeInput" value="20" min="0" step="1" style="flex: 1; text-align: center;" />
         <button id="incrementDeliveryBtn" class="btn-small">+5</button>
       </div>
-      
       <h3 style="text-align: left;">
         <span id="changeText">الباقي للعميل:</span>
         <span id="changeAmount">0.00</span> ج.م
       </h3>
-
       <div class="flex-container flex-end" style="margin-top: 20px;">
-        <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة الفاتورة</button>
+        <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة</button>
         <button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ الفاتورة</button>
+        <button id="sendWhatsappBtn" class="btn-success" style="background-color: #25d366;"><i class="fab fa-whatsapp"></i> واتساب</button>
       </div>
     </section>
 
@@ -391,7 +382,6 @@
 
     <section id="summary">
       <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
-
       <div class="form-group flex-container">
           <label for="summaryGroupSelect">تجميع حسب:</label>
           <select id="summaryGroupSelect">
@@ -413,7 +403,6 @@
         </thead>
         <tbody id="salesSummaryTable"></tbody>
       </table>
-
       <div style="margin-top: 30px;">
         <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
         <div id="bestSellingItems" class="summary-box">
@@ -446,6 +435,7 @@
   </main>
 </div>
 <div id="notification-container"></div>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     // #region Global Variables and DOM Elements
@@ -487,6 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
         invoiceTotalSpan: document.getElementById("invoiceTotal"),
         saveInvoiceBtn: document.getElementById("saveInvoiceBtn"),
         printInvoiceBtn: document.getElementById("printInvoiceBtn"),
+        sendWhatsappBtn: document.getElementById("sendWhatsappBtn"),
         paymentMethodInputs: document.querySelectorAll('input[name="paymentMethod"]'),
         amountPaidInput: document.getElementById("amountPaidInput"),
         deliveryFeeInput: document.getElementById("deliveryFeeInput"),
@@ -512,7 +503,9 @@ document.addEventListener("DOMContentLoaded", () => {
         newUsernameInput: document.getElementById("newUsernameInput"),
         newUserPasswordInput: document.getElementById("newUserPasswordInput"),
         saveUserBtn: document.getElementById("saveUserBtn"),
-        usersList: document.getElementById("usersList")
+        usersList: document.getElementById("usersList"),
+        prevCategoryBtn: document.getElementById('prevCategoryBtn'),
+        nextCategoryBtn: document.getElementById('nextCategoryBtn'),
     };
 
     let appState = {
@@ -529,6 +522,7 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedItem: null,
         selectedCustomer: null,
         unsubscribe: {},
+        allCategories: [],
         currentCategoryPage: 0,
         categoriesPerPage: 10
     };
@@ -674,10 +668,26 @@ document.addEventListener("DOMContentLoaded", () => {
             printWindow.document.close();
             printWindow.focus();
             setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+        },
+        sendWhatsappMessage: (invoice) => {
+            if (!invoice.customerPhone) {
+                Helpers.showNotification("لا يوجد رقم هاتف للعميل لإرسال الفاتورة.", 5000);
+                return;
+            }
+            let message = `أهلاً ${invoice.customerName || "بالعميل"}،\n\nفاتورتك رقم: ${invoice.invoiceNumber}\n\nتفاصيل الفاتورة:\n`;
+            invoice.items.forEach(item => {
+                message += `- ${item.name}: ${item.qty} x ${item.price.toFixed(2)} = ${(item.price * item.qty).toFixed(2)} ج.م\n`;
+            });
+            if (invoice.deliveryFee > 0) {
+                message += `\nخدمة التوصيل: ${invoice.deliveryFee.toFixed(2)} ج.م\n`;
+            }
+            message += `\nالإجمالي: ${invoice.total.toFixed(2)} ج.م`;
+            const whatsappUrl = `https://wa.me/${invoice.customerPhone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
         }
     };
     // #endregion
-<script>
+
     // #region Authentication
     const Auth = {
       login: (username, password) => {
@@ -723,6 +733,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
     // #endregion
+
     // #region Items Controller
     const ItemsController = {
         render: () => {
@@ -813,6 +824,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
     // #endregion
+
     // #region Customers Controller
     const CustomersController = {
         render: () => {
@@ -914,7 +926,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             let totalDue = 0;
             let totalPaid = 0;
-            const statementHtml = customerInvoices.map(inv => {
+            const statementHtml = customerInvoices.map((inv, index) => {
                 const remaining = inv.total - inv.amountPaid;
                 const status = remaining > 0.01 ? "عليه" : remaining < -0.01 ? "له" : "صافي";
                 const statusColor = remaining > 0.01 ? 'var(--danger-color)' : remaining < -0.01 ? 'var(--success-color)' : 'var(--primary-color)';
@@ -923,10 +935,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
                 const settlementButton = Math.abs(remaining) > 0.01 ?
                     `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : '';
+                const invoiceNumber = appState.invoices.length - appState.invoices.indexOf(inv);
                 return `
                     <div class="customer-card">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <b>فاتورة رقم: ${inv.id.substring(0, 8)}</b>
+                            <b>فاتورة رقم: ${invoiceNumber}</b>
                             ${settlementButton}
                         </div>
                         <small>التاريخ: ${inv.createdAt.toDate().toLocaleDateString('ar-EG')}</small><br/>
@@ -951,12 +964,13 @@ document.addEventListener("DOMContentLoaded", () => {
         },
     };
     // #endregion
+
     // #region Sales Controller
     const SalesController = {
         renderCategoryFilters: () => {
-            const categoryFiltersDiv = document.getElementById('salesCategoryFilters');
-            const categories = ['all', ...new Set(appState.items.map(item => item.category))].filter(c => c);
-            appState.allCategories = categories;
+            const categories = [...new Set(appState.items.map(item => item.category))].filter(c => c);
+            appState.allCategories = ['all', ...categories];
+            appState.currentCategoryPage = 0;
             SalesController.renderCategoryButtons();
         },
         renderCategoryButtons: () => {
@@ -966,19 +980,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const visibleCategories = appState.allCategories.slice(startIndex, endIndex);
             categoryFiltersDiv.innerHTML = visibleCategories.map(category => {
                 const displayName = category === 'all' ? 'الكل' : category;
-                return `<button class="btn-small" data-category="${category}">${displayName}</button>`;
+                return `<button class="btn-small" data-category="${displayName}">${displayName}</button>`;
             }).join("");
-            document.getElementById('prevCategoryBtn').disabled = appState.currentCategoryPage === 0;
-            document.getElementById('nextCategoryBtn').disabled = endIndex >= appState.allCategories.length;
-            categoryFiltersDiv.querySelector('button')?.classList.add('active');
-            const firstCategory = visibleCategories[0];
-            if (firstCategory) {
-                SalesController.renderItemsGrid(firstCategory);
+            DOM.prevCategoryBtn.disabled = appState.currentCategoryPage === 0;
+            DOM.nextCategoryBtn.disabled = endIndex >= appState.allCategories.length;
+            const firstButton = categoryFiltersDiv.querySelector('button');
+            if (firstButton) {
+                firstButton.classList.add('active');
+                SalesController.renderItemsGrid(firstButton.dataset.category);
             }
         },
         renderItemsGrid: (category) => {
             const itemGridDiv = document.getElementById('itemGrid');
-            const itemsToRender = category === 'all'
+            const itemsToRender = category === 'الكل'
                 ? appState.items
                 : appState.items.filter(item => item.category === category);
             itemGridDiv.innerHTML = itemsToRender.filter(item => item.stock === null || item.stock > 0).map(item => `
@@ -1070,12 +1084,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const changeOrBalance = amountPaid - invoiceTotal;
             const customerId = appState.selectedCustomer ? appState.selectedCustomer.id : null;
             const customerName = appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim();
+            const customerPhone = appState.selectedCustomer ? appState.selectedCustomer.phone : null;
             const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
             const deliveryFee = parseFloat(DOM.deliveryFeeInput.value) || 0;
             const newInvoice = {
                 customerId: customerId,
                 customerName: customerName,
-                customerPhone: appState.selectedCustomer ? appState.selectedCustomer.phone : null,
+                customerPhone: customerPhone,
                 paymentMethod: paymentMethod,
                 amountPaid: amountPaid,
                 changeOrBalance: changeOrBalance,
@@ -1107,6 +1122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
     };
     // #endregion
+
     // #region Reports Controller
     const ReportsController = {
         renderInvoices: () => {
@@ -1123,10 +1139,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 const deliveryFeeText = inv.deliveryFee > 0 ? `<p style="margin: 5px 0;"><small>خدمة التوصيل: ${inv.deliveryFee.toFixed(2)} ج.م</small></p>` : '';
                 const settlementButton = Math.abs(inv.changeOrBalance) > 0.01 ?
                     `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : '';
+                const invoiceNumber = appState.invoices.length - index;
                 invoicesList.innerHTML += `
                     <div class="summary-box">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <b>فاتورة رقم: ${appState.invoices.length - index}</b>
+                            <b>فاتورة رقم: ${invoiceNumber}</b>
                             <div class="flex-container">
                                 <button class="btn-small btn-success print-saved-invoice-btn" data-id="${inv.id}"><i class="fas fa-print"></i> طباعة</button>
                                 ${settlementButton}
@@ -1203,7 +1220,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 </tr>
                             `).join("")}
                         </tbody>
-                    </table>
+                </table>
                 `;
             } else {
                 bestSellingItemsDiv.innerHTML = "<p>لا توجد بيانات متاحة.</p>";
@@ -1244,6 +1261,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
     // #endregion
+
     // #region User Management Controller
     const UsersController = {
         render: () => {
@@ -1347,13 +1365,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
     // #endregion
-<script>
+
     // #region App Logic & Event Listeners
     const App = {
         init: async () => {
             App.bindEvents();
             App.listenToFirebase();
-            // Check if items collection is empty and populate from p.json if so
             const itemsInDB = await window.getCollection("items");
             if (itemsInDB.length === 0) {
                 try {
@@ -1387,13 +1404,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 Auth.showApp(appState.currentUser.role || 'user');
             }
         },
+
         listenToFirebase: () => {
             Object.values(appState.unsubscribe).forEach(unsub => unsub());
             appState.unsubscribe.items = window.readCollection("items", (items) => {
                 appState.items = items;
                 if(document.getElementById('items').classList.contains('active')) ItemsController.render();
                 SalesController.renderCategoryFilters();
-                SalesController.renderItemsGrid('all');
             }, "name", "asc");
             appState.unsubscribe.customers = window.readCollection("customers", (customers) => {
                 appState.customers = customers;
@@ -1419,6 +1436,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         },
+
         bindEvents: () => {
             document.addEventListener('click', (e) => {
                 if (!DOM.searchItemInput.contains(e.target) && !DOM.searchResultsDiv.contains(e.target)) DOM.searchResultsDiv.style.display = 'none';
@@ -1462,12 +1480,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (target && target.classList.contains("settle-invoice-btn")) ReportsController.settleInvoice(target.getAttribute("data-invoice-id"));
             });
             // Sales Events
-            document.getElementById('salesCategoryFilters').addEventListener('click', (e) => {
+            DOM.salesCategoryFilters.addEventListener('click', (e) => {
                 const target = e.target.closest("button");
                 if (!target) return;
                 document.querySelectorAll('#salesCategoryFilters button').forEach(b => b.classList.remove('active'));
                 target.classList.add('active');
                 SalesController.renderItemsGrid(target.dataset.category);
+            });
+            DOM.prevCategoryBtn.addEventListener('click', () => {
+                if (appState.currentCategoryPage > 0) {
+                    appState.currentCategoryPage--;
+                    SalesController.renderCategoryButtons();
+                }
+            });
+            DOM.nextCategoryBtn.addEventListener('click', () => {
+                const totalPages = Math.ceil(appState.allCategories.length / appState.categoriesPerPage);
+                if (appState.currentCategoryPage < totalPages - 1) {
+                    appState.currentCategoryPage++;
+                    SalesController.renderCategoryButtons();
+                }
             });
             DOM.searchItemInput.addEventListener("input", (e) => {
                 const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase());
@@ -1521,6 +1552,20 @@ document.addEventListener("DOMContentLoaded", () => {
             DOM.deliveryFeeInput.addEventListener('input', SalesController.renderInvoice);
             DOM.addToInvoiceBtn.addEventListener("click", SalesController.addToInvoice);
             DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
+            DOM.sendWhatsappBtn.addEventListener("click", () => {
+                const customerId = appState.selectedCustomer ? appState.selectedCustomer.id : null;
+                const customerName = appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim();
+                const customerPhone = appState.selectedCustomer ? appState.selectedCustomer.phone : null;
+                const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
+                const dummyInvoice = {
+                    invoiceNumber: 'مسودة',
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    items: [...appState.currentInvoice],
+                    total: invoiceTotal,
+                };
+                Helpers.sendWhatsappMessage(dummyInvoice);
+            });
             DOM.invoiceTable.addEventListener("click", (e) => {
                 const target = e.target.closest("button");
                 if (target && target.classList.contains("remove-from-invoice-btn")) SalesController.removeFromInvoice(target.getAttribute("data-index"));
@@ -1575,10 +1620,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0;
                 const changeOrBalance = amountPaid - invoiceTotal;
                 const dummyInvoice = {
-                    id: 'مسودة',
+                    invoiceNumber: 'مسودة',
                     date: new Date().toISOString(),
                     createdAt: { toDate: () => new Date() },
                     customerName: appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim(),
+                    customerPhone: appState.selectedCustomer ? appState.selectedCustomer.phone : null,
                     paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
                     amountPaid: amountPaid,
                     changeOrBalance: changeOrBalance,
@@ -1588,19 +1634,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
                 const printContent = Helpers.generatePrintContent(dummyInvoice);
                 Helpers.printContent(printContent);
-            });
-            document.getElementById('prevCategoryBtn').addEventListener('click', () => {
-                if (appState.currentCategoryPage > 0) {
-                    appState.currentCategoryPage--;
-                    SalesController.renderCategoryButtons();
-                }
-            });
-            document.getElementById('nextCategoryBtn').addEventListener('click', () => {
-                const totalPages = Math.ceil(appState.allCategories.length / appState.categoriesPerPage);
-                if (appState.currentCategoryPage < totalPages - 1) {
-                    appState.currentCategoryPage++;
-                    SalesController.renderCategoryButtons();
-                }
             });
         },
     };
