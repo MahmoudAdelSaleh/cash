@@ -151,7 +151,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
   // بيانات مشروعك (يرجى التأكد من صحتها)
   const firebaseConfig = {
@@ -294,11 +294,6 @@
       <div class="form-group flex-container">
         <input type="text" id="newCustomerId" placeholder="رقم العميل" />
         <input type="text" id="newCustomerName" placeholder="اسم العميل" />
-        <input type="tel" id="newCustomerPhone" placeholder="رقم الهاتف" />
-      </div>
-      <div class="form-group flex-container">
-        <input type="text" id="newCustomerAddress" placeholder="العنوان" />
-        <input type="text" id="newCustomerNotes" placeholder="ملاحظات" />
         <button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ العميل</button>
       </div>
       <div id="customersList"></div>
@@ -311,12 +306,10 @@
 
     <section id="sales" class="active" style="position: relative;">
       <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
-      <div id="salesCategoryContainer" style="display: flex; justify-content: space-between; align-items: center;">
-        <button id="prevCategoryBtn" class="btn-small"><i class="fas fa-chevron-right"></i></button>
-        <div id="salesCategoryFilters" class="flex-container"></div>
-        <button id="nextCategoryBtn" class="btn-small"><i class="fas fa-chevron-left"></i></button>
-      </div>
-      <div id="itemGrid" class="product-grid"></div>
+      <div id="salesCategoryFilters" class="flex-container" style="justify-content: flex-start; margin-bottom: 15px;">
+        </div>
+      <div id="itemGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;">
+        </div>
       <div class="form-group" style="position: relative;">
         <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
         <div id="customerSuggestions"></div>
@@ -326,12 +319,11 @@
         <div id="searchResults"></div>
       </div>
       <div class="form-group flex-container">
-        <label for="quantityInput">الكمية:</label>
-        <button id="decrementQtyBtn" class="btn-small">-1</button>
-        <input type="number" id="quantityInput" value="1" min="1" style="flex: 1; text-align: center;" />
-        <button id="incrementQtyBtn" class="btn-small">+1</button>
+        <label for="quantitySelect">الكمية:</label>
+        <select id="quantitySelect"></select>
         <button id="addToInvoiceBtn"><i class="fas fa-plus-circle"></i> إضافة للفاتورة</button>
       </div>
+
       <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
       <table>
         <thead>
@@ -346,32 +338,25 @@
         <tbody id="invoiceTable"></tbody>
       </table>
       <h3 style="text-align: left;">إجمالي الفاتورة: <span id="invoiceTotal">0.00</span> ج.م</h3>
-      <div class="form-group">
-        <label>طريقة الدفع:</label>
-        <div style="display: flex; gap: 15px;">
-          <label><input type="radio" name="paymentMethod" value="cash" checked> نقداً</label>
-          <label><input type="radio" name="paymentMethod" value="visa"> فيزا</label>
-          <label><input type="radio" name="paymentMethod" value="wallet"> محفظة</label>
-        </div>
-      </div>
+
       <div class="form-group flex-container">
-        <label for="amountPaidInput">المبلغ المدفوع:</label>
+        <label for="paymentMethodSelect">طريقة الدفع:</label>
+        <select id="paymentMethodSelect">
+          <option value="cash">نقداً</option>
+          <option value="visa">فيزا</option>
+          <option value="wallet">محفظة</option>
+        </select>
         <input type="number" id="amountPaidInput" placeholder="المبلغ المدفوع" min="0" step="0.01" />
       </div>
-      <div class="form-group flex-container">
-        <label for="deliveryFeeInput">خدمة التوصيل:</label>
-        <button id="decrementDeliveryBtn" class="btn-small">-5</button>
-        <input type="number" id="deliveryFeeInput" value="20" min="0" step="1" style="flex: 1; text-align: center;" />
-        <button id="incrementDeliveryBtn" class="btn-small">+5</button>
-      </div>
+
       <h3 style="text-align: left;">
         <span id="changeText">الباقي للعميل:</span>
         <span id="changeAmount">0.00</span> ج.م
       </h3>
+
       <div class="flex-container flex-end" style="margin-top: 20px;">
-        <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة</button>
+        <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة الفاتورة</button>
         <button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ الفاتورة</button>
-        <button id="sendWhatsappBtn" class="btn-success" style="background-color: #25d366;"><i class="fab fa-whatsapp"></i> واتساب</button>
       </div>
     </section>
 
@@ -382,6 +367,7 @@
 
     <section id="summary">
       <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
+
       <div class="form-group flex-container">
           <label for="summaryGroupSelect">تجميع حسب:</label>
           <select id="summaryGroupSelect">
@@ -403,11 +389,17 @@
         </thead>
         <tbody id="salesSummaryTable"></tbody>
       </table>
+
       <div style="margin-top: 30px;">
         <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
         <div id="bestSellingItems" class="summary-box">
           <p>لا توجد بيانات متاحة.</p>
         </div>
+      </div>
+
+      <div class="flex-container flex-end" style="margin-top: 20px;">
+        <button id="resetAfterDateBtn" class="btn-warning"><i class="fas fa-history"></i> حذف الفواتير بعد تاريخ</button>
+        <button id="fullResetBtn" class="btn-danger"><i class="fas fa-trash-alt"></i> إعادة ضبط كاملة</button>
       </div>
     </section>
 
@@ -427,14 +419,11 @@
               <button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button>
           </div>
       </div>
-      <div class="flex-container flex-end" style="margin-top: 20px;">
-        <button id="resetAfterDateBtn" class="btn-warning"><i class="fas fa-history"></i> حذف الفواتير بعد تاريخ</button>
-        <button id="fullResetBtn" class="btn-danger"><i class="fas fa-trash-alt"></i> إعادة ضبط كاملة</button>
-      </div>
     </section>
   </main>
 </div>
 <div id="notification-container"></div>
+
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -460,29 +449,20 @@ document.addEventListener("DOMContentLoaded", () => {
         itemsTable: document.getElementById("itemsTable"),
         newCustomerIdInput: document.getElementById("newCustomerId"),
         newCustomerNameInput: document.getElementById("newCustomerName"),
-        newCustomerPhoneInput: document.getElementById("newCustomerPhone"),
-        newCustomerAddressInput: document.getElementById("newCustomerAddress"),
-        newCustomerNotesInput: document.getElementById("newCustomerNotes"),
         saveCustomerBtn: document.getElementById("saveCustomerBtn"),
         customersList: document.getElementById("customersList"),
         customerNameInput: document.getElementById("customerName"),
         customerSuggestionsDiv: document.getElementById("customerSuggestions"),
         searchItemInput: document.getElementById("searchItem"),
         searchResultsDiv: document.getElementById("searchResults"),
-        quantityInput: document.getElementById("quantityInput"),
-        decrementQtyBtn: document.getElementById("decrementQtyBtn"),
-        incrementQtyBtn: document.getElementById("incrementQtyBtn"),
+        quantitySelect: document.getElementById("quantitySelect"),
         addToInvoiceBtn: document.getElementById("addToInvoiceBtn"),
         invoiceTable: document.getElementById("invoiceTable"),
         invoiceTotalSpan: document.getElementById("invoiceTotal"),
         saveInvoiceBtn: document.getElementById("saveInvoiceBtn"),
         printInvoiceBtn: document.getElementById("printInvoiceBtn"),
-        sendWhatsappBtn: document.getElementById("sendWhatsappBtn"),
-        paymentMethodInputs: document.querySelectorAll('input[name="paymentMethod"]'),
+        paymentMethodSelect: document.getElementById("paymentMethodSelect"),
         amountPaidInput: document.getElementById("amountPaidInput"),
-        deliveryFeeInput: document.getElementById("deliveryFeeInput"),
-        decrementDeliveryBtn: document.getElementById("decrementDeliveryBtn"),
-        incrementDeliveryBtn: document.getElementById("incrementDeliveryBtn"),
         changeTextSpan: document.getElementById("changeText"),
         changeAmountSpan: document.getElementById("changeAmount"),
         invoicesList: document.getElementById("invoicesList"),
@@ -503,28 +483,23 @@ document.addEventListener("DOMContentLoaded", () => {
         newUsernameInput: document.getElementById("newUsernameInput"),
         newUserPasswordInput: document.getElementById("newUserPasswordInput"),
         saveUserBtn: document.getElementById("saveUserBtn"),
-        usersList: document.getElementById("usersList"),
-        prevCategoryBtn: document.getElementById('prevCategoryBtn'),
-        nextCategoryBtn: document.getElementById('nextCategoryBtn'),
+        usersList: document.getElementById("usersList")
     };
 
     let appState = {
-        items: [],
-        invoices: [],
-        customers: [],
-        users: [],
-        adminPIN: null,
+        items: [],       // سيتم ملؤها من ملف p.json
+        invoices: [],    // سيتم ملؤها من Firebase
+        customers: [],   // سيتم ملؤها من Firebase
+        users: [],       // سيتم ملؤها من Firebase
+        adminPIN: null,  // سيتم ملؤه من Firebase
         currentUser: null,
         currentInvoice: [],
-        editingItemId: null,
+        editingItemId: null,      
         editingCustomerId: null,
         editingUserId: null,
         selectedItem: null,
         selectedCustomer: null,
-        unsubscribe: {},
-        allCategories: [],
-        currentCategoryPage: 0,
-        categoriesPerPage: 10
+        unsubscribe: {} 
     };
     // #endregion
 
@@ -563,13 +538,11 @@ document.addEventListener("DOMContentLoaded", () => {
             DOM.itemCategorySelect.value = "";
             appState.editingItemId = null;
             DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف';
+            DOM.saveItemBtn.disabled = true; // تعطيل الزر لأن البيانات من ملف
         },
         clearCustomerForm: () => {
             DOM.newCustomerIdInput.value = "";
             DOM.newCustomerNameInput.value = "";
-            DOM.newCustomerPhoneInput.value = "";
-            DOM.newCustomerAddressInput.value = "";
-            DOM.newCustomerNotesInput.value = "";
             appState.editingCustomerId = null;
             DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العميل';
         },
@@ -617,19 +590,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${(item.price * item.qty).toFixed(2)}</td>
                 </tr>
             `).join("");
+
             const customerInfo = invoice.customerName ? `<span>العميل: ${invoice.customerName}</span>` : `<span>العميل: .......................................</span>`;
             const paymentMethodText = invoice.paymentMethod === 'cash' ? 'نقداً' : invoice.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
-            const dateObject = invoice.createdAt && typeof invoice.createdAt.toDate === 'function'
-                ? invoice.createdAt.toDate()
+
+            const dateObject = invoice.createdAt && typeof invoice.createdAt.toDate === 'function' 
+                ? invoice.createdAt.toDate() 
                 : new Date(invoice.date);
             const formattedDate = dateObject.toLocaleString('ar-EG', { dateStyle: 'long', timeStyle: 'short' });
+
             const changeText = invoice.changeOrBalance >= 0 ? 'الباقي للعميل' : 'المطلوب منه';
-            const deliveryFeeText = invoice.deliveryFee > 0 ? `<p><strong>خدمة التوصيل:</strong> ${invoice.deliveryFee.toFixed(2)} ج.م</p>` : '';
+
             return `
                 <div style="direction:rtl; font-family: 'Segoe UI', sans-serif;" id="print-area">
                   <h2 class="print-header">فاتورة مبيعات</h2>
                   <div class="print-details">
-                    <p>رقم الفاتورة: <span>${invoice.invoiceNumber || invoice.id.substring(0, 8)}</span></p>
+                    <p>رقم الفاتورة: <span>${invoice.id.substring(0, 8)}</span></p>
                     <p>التاريخ: <span>${formattedDate}</span></p>
                     <p>${customerInfo}</p>
                   </div>
@@ -650,7 +626,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                   <div class="print-summary">
                     <p><strong>إجمالي الفاتورة:</strong> ${invoice.total.toFixed(2)} ج.م</p>
-                    ${deliveryFeeText}
                     <p><strong>طريقة الدفع:</strong> ${paymentMethodText}</p>
                     <p><strong>المبلغ المدفوع:</strong> ${invoice.amountPaid.toFixed(2)} ج.م</p>
                     <p><strong>${changeText}:</strong> ${Math.abs(invoice.changeOrBalance).toFixed(2)} ج.م</p>
@@ -664,34 +639,17 @@ document.addEventListener("DOMContentLoaded", () => {
             printWindow.document.write('<style>@media print { body { -webkit-print-color-adjust: exact; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid black; padding: 8px; text-align: right; } th { background-color: #f2f2f2; } }</style>');
             printWindow.document.write('</head><body>');
             printWindow.document.write(content);
-            printWindow.document.write('</body></html>');
             printWindow.document.close();
             printWindow.focus();
             setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
-        },
-        sendWhatsappMessage: (invoice) => {
-            if (!invoice.customerPhone) {
-                Helpers.showNotification("لا يوجد رقم هاتف للعميل لإرسال الفاتورة.", 5000);
-                return;
-            }
-            let message = `أهلاً ${invoice.customerName || "بالعميل"}،\n\nفاتورتك رقم: ${invoice.invoiceNumber}\n\nتفاصيل الفاتورة:\n`;
-            invoice.items.forEach(item => {
-                message += `- ${item.name}: ${item.qty} x ${item.price.toFixed(2)} = ${(item.price * item.qty).toFixed(2)} ج.م\n`;
-            });
-            if (invoice.deliveryFee > 0) {
-                message += `\nخدمة التوصيل: ${invoice.deliveryFee.toFixed(2)} ج.م\n`;
-            }
-            message += `\nالإجمالي: ${invoice.total.toFixed(2)} ج.م`;
-            const whatsappUrl = `https://wa.me/${invoice.customerPhone}?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
         }
     };
     // #endregion
-
     // #region Authentication
     const Auth = {
       login: (username, password) => {
         const pin = Helpers.convertToArabicAndEnglishDigits(password);
+
         if (pin === appState.adminPIN) {
           appState.currentUser = { username: "المدير العام", role: "admin" };
           localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
@@ -699,6 +657,7 @@ document.addEventListener("DOMContentLoaded", () => {
           Auth.showApp("admin");
           return;
         }
+
         const user = appState.users.find(u => u.username === username && u.password === pin);
         if (user) {
           appState.currentUser = user;
@@ -721,14 +680,10 @@ document.addEventListener("DOMContentLoaded", () => {
       showApp: (role) => {
         DOM.loginContainer.style.display = "none";
         DOM.appContainer.style.display = "block";
+
         const usersTab = document.querySelector('[data-tab="users"]');
-        const itemsTab = document.querySelector('[data-tab="items"]');
-        const invoicesTab = document.querySelector('[data-tab="invoices"]');
-        const summaryTab = document.querySelector('[data-tab="summary"]');
         usersTab.classList.toggle("hidden", role !== "admin");
-        itemsTab.classList.toggle("hidden", role !== "admin");
-        invoicesTab.classList.toggle("hidden", role !== "admin");
-        summaryTab.classList.toggle("hidden", role !== "admin");
+
         document.querySelector('[data-tab="sales"]').click();
       }
     };
@@ -738,905 +693,811 @@ document.addEventListener("DOMContentLoaded", () => {
     const ItemsController = {
         render: () => {
             const filterCategory = DOM.filterCategorySelect.value;
-            const filteredItems = filterCategory === "all"
-                ? appState.items
+            const filteredItems = filterCategory === "all" 
+                ? appState.items 
                 : appState.items.filter(item => item.category === filterCategory);
+
             DOM.itemsTable.innerHTML = filteredItems.map(item => `
                 <tr>
                     <td>${item.code}</td>
                     <td>${item.name}</td>
                     <td>${item.unit}</td>
                     <td>${parseFloat(item.price).toFixed(2)}</td>
-                    <td>${item.stock !== null ? item.stock : 'غير محدد'}</td>
+                    <td>${item.stock}</td>
                     <td>${item.category || 'غير محدد'}</td>
-                    <td><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button></td>
-                    <td><button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td>
+                    <td><button disabled class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button></td>
+                    <td><button disabled class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td>
                 </tr>
             `).join("");
+             // ملء قائمة الفئات للتصفية
             const categories = [...new Set(appState.items.map(item => item.category))];
             DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>';
-            DOM.itemCategorySelect.innerHTML = '<option value="">اختر الفئة</option>';
             categories.forEach(category => {
-                if (category) {
-                    DOM.filterCategorySelect.innerHTML += `<option value="${category}">${category}</option>`;
-                    DOM.itemCategorySelect.innerHTML += `<option value="${category}">${category}</option>`;
-                }
+                DOM.filterCategorySelect.innerHTML += `<option value="${category}">${category}</option>`;
             });
         },
-        save: async () => {
-            const code = DOM.itemCodeInput.value.trim();
-            const name = DOM.itemNameInput.value.trim();
-            const unit = DOM.itemUnitInput.value.trim();
-            const price = parseFloat(DOM.itemPriceInput.value);
-            const stock = parseInt(DOM.itemStockInput.value);
-            const category = DOM.itemCategorySelect.value.trim();
-            if (!code || !name || isNaN(price) || isNaN(stock)) {
-                Helpers.showNotification("يرجى إدخال جميع البيانات الأساسية.", 5000);
-                return;
-            }
-            const itemData = { code, name, unit, price, stock, category, status: true };
-            try {
-                if (appState.editingItemId) {
-                    const isDuplicate = appState.items.some(item => item.code === code && item.id !== appState.editingItemId);
-                    if (isDuplicate) {
-                        Helpers.showNotification("كود الصنف موجود بالفعل.", 5000);
-                        return;
-                    }
-                    await window.updateDocument("items", appState.editingItemId, itemData);
-                    Helpers.showNotification("تم تعديل الصنف بنجاح.");
-                } else {
-                    const isDuplicate = appState.items.some(item => item.code === code);
-                    if (isDuplicate) {
-                        Helpers.showNotification("كود الصنف موجود بالفعل.", 5000);
-                        return;
-                    }
-                    await window.addDocument("items", itemData);
-                    Helpers.showNotification("تم حفظ الصنف بنجاح.");
-                }
-                Helpers.clearItemForm();
-            } catch (error) {
-                console.error("Error saving item: ", error);
-                Helpers.showNotification("حدث خطأ أثناء حفظ الصنف.", 5000);
-            }
+        save: () => {
+             Helpers.showNotification("لا يمكن تعديل الأصناف لأنها محملة من ملف.", 4000);
         },
         edit: (id) => {
-            const item = appState.items.find(i => i.id === id);
-            if (!item) return;
-            DOM.itemCodeInput.value = item.code;
-            DOM.itemNameInput.value = item.name;
-            DOM.itemUnitInput.value = item.unit;
-            DOM.itemPriceInput.value = item.price;
-            DOM.itemStockInput.value = item.stock;
-            DOM.itemCategorySelect.value = item.category || "";
-            appState.editingItemId = id;
-            DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف';
+             const item = appState.items.find(i => i.id === id);
+             if (!item) return;
+             DOM.itemCodeInput.value = item.code;
+             DOM.itemNameInput.value = item.name;
+             DOM.itemUnitInput.value = item.unit;
+             DOM.itemPriceInput.value = item.price;
+             DOM.itemStockInput.value = item.stock;
+             DOM.itemCategorySelect.value = item.category || "";
+             Helpers.showNotification("وضع العرض فقط.", 2000);
         },
-        delete: async (id) => {
-            if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
-                try {
-                    await window.deleteDocument("items", id);
-                    Helpers.showNotification("تم حذف الصنف بنجاح.");
-                } catch (error) {
-                    console.error("Error deleting item: ", error);
-                    Helpers.showNotification("حدث خطأ أثناء حذف الصنف.", 5000);
-                }
-            }
+        delete: () => {
+             Helpers.showNotification("لا يمكن حذف الأصناف لأنها محملة من ملف.", 4000);
         }
     };
     // #endregion
 
     // #region Customers Controller
     const CustomersController = {
-        render: () => {
-            DOM.customersList.style.display = 'block';
-            DOM.customerStatementSection.style.display = 'none';
-            DOM.customersList.innerHTML = appState.customers.map(cust => `
+    render: () => {
+        DOM.customersList.style.display = 'block';
+        DOM.customerStatementSection.style.display = 'none';
+        DOM.customersList.innerHTML = appState.customers.map(cust => `
+            <div class="customer-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <b>${cust.name}</b><br/>
+                        <small>رقم: ${cust.customerId}</small>
+                    </div>
+                    <div class="flex-container">
+                        <button class="btn-small btn-success show-statement-btn" data-id="${cust.id}"><i class="fas fa-clipboard-list"></i> كشف حساب</button>
+                        <button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            </div>
+        `).join("");
+    },
+    saveCustomer: async () => {
+        const customerId = Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerIdInput.value.trim());
+        const name = DOM.newCustomerNameInput.value.trim();
+        if (!customerId || !name) {
+            Helpers.showNotification("يرجى إدخال رقم واسم العميل.", 5000);
+            return;
+        }
+
+        const customerData = { customerId, name };
+
+        try {
+            if (appState.editingCustomerId) {
+                const isDuplicate = appState.customers.some(cust => cust.customerId === customerId && cust.id !== appState.editingCustomerId);
+                if (isDuplicate) {
+                    Helpers.showNotification("هذا الرقم مستخدم بالفعل لعميل آخر.", 5000);
+                    return;
+                }
+                await window.updateDocument("customers", appState.editingCustomerId, customerData);
+                Helpers.showNotification("تم تعديل العميل بنجاح.");
+            } else {
+                const isDuplicate = appState.customers.some(cust => cust.customerId === customerId);
+                if (isDuplicate) {
+                    Helpers.showNotification("هذا العميل موجود بالفعل.", 5000);
+                    return;
+                }
+                await window.addDocument("customers", customerData);
+                Helpers.showNotification("تم حفظ العميل بنجاح.");
+            }
+            Helpers.clearCustomerForm();
+        } catch (error) {
+            console.error("Error saving customer: ", error);
+            Helpers.showNotification("حدث خطأ أثناء حفظ العميل.", 5000);
+        }
+    },
+    edit: (id) => {
+        const customer = appState.customers.find(c => c.id === id);
+        if (!customer) return;
+        DOM.newCustomerIdInput.value = customer.customerId;
+        DOM.newCustomerNameInput.value = customer.name;
+        appState.editingCustomerId = id;
+        DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل العميل';
+    },
+    deleteCustomer: async (id) => {
+        const customer = appState.customers.find(c => c.id === id);
+        if (!customer) return;
+
+        const hasInvoices = appState.invoices.some(inv => inv.customerId === customer.id);
+        if (hasInvoices) {
+            Helpers.showNotification("لا يمكن حذف هذا العميل لوجود فواتير مسجلة باسمه.", 5000);
+            return;
+        }
+        if (confirm("هل أنت متأكد من حذف هذا العميل؟")) {
+            try {
+                await window.deleteDocument("customers", id);
+                Helpers.showNotification("تم حذف العميل بنجاح.");
+            } catch (error) {
+                console.error("Error deleting customer: ", error);
+                Helpers.showNotification("حدث خطأ أثناء حذف العميل.", 5000);
+            }
+        }
+    },
+    showStatement: (customerId) => {
+        const customer = appState.customers.find(c => c.id === customerId);
+        if (!customer) return;
+
+        DOM.customersList.style.display = 'none';
+        DOM.customerStatementSection.style.display = 'block';
+        DOM.statementCustomerName.textContent = customer.name;
+        DOM.statementDetails.innerHTML = "";
+
+        const customerInvoices = appState.invoices.filter(inv => inv.customerId === customerId);
+
+        if (customerInvoices.length === 0) {
+            DOM.statementDetails.innerHTML = "<p>لا توجد فواتير لهذا العميل.</p>";
+            return;
+        }
+
+        let totalDue = 0;
+        let totalPaid = 0;
+
+        const statementHtml = customerInvoices.map(inv => {
+            const remaining = inv.total - inv.amountPaid;
+            const status = remaining > 0.01 ? "عليه" : remaining < -0.01 ? "له" : "صافي";
+            const statusColor = remaining > 0.01 ? 'var(--danger-color)' : remaining < -0.01 ? 'var(--success-color)' : 'var(--primary-color)';
+
+            totalDue += inv.total;
+            totalPaid += inv.amountPaid;
+
+            const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
+            const settlementButton = Math.abs(remaining) > 0.01 ? 
+                `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : '';
+
+            return `
                 <div class="customer-card">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <div>
-                            <b>${cust.name}</b><br/>
-                            <small>رقم: ${cust.customerId}</small><br/>
-                            <small>هاتف: ${cust.phone || 'غير محدد'}</small><br/>
-                            <small>عنوان: ${cust.address || 'غير محدد'}</small>
-                        </div>
-                        <div class="flex-container">
-                            <button class="btn-small btn-success show-statement-btn" data-id="${cust.id}"><i class="fas fa-clipboard-list"></i> كشف حساب</button>
-                            <button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button>
-                            <button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button>
-                        </div>
+                        <b>فاتورة رقم: ${inv.id.substring(0, 8)}</b>
+                        ${settlementButton}
                     </div>
-                </div>
-            `).join("");
-        },
-        saveCustomer: async () => {
-            const customerId = Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerIdInput.value.trim());
-            const name = DOM.newCustomerNameInput.value.trim();
-            const phone = DOM.newCustomerPhoneInput.value.trim();
-            const address = DOM.newCustomerAddressInput.value.trim();
-            const notes = DOM.newCustomerNotesInput.value.trim();
-            if (!customerId || !name) {
-                Helpers.showNotification("يرجى إدخال رقم واسم العميل.", 5000);
-                return;
-            }
-            const customerData = { customerId, name, phone, address, notes };
-            try {
-                if (appState.editingCustomerId) {
-                    const isDuplicate = appState.customers.some(cust => cust.customerId === customerId && cust.id !== appState.editingCustomerId);
-                    if (isDuplicate) {
-                        Helpers.showNotification("هذا الرقم مستخدم بالفعل لعميل آخر.", 5000);
-                        return;
-                    }
-                    await window.updateDocument("customers", appState.editingCustomerId, customerData);
-                    Helpers.showNotification("تم تعديل العميل بنجاح.");
-                } else {
-                    const isDuplicate = appState.customers.some(cust => cust.customerId === customerId);
-                    if (isDuplicate) {
-                        Helpers.showNotification("هذا العميل موجود بالفعل.", 5000);
-                        return;
-                    }
-                    await window.addDocument("customers", customerData);
-                    Helpers.showNotification("تم حفظ العميل بنجاح.");
-                }
-                Helpers.clearCustomerForm();
-            } catch (error) {
-                console.error("Error saving customer: ", error);
-                Helpers.showNotification("حدث خطأ أثناء حفظ العميل.", 5000);
-            }
-        },
-        edit: (id) => {
-            const customer = appState.customers.find(c => c.id === id);
-            if (!customer) return;
-            DOM.newCustomerIdInput.value = customer.customerId;
-            DOM.newCustomerNameInput.value = customer.name;
-            DOM.newCustomerPhoneInput.value = customer.phone || "";
-            DOM.newCustomerAddressInput.value = customer.address || "";
-            DOM.newCustomerNotesInput.value = customer.notes || "";
-            appState.editingCustomerId = id;
-            DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل العميل';
-        },
-        deleteCustomer: async (id) => {
-            const customer = appState.customers.find(c => c.id === id);
-            if (!customer) return;
-            const hasInvoices = appState.invoices.some(inv => inv.customerId === customer.id);
-            if (hasInvoices) {
-                Helpers.showNotification("لا يمكن حذف هذا العميل لوجود فواتير مسجلة باسمه.", 5000);
-                return;
-            }
-            if (confirm("هل أنت متأكد من حذف هذا العميل؟")) {
-                try {
-                    await window.deleteDocument("customers", id);
-                    Helpers.showNotification("تم حذف العميل بنجاح.");
-                } catch (error) {
-                    console.error("Error deleting customer: ", error);
-                    Helpers.showNotification("حدث خطأ أثناء حذف العميل.", 5000);
-                }
-            }
-        },
-        showStatement: (customerId) => {
-            const customer = appState.customers.find(c => c.id === customerId);
-            if (!customer) return;
-            DOM.customersList.style.display = 'none';
-            DOM.customerStatementSection.style.display = 'block';
-            DOM.statementCustomerName.textContent = customer.name;
-            DOM.statementDetails.innerHTML = "";
-            const customerInvoices = appState.invoices.filter(inv => inv.customerId === customerId);
-            if (customerInvoices.length === 0) {
-                DOM.statementDetails.innerHTML = "<p>لا توجد فواتير لهذا العميل.</p>";
-                return;
-            }
-            let totalDue = 0;
-            let totalPaid = 0;
-            const statementHtml = customerInvoices.map((inv, index) => {
-                const remaining = inv.total - inv.amountPaid;
-                const status = remaining > 0.01 ? "عليه" : remaining < -0.01 ? "له" : "صافي";
-                const statusColor = remaining > 0.01 ? 'var(--danger-color)' : remaining < -0.01 ? 'var(--success-color)' : 'var(--primary-color)';
-                totalDue += inv.total;
-                totalPaid += inv.amountPaid;
-                const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
-                const settlementButton = Math.abs(remaining) > 0.01 ?
-                    `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : '';
-                const invoiceNumber = appState.invoices.length - appState.invoices.indexOf(inv);
-                return `
-                    <div class="customer-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <b>فاتورة رقم: ${invoiceNumber}</b>
-                            ${settlementButton}
-                        </div>
-                        <small>التاريخ: ${inv.createdAt.toDate().toLocaleDateString('ar-EG')}</small><br/>
-                        <small>إجمالي الفاتورة: <b>${inv.total.toFixed(2)} ج.م</b></small><br/>
-                        <small>المبلغ المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</small><br/>
-                        <small>طريقة الدفع: ${paymentMethodText}</small><br/>
-                        <small>الحالة: <span style="font-weight:bold; color:${statusColor};">${status} ${Math.abs(remaining).toFixed(2)} ج.م</span></small>
-                    </div>
-                `;
-            }).join("");
-            const balance = totalDue - totalPaid;
-            const balanceStatus = balance > 0.01 ? 'عليه' : balance < -0.01 ? 'له' : 'صافي';
-            const balanceColor = balance > 0.01 ? 'var(--danger-color)' : balance < -0.01 ? 'var(--success-color)' : 'var(--primary-color)';
-            DOM.statementDetails.innerHTML = statementHtml + `
-                <div class="summary-box" style="border: 2px solid ${balanceColor};">
-                    <b>إجمالي الحساب:</b><br/>
-                    المطلوب: ${totalDue.toFixed(2)} ج.م<br/>
-                    المدفوع: ${totalPaid.toFixed(2)} ج.م<br/>
-                    <b style="color:${balanceColor};">الصافي: ${balanceStatus} ${Math.abs(balance).toFixed(2)} ج.م</b>
+                    <small>التاريخ: ${inv.createdAt.toDate().toLocaleDateString('ar-EG')}</small><br/>
+                    <small>إجمالي الفاتورة: <b>${inv.total.toFixed(2)} ج.م</b></small><br/>
+                    <small>المبلغ المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</small><br/>
+                    <small>طريقة الدفع: ${paymentMethodText}</small><br/>
+                    <small>الحالة: <span style="font-weight:bold; color:${statusColor};">${status} ${Math.abs(remaining).toFixed(2)} ج.م</span></small>
                 </div>
             `;
-        },
+        }).join("");
+
+        const balance = totalDue - totalPaid;
+        const balanceStatus = balance > 0.01 ? 'عليه' : balance < -0.01 ? 'له' : 'صافي';
+        const balanceColor = balance > 0.01 ? 'var(--danger-color)' : balance < -0.01 ? 'var(--success-color)' : 'var(--primary-color)';
+
+        DOM.statementDetails.innerHTML = statementHtml + `
+            <div class="summary-box" style="border: 2px solid ${balanceColor};">
+                <b>إجمالي الحساب:</b><br/>
+                المطلوب: ${totalDue.toFixed(2)} ج.م<br/>
+                المدفوع: ${totalPaid.toFixed(2)} ج.م<br/>
+                <b style="color:${balanceColor};">الصافي: ${balanceStatus} ${Math.abs(balance).toFixed(2)} ج.م</b>
+            </div>
+        `;
+    },
     };
     // #endregion
 
     // #region Sales Controller
     const SalesController = {
-        renderCategoryFilters: () => {
-            const categories = [...new Set(appState.items.map(item => item.category))].filter(c => c);
-            appState.allCategories = ['all', ...categories];
-            appState.currentCategoryPage = 0;
-            SalesController.renderCategoryButtons();
-        },
-        renderCategoryButtons: () => {
-            const categoryFiltersDiv = document.getElementById('salesCategoryFilters');
-            const startIndex = appState.currentCategoryPage * appState.categoriesPerPage;
-            const endIndex = startIndex + appState.categoriesPerPage;
-            const visibleCategories = appState.allCategories.slice(startIndex, endIndex);
-            categoryFiltersDiv.innerHTML = visibleCategories.map(category => {
-                const displayName = category === 'all' ? 'الكل' : category;
-                return `<button class="btn-small" data-category="${displayName}">${displayName}</button>`;
-            }).join("");
-            DOM.prevCategoryBtn.disabled = appState.currentCategoryPage === 0;
-            DOM.nextCategoryBtn.disabled = endIndex >= appState.allCategories.length;
-            const firstButton = categoryFiltersDiv.querySelector('button');
-            if (firstButton) {
-                firstButton.classList.add('active');
-                SalesController.renderItemsGrid(firstButton.dataset.category);
-            }
-        },
-        renderItemsGrid: (category) => {
-            const itemGridDiv = document.getElementById('itemGrid');
-            const itemsToRender = category === 'الكل'
-                ? appState.items
-                : appState.items.filter(item => item.category === category);
-            itemGridDiv.innerHTML = itemsToRender.filter(item => item.stock === null || item.stock > 0).map(item => `
-                <div class="item-card" data-id="${item.id}">
-                    <h5>${item.name}</h5>
-                    <p>${item.price.toFixed(2)} ج.م</p>
-                </div>
-            `).join("");
-            itemGridDiv.querySelectorAll('.item-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const itemId = card.dataset.id;
-                    appState.selectedItem = appState.items.find(item => item.id === itemId);
-                    if (appState.selectedItem) {
-                        DOM.searchItemInput.value = appState.selectedItem.name;
-                        Helpers.showNotification(`تم اختيار: ${appState.selectedItem.name}`, 1500);
-                        DOM.quantityInput.focus();
-                    }
-                });
+    renderCategoryFilters: () => {
+        const categoryFiltersDiv = document.getElementById('salesCategoryFilters');
+        const categories = ['all', ...new Set(appState.items.map(item => item.category))];
+        
+        categoryFiltersDiv.innerHTML = categories.map(category => {
+            const displayName = category === 'all' ? 'الكل' : category;
+            return `<button class="btn-small ${category === 'all' ? 'active' : ''}" data-category="${category}">${displayName}</button>`;
+        }).join("");
+
+        categoryFiltersDiv.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                categoryFiltersDiv.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                
+                const category = e.currentTarget.dataset.category;
+                SalesController.renderItemsGrid(category);
             });
-        },
-        renderInvoice: () => {
-            DOM.invoiceTable.innerHTML = "";
-            let total = 0;
-            appState.currentInvoice.forEach((item, index) => {
-                const subtotal = item.price * item.qty;
-                total += subtotal;
-                DOM.invoiceTable.innerHTML += `
-                    <tr>
-                        <td>${item.name}</td>
-                        <td>${item.qty}</td>
-                        <td>${item.price.toFixed(2)}</td>
-                        <td>${subtotal.toFixed(2)}</td>
-                        <td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td>
-                    </tr>
-                `;
+        });
+    },
+
+    renderItemsGrid: (category) => {
+        const itemGridDiv = document.getElementById('itemGrid');
+        const itemsToRender = category === 'all' 
+            ? appState.items 
+            : appState.items.filter(item => item.category === category);
+
+        itemGridDiv.innerHTML = itemsToRender.filter(item => item.stock > 0).map(item => `
+            <div class="item-card" data-id="${item.id}">
+                <h5>${item.name}</h5>
+                <p>${item.price.toFixed(2)} ج.م</p>
+            </div>
+        `).join("");
+
+        itemGridDiv.querySelectorAll('.item-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const itemId = card.dataset.id;
+                appState.selectedItem = appState.items.find(item => item.id === itemId);
+                if (appState.selectedItem) {
+                    DOM.searchItemInput.value = appState.selectedItem.name;
+                    Helpers.showNotification(`تم اختيار: ${appState.selectedItem.name}`, 1500);
+                    DOM.quantitySelect.focus();
+                }
             });
-            const deliveryFee = parseFloat(DOM.deliveryFeeInput.value) || 0;
-            total += deliveryFee;
-            DOM.invoiceTotalSpan.textContent = total.toFixed(2);
+        });
+    },
+    renderInvoice: () => {
+        DOM.invoiceTable.innerHTML = "";
+        let total = 0;
+        appState.currentInvoice.forEach((item, index) => {
+            const subtotal = item.price * item.qty;
+            total += subtotal;
+            DOM.invoiceTable.innerHTML += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.qty}</td>
+                    <td>${item.price.toFixed(2)}</td>
+                    <td>${subtotal.toFixed(2)}</td>
+                    <td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>
+            `;
+        });
+        DOM.invoiceTotalSpan.textContent = total.toFixed(2);
+        Helpers.calculateChange();
+    },
+    addToInvoice: () => {
+        const { selectedItem } = appState;
+        const qty = parseInt(DOM.quantitySelect.value);
+
+        if (!selectedItem) {
+            Helpers.showNotification("يرجى اختيار صنف.", 5000);
+            return;
+        }
+        if (qty <= 0) {
+            Helpers.showNotification("يرجى إدخال كمية صحيحة.", 5000);
+            return;
+        }
+
+        const itemInStock = appState.items.find(i => i.id === selectedItem.id);
+        const existingItemInInvoice = appState.currentInvoice.find(i => i.id === selectedItem.id);
+        const currentQtyInInvoice = existingItemInInvoice ? existingItemInInvoice.qty : 0;
+
+        if (itemInStock.stock < qty + currentQtyInInvoice) {
+            Helpers.showNotification(`المخزون غير كافٍ. المتوفر: ${itemInStock.stock}`, 5000);
+            return;
+        }
+
+        if (existingItemInInvoice) {
+            existingItemInInvoice.qty += qty;
+        } else {
+            appState.currentInvoice.push({
+                id: selectedItem.id,
+                code: selectedItem.code,
+                name: selectedItem.name,
+                qty: qty,
+                price: selectedItem.price,
+            });
+        }
+        SalesController.renderInvoice();
+        DOM.searchItemInput.value = "";
+        appState.selectedItem = null;
+        DOM.quantitySelect.value = 1;
+        Helpers.showNotification(`تم إضافة ${qty} من ${itemInStock.name} للفاتورة.`);
+    },
+    removeFromInvoice: (index) => {
+        const removedItem = appState.currentInvoice.splice(index, 1)[0];
+        SalesController.renderInvoice();
+        Helpers.showNotification(`تم حذف ${removedItem.name} من الفاتورة.`);
+    },
+    saveInvoice: async () => {
+        if (appState.currentInvoice.length === 0) {
+            Helpers.showNotification("لا يمكن حفظ فاتورة فارغة.", 5000);
+            return;
+        }
+        
+        const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
+        const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0;
+        const changeOrBalance = amountPaid - invoiceTotal;
+        const customerId = appState.selectedCustomer ? appState.selectedCustomer.id : null;
+        const customerName = appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim();
+
+        const newInvoice = {
+            customerId: customerId,
+            customerName: customerName,
+            paymentMethod: DOM.paymentMethodSelect.value,
+            amountPaid: amountPaid,
+            changeOrBalance: changeOrBalance,
+            items: [...appState.currentInvoice], 
+            total: invoiceTotal,
+        };
+
+        try {
+            await window.addDocument("invoices", newInvoice);
+            Helpers.showNotification("تم حفظ الفاتورة بنجاح!");
+
+            appState.currentInvoice = [];
+            SalesController.renderInvoice();
+            DOM.customerNameInput.value = "";
+            DOM.amountPaidInput.value = "";
+            appState.selectedCustomer = null;
             Helpers.calculateChange();
-        },
-        addToInvoice: () => {
-            const { selectedItem } = appState;
-            const qty = parseInt(DOM.quantityInput.value);
-            if (!selectedItem) {
-                Helpers.showNotification("يرجى اختيار صنف.", 5000);
-                return;
-            }
-            if (qty <= 0 || isNaN(qty)) {
-                Helpers.showNotification("يرجى إدخال كمية صحيحة.", 5000);
-                return;
-            }
-            const itemInStock = appState.items.find(i => i.id === selectedItem.id);
-            const existingItemInInvoice = appState.currentInvoice.find(i => i.id === selectedItem.id);
-            const currentQtyInInvoice = existingItemInInvoice ? existingItemInInvoice.qty : 0;
-            if (itemInStock.stock !== null && itemInStock.stock < qty + currentQtyInInvoice) {
-                Helpers.showNotification(`المخزون غير كافٍ. المتوفر: ${itemInStock.stock}`, 5000);
-                return;
-            }
-            if (existingItemInInvoice) {
-                existingItemInInvoice.qty += qty;
-            } else {
-                appState.currentInvoice.push({
-                    id: selectedItem.id,
-                    code: selectedItem.code,
-                    name: selectedItem.name,
-                    qty: qty,
-                    price: selectedItem.price,
-                });
-            }
-            SalesController.renderInvoice();
-            DOM.searchItemInput.value = "";
-            appState.selectedItem = null;
-            DOM.quantityInput.value = 1;
-            Helpers.showNotification(`تم إضافة ${qty} من ${itemInStock.name} للفاتورة.`);
-        },
-        removeFromInvoice: (index) => {
-            const removedItem = appState.currentInvoice.splice(index, 1)[0];
-            SalesController.renderInvoice();
-            Helpers.showNotification(`تم حذف ${removedItem.name} من الفاتورة.`);
-        },
-        saveInvoice: async () => {
-            if (appState.currentInvoice.length === 0) {
-                Helpers.showNotification("لا يمكن حفظ فاتورة فارغة.", 5000);
-                return;
-            }
-            const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
-            const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0;
-            const changeOrBalance = amountPaid - invoiceTotal;
-            const customerId = appState.selectedCustomer ? appState.selectedCustomer.id : null;
-            const customerName = appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim();
-            const customerPhone = appState.selectedCustomer ? appState.selectedCustomer.phone : null;
-            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-            const deliveryFee = parseFloat(DOM.deliveryFeeInput.value) || 0;
-            const newInvoice = {
-                customerId: customerId,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                paymentMethod: paymentMethod,
-                amountPaid: amountPaid,
-                changeOrBalance: changeOrBalance,
-                deliveryFee: deliveryFee,
-                items: [...appState.currentInvoice],
-                total: invoiceTotal,
-            };
-            try {
-                const batchOperations = appState.currentInvoice.map(item => {
-                    const itemInStock = appState.items.find(i => i.id === item.id);
-                    if (itemInStock) {
-                        const newStock = (itemInStock.stock !== null) ? itemInStock.stock - item.qty : null;
-                        return { type: 'update', collection: 'items', id: item.id, data: { stock: newStock } };
-                    }
-                });
-                await window.writeBatchDocuments(batchOperations.filter(op => op));
-                await window.addDocument("invoices", newInvoice);
-                Helpers.showNotification("تم حفظ الفاتورة بنجاح!");
-                appState.currentInvoice = [];
-                SalesController.renderInvoice();
-                DOM.customerNameInput.value = "";
-                DOM.amountPaidInput.value = "";
-                appState.selectedCustomer = null;
-                Helpers.calculateChange();
-            } catch (error) {
-                console.error("Error saving invoice: ", error);
-                Helpers.showNotification("حدث خطأ أثناء حفظ الفاتورة.", 5000);
-            }
-        },
+
+        } catch (error) {
+            console.error("Error saving invoice: ", error);
+            Helpers.showNotification("حدث خطأ أثناء حفظ الفاتورة.", 5000);
+        }
+    },
     };
     // #endregion
-
-    // #region Reports Controller
+     // #region Reports Controller
     const ReportsController = {
-        renderInvoices: () => {
-            const { invoicesList } = DOM;
-            invoicesList.innerHTML = "";
-            if (appState.invoices.length === 0) {
-                invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>";
-                return;
-            }
-            appState.invoices.forEach((inv, index) => {
-                const date = inv.createdAt.toDate();
-                const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
-                const changeText = inv.changeOrBalance >= 0.01 ? 'الباقي للعميل' : inv.changeOrBalance < -0.01 ? 'المطلوب منه' : 'صافي';
-                const deliveryFeeText = inv.deliveryFee > 0 ? `<p style="margin: 5px 0;"><small>خدمة التوصيل: ${inv.deliveryFee.toFixed(2)} ج.م</small></p>` : '';
-                const settlementButton = Math.abs(inv.changeOrBalance) > 0.01 ?
-                    `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : '';
-                const invoiceNumber = appState.invoices.length - index;
-                invoicesList.innerHTML += `
-                    <div class="summary-box">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <b>فاتورة رقم: ${invoiceNumber}</b>
-                            <div class="flex-container">
-                                <button class="btn-small btn-success print-saved-invoice-btn" data-id="${inv.id}"><i class="fas fa-print"></i> طباعة</button>
-                                ${settlementButton}
-                            </div>
-                        </div>
-                        <p style="margin: 5px 0;"><small>التاريخ: ${date.toLocaleString('ar-EG', { dateStyle: 'long', timeStyle: 'short' })}</small></p>
-                        <p style="margin: 5px 0;"><small>العميل: ${inv.customerName || "بدون اسم"}</small></p>
-                        <p style="margin: 5px 0;"><strong>الإجمالي: ${inv.total.toFixed(2)} ج.م</strong></p>
-                        <p style="margin: 5px 0;"><small>المبلغ المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</small></p>
-                        ${deliveryFeeText}
-                        <p style="margin: 5px 0;"><small>${changeText}: ${Math.abs(inv.changeOrBalance).toFixed(2)} ج.م</small></p>
-                        <table style="margin-top:10px;">
-                            <thead><tr><th>اسم الصنف</th><th>كمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
-                            <tbody>
-                                ${inv.items.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price.toFixed(2)}</td><td>${(i.price * i.qty).toFixed(2)}</td></tr>`).join("")}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            });
-        },
-        renderSummary: () => {
-            const { salesSummaryTable, totalSalesAmount, bestSellingItemsDiv } = DOM;
-            const groupBy = DOM.summaryGroupSelect.value;
-            let summary = {};
-            let itemSales = {};
-            let totalAmount = 0;
-            appState.invoices.forEach(inv => {
-                const invDate = inv.createdAt.toDate();
-                let key, displayKey;
-                if (groupBy === 'day') {
-                    key = invDate.toISOString().slice(0, 10);
-                    displayKey = invDate.toLocaleDateString('ar-EG', { dateStyle: 'long' });
-                } else if (groupBy === 'week') {
-                    const [year, week] = Helpers.getWeekNumber(invDate);
-                    key = `${year}-${week}`;
-                    displayKey = `الأسبوع ${week} من عام ${year}`;
-                } else if (groupBy === 'month') {
-                    key = invDate.toISOString().slice(0, 7);
-                    displayKey = invDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' });
-                }
-                if (!summary[key]) {
-                    summary[key] = { count: 0, amount: 0, display: displayKey };
-                }
-                summary[key].count++;
-                summary[key].amount += inv.total;
-                totalAmount += inv.total;
-                inv.items.forEach(item => {
-                    if (!itemSales[item.code]) {
-                        itemSales[item.code] = { name: item.name, totalQty: 0 };
-                    }
-                    itemSales[item.code].totalQty += item.qty;
-                });
-            });
-            const summaryData = Object.values(summary).sort((a,b) => b.display.localeCompare(a.display));
-            totalSalesAmount.textContent = totalAmount.toFixed(2);
-            salesSummaryTable.innerHTML = summaryData.map(row => `
-                <tr>
-                    <td>${row.display}</td>
-                    <td>${row.count}</td>
-                    <td>${row.amount.toFixed(2)}</td>
-                </tr>
-            `).join("");
-            const sortedItems = Object.values(itemSales).sort((a, b) => b.totalQty - a.totalQty).slice(0, 10);
-            if (sortedItems.length > 0) {
-                bestSellingItemsDiv.innerHTML = `
-                    <table style="margin-top:0;">
-                        <thead><tr><th>اسم الصنف</th><th>الكمية المباعة</th></tr></thead>
-                        <tbody>
-                            ${sortedItems.map(item => `
-                                <tr>
-                                    <td>${item.name}</td>
-                                    <td>${item.totalQty}</td>
-                                </tr>
-                            `).join("")}
-                        </tbody>
-                </table>
-                `;
-            } else {
-                bestSellingItemsDiv.innerHTML = "<p>لا توجد بيانات متاحة.</p>";
-            }
-        },
-        printSavedInvoice: (id) => {
-            const invoiceToPrint = appState.invoices.find(inv => inv.id === id);
-            if(invoiceToPrint) {
-                const printContent = Helpers.generatePrintContent(invoiceToPrint);
-                Helpers.printContent(printContent);
-            }
-        },
-        settleInvoice: async (invoiceId) => {
-            const invoice = appState.invoices.find(inv => inv.id === invoiceId);
-            if (!invoice) {
-                Helpers.showNotification("الفاتورة غير موجودة.", 5000);
-                return;
-            }
-            const remaining = invoice.total - invoice.amountPaid;
-            let newPayment = prompt(`الرصيد المتبقي على الفاتورة هو: ${remaining.toFixed(2)} ج.م.\nأدخل المبلغ الجديد للتسوية:`);
-            if (newPayment === null || newPayment.trim() === "") return;
-            newPayment = parseFloat(Helpers.convertToArabicAndEnglishDigits(newPayment));
-            if (isNaN(newPayment)) {
-                Helpers.showNotification("يرجى إدخال مبلغ صحيح.", 5000);
-                return;
-            }
-            const updatedData = {
-                amountPaid: invoice.amountPaid + newPayment,
-                changeOrBalance: (invoice.amountPaid + newPayment) - invoice.total
-            };
-            try {
-                await window.updateDocument("invoices", invoiceId, updatedData);
-                Helpers.showNotification("تمت التسوية بنجاح!");
-            } catch (error) {
-                console.error("Error settling invoice: ", error);
-                Helpers.showNotification("حدث خطأ أثناء التسوية.", 5000);
-            }
+    renderInvoices: () => {
+        const { invoicesList } = DOM;
+        invoicesList.innerHTML = "";
+        if (appState.invoices.length === 0) {
+            invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>";
+            return;
         }
+
+        appState.invoices.forEach(inv => {
+            const date = inv.createdAt.toDate(); 
+            const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
+            const changeText = inv.changeOrBalance >= 0.01 ? 'الباقي للعميل' : inv.changeOrBalance < -0.01 ? 'المطلوب منه' : 'صافي';
+
+            const settlementButton = Math.abs(inv.changeOrBalance) > 0.01 ? 
+                `<button class="btn-small btn-warning settle-invoice-btn" data-invoice-id="${inv.id}"><i class="fas fa-money-bill-wave"></i> تسوية</button>` : '';
+
+            invoicesList.innerHTML += `
+                <div class="summary-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <b>فاتورة رقم: ${inv.id.substring(0, 8)}</b>
+                        <div class="flex-container">
+                            <button class="btn-small btn-success print-saved-invoice-btn" data-id="${inv.id}"><i class="fas fa-print"></i> طباعة</button>
+                            ${settlementButton}
+                        </div>
+                    </div>
+                    <p style="margin: 5px 0;"><small>التاريخ: ${date.toLocaleString('ar-EG', { dateStyle: 'long', timeStyle: 'short' })}</small></p>
+                    <p style="margin: 5px 0;"><small>العميل: ${inv.customerName || "بدون اسم"}</small></p>
+                    <p style="margin: 5px 0;"><strong>الإجمالي: ${inv.total.toFixed(2)} ج.م</strong></p>
+                    <p style="margin: 5px 0;"><small>المبلغ المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</small></p>
+                    <p style="margin: 5px 0;"><small>${changeText}: ${Math.abs(inv.changeOrBalance).toFixed(2)} ج.م</small></p>
+                    <table style="margin-top:10px;">
+                        <thead><tr><th>اسم الصنف</th><th>كمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+                        <tbody>
+                            ${inv.items.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price.toFixed(2)}</td><td>${(i.price * i.qty).toFixed(2)}</td></tr>`).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        });
+    },
+    renderSummary: () => {
+        const { salesSummaryTable, totalSalesAmount, bestSellingItemsDiv } = DOM;
+        const groupBy = DOM.summaryGroupSelect.value;
+        let summary = {};
+        let itemSales = {};
+        let totalAmount = 0;
+
+        appState.invoices.forEach(inv => {
+            const invDate = inv.createdAt.toDate();
+            let key, displayKey;
+            if (groupBy === 'day') {
+                key = invDate.toISOString().slice(0, 10);
+                displayKey = invDate.toLocaleDateString('ar-EG', { dateStyle: 'long' });
+            } else if (groupBy === 'week') {
+                const [year, week] = Helpers.getWeekNumber(invDate);
+                key = `${year}-${week}`;
+                displayKey = `الأسبوع ${week} من عام ${year}`;
+            } else if (groupBy === 'month') {
+                key = invDate.toISOString().slice(0, 7);
+                displayKey = invDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' });
+            }
+
+            if (!summary[key]) {
+                summary[key] = { count: 0, amount: 0, display: displayKey };
+            }
+            summary[key].count++;
+            summary[key].amount += inv.total;
+            totalAmount += inv.total;
+
+            inv.items.forEach(item => {
+                if (!itemSales[item.code]) {
+                    itemSales[item.code] = { name: item.name, totalQty: 0 };
+                }
+                itemSales[item.code].totalQty += item.qty;
+            });
+        });
+
+        const summaryData = Object.values(summary).sort((a,b) => b.display.localeCompare(a.display));
+        totalSalesAmount.textContent = totalAmount.toFixed(2);
+        salesSummaryTable.innerHTML = summaryData.map(row => `
+            <tr>
+                <td>${row.display}</td>
+                <td>${row.count}</td>
+                <td>${row.amount.toFixed(2)}</td>
+            </tr>
+        `).join("");
+
+        const sortedItems = Object.values(itemSales).sort((a, b) => b.totalQty - a.totalQty).slice(0, 10);
+        if (sortedItems.length > 0) {
+            bestSellingItemsDiv.innerHTML = `
+                <table style="margin-top:0;">
+                    <thead><tr><th>اسم الصنف</th><th>الكمية المباعة</th></tr></thead>
+                    <tbody>
+                        ${sortedItems.map(item => `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.totalQty}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            bestSellingItemsDiv.innerHTML = "<p>لا توجد بيانات متاحة.</p>";
+        }
+    },
+    printSavedInvoice: (id) => {
+        const invoiceToPrint = appState.invoices.find(inv => inv.id === id);
+        if(invoiceToPrint) {
+            const printContent = Helpers.generatePrintContent(invoiceToPrint);
+            Helpers.printContent(printContent);
+        }
+    },
+    settleInvoice: async (invoiceId) => {
+        const invoice = appState.invoices.find(inv => inv.id === invoiceId);
+        if (!invoice) {
+            Helpers.showNotification("الفاتورة غير موجودة.", 5000);
+            return;
+        }
+
+        const remaining = invoice.total - invoice.amountPaid;
+        let newPayment = prompt(`الرصيد المتبقي على الفاتورة هو: ${remaining.toFixed(2)} ج.م.\nأدخل المبلغ الجديد للتسوية:`);
+
+        if (newPayment === null || newPayment.trim() === "") return;
+
+        newPayment = parseFloat(Helpers.convertToArabicAndEnglishDigits(newPayment));
+        if (isNaN(newPayment)) {
+            Helpers.showNotification("يرجى إدخال مبلغ صحيح.", 5000);
+            return;
+        }
+
+        const updatedData = {
+            amountPaid: invoice.amountPaid + newPayment,
+            changeOrBalance: (invoice.amountPaid + newPayment) - invoice.total
+        };
+
+        try {
+            await window.updateDocument("invoices", invoiceId, updatedData);
+            Helpers.showNotification("تمت التسوية بنجاح!");
+        } catch (error) {
+            console.error("Error settling invoice: ", error);
+            Helpers.showNotification("حدث خطأ أثناء التسوية.", 5000);
+        }
+    }
     };
     // #endregion
 
     // #region User Management Controller
     const UsersController = {
-        render: () => {
-            DOM.usersList.innerHTML = appState.users.map(user => `
-                <div class="customer-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <div>
-                            <b>${user.username}</b><br/>
-                        </div>
-                        <div class="flex-container">
-                            <button class="btn-small btn-warning edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i> تعديل</button>
-                            <button class="btn-small btn-danger delete-user-btn" data-id="${user.id}"><i class="fas fa-trash-alt"></i> حذف</button>
-                        </div>
+    render: () => {
+        DOM.usersList.innerHTML = appState.users.map(user => `
+            <div class="customer-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <b>${user.username}</b><br/>
+                    </div>
+                    <div class="flex-container">
+                        <button class="btn-small btn-warning edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i> تعديل</button>
+                        <button class="btn-small btn-danger delete-user-btn" data-id="${user.id}"><i class="fas fa-trash-alt"></i> حذف</button>
                     </div>
                 </div>
-            `).join("");
-        },
-        saveUser: async () => {
-            const username = DOM.newUsernameInput.value.trim();
-            const password = Helpers.convertToArabicAndEnglishDigits(DOM.newUserPasswordInput.value.trim());
-            if (!username || !password) {
-                Helpers.showNotification("يرجى إدخال اسم المستخدم وكلمة المرور.", 5000);
-                return;
+            </div>
+        `).join("");
+    },
+    saveUser: async () => {
+        const username = DOM.newUsernameInput.value.trim();
+        const password = Helpers.convertToArabicAndEnglishDigits(DOM.newUserPasswordInput.value.trim());
+        if (!username || !password) {
+            Helpers.showNotification("يرجى إدخال اسم المستخدم وكلمة المرور.", 5000);
+            return;
+        }
+
+        const userData = { username, password, role: 'user' };
+
+        try {
+            if (appState.editingUserId) {
+                await window.updateDocument("users", appState.editingUserId, userData);
+                Helpers.showNotification("تم تعديل المستخدم بنجاح.");
+            } else {
+                if (appState.users.some(u => u.username === username)) {
+                    Helpers.showNotification("اسم المستخدم موجود بالفعل.", 5000);
+                    return;
+                }
+                await window.addDocument("users", userData);
+                Helpers.showNotification("تم إضافة مستخدم جديد بنجاح.");
             }
-            const userData = { username, password, role: 'user' };
+            Helpers.clearUserForm();
+        } catch(error) {
+            console.error("Error saving user:", error);
+            Helpers.showNotification("حدث خطأ أثناء حفظ المستخدم.", 5000);
+        }
+    },
+    edit: (id) => {
+        const user = appState.users.find(u => u.id === id);
+        if (!user) return;
+        DOM.newUsernameInput.value = user.username;
+        DOM.newUserPasswordInput.value = user.password;
+        appState.editingUserId = id;
+        DOM.saveUserBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل مستخدم';
+    },
+    delete: async (id) => {
+        if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
             try {
-                if (appState.editingUserId) {
-                    await window.updateDocument("users", appState.editingUserId, userData);
-                    Helpers.showNotification("تم تعديل المستخدم بنجاح.");
-                } else {
-                    if (appState.users.some(u => u.username === username)) {
-                        Helpers.showNotification("اسم المستخدم موجود بالفعل.", 5000);
-                        return;
-                    }
-                    await window.addDocument("users", userData);
-                    Helpers.showNotification("تم إضافة مستخدم جديد بنجاح.");
-                }
-                Helpers.clearUserForm();
+                await window.deleteDocument("users", id);
+                Helpers.showNotification("تم حذف المستخدم بنجاح.");
             } catch(error) {
-                console.error("Error saving user:", error);
-                Helpers.showNotification("حدث خطأ أثناء حفظ المستخدم.", 5000);
-            }
-        },
-        edit: (id) => {
-            const user = appState.users.find(u => u.id === id);
-            if (!user) return;
-            DOM.newUsernameInput.value = user.username;
-            DOM.newUserPasswordInput.value = user.password;
-            appState.editingUserId = id;
-            DOM.saveUserBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل مستخدم';
-        },
-        delete: async (id) => {
-            if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
-                try {
-                    await window.deleteDocument("users", id);
-                    Helpers.showNotification("تم حذف المستخدم بنجاح.");
-                } catch(error) {
-                    console.error("Error deleting user:", error);
-                    Helpers.showNotification("حدث خطأ أثناء حذف المستخدم.", 5000);
-                }
-            }
-        },
-        resetInvoicesAfterDate: async () => {
-            const dateInput = prompt("أدخل التاريخ (YYYY-MM-DD) لحذف جميع الفواتير التي تمت بعده:");
-            if (!dateInput) return;
-            const cutoffDate = new Date(dateInput);
-            if (isNaN(cutoffDate.getTime())) {
-              Helpers.showNotification("تنسيق التاريخ غير صحيح.", 5000);
-              return;
-            }
-            if (confirm(`هل أنت متأكد من حذف جميع الفواتير التي تمت بعد تاريخ ${dateInput}؟`)) {
-                try {
-                    const invoicesToDelete = appState.invoices.filter(inv => inv.createdAt.toDate() > cutoffDate);
-                    const batch = writeBatch(db);
-                    invoicesToDelete.forEach(inv => batch.delete(doc(db, "invoices", inv.id)));
-                    await batch.commit();
-                    Helpers.showNotification(`تم حذف ${invoicesToDelete.length} فاتورة بنجاح.`);
-                } catch (error) {
-                    console.error("Error deleting invoices:", error);
-                    Helpers.showNotification("حدث خطأ أثناء حذف الفواتير.", 5000);
-                }
-            }
-        },
-        fullReset: async () => {
-            if (confirm("تحذير: هذه العملية ستحذف جميع الفواتير، العملاء، والمستخدمين، والأصناف. هل أنت متأكد؟")) {
-                try {
-                    const collections = ["invoices", "customers", "users", "items"];
-                    const batch = writeBatch(db);
-                    for (const collectionName of collections) {
-                        const querySnapshot = await getDocs(collection(db, collectionName));
-                        querySnapshot.forEach(doc => batch.delete(doc.ref));
-                    }
-                    await batch.commit();
-                    Helpers.showNotification("تمت إعادة ضبط النظام بالكامل بنجاح.");
-                    Auth.logout();
-                } catch (error) {
-                    console.error("Error during full reset:", error);
-                    Helpers.showNotification("حدث خطأ أثناء إعادة الضبط الكاملة.", 5000);
-                }
+                console.error("Error deleting user:", error);
+                Helpers.showNotification("حدث خطأ أثناء حذف المستخدم.", 5000);
             }
         }
+    }
     };
     // #endregion
 
     // #region App Logic & Event Listeners
     const App = {
-        init: async () => {
-            App.bindEvents();
-            App.listenToFirebase();
-            const itemsInDB = await window.getCollection("items");
-            if (itemsInDB.length === 0) {
-                try {
-                    const response = await fetch('p.json');
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const itemsData = await response.json();
-                    const itemsToAdd = itemsData
-                        .filter(item => item.status === true)
-                        .map(item => ({
-                            code: item.sku,
-                            name: item.name,
-                            price: parseFloat(item.price) || 0,
-                            category: item["category "] ? item["category "].trim() : "غير مصنف",
-                            unit: "قطعة",
-                            stock: 999,
-                            status: true
-                        }));
-                    const batch = writeBatch(db);
-                    itemsToAdd.forEach(item => batch.set(doc(collection(db, "items")), item));
-                    await batch.commit();
-                    Helpers.showNotification("تم استيراد الأصناف من ملف p.json إلى Firebase بنجاح.", 4000);
-                } catch (error) {
-                    console.error("Could not load and import items from p.json:", error);
-                    Helpers.showNotification("فشل استيراد الأصناف من ملف p.json.", 5000);
-                }
-            }
-            const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) {
-                appState.currentUser = JSON.parse(savedUser);
-                Helpers.showNotification(`أهلاً بعودتك, ${appState.currentUser.username}!`);
-                Auth.showApp(appState.currentUser.role || 'user');
-            }
-        },
+    init: async () => {
+        App.bindEvents();
+        App.listenToFirebase();
 
-        listenToFirebase: () => {
-            Object.values(appState.unsubscribe).forEach(unsub => unsub());
-            appState.unsubscribe.items = window.readCollection("items", (items) => {
-                appState.items = items;
-                if(document.getElementById('items').classList.contains('active')) ItemsController.render();
-                SalesController.renderCategoryFilters();
-            }, "name", "asc");
-            appState.unsubscribe.customers = window.readCollection("customers", (customers) => {
-                appState.customers = customers;
-                if(document.getElementById('customers').classList.contains('active')) {
-                    CustomersController.render();
-                }
-            }, "name", "asc");
-            appState.unsubscribe.invoices = window.readCollection("invoices", (invoices) => {
-                appState.invoices = invoices;
-                if(document.getElementById('invoices').classList.contains('active')) ReportsController.renderInvoices();
-                if(document.getElementById('summary').classList.contains('active')) ReportsController.renderSummary();
-            }, "createdAt", "desc");
-            appState.unsubscribe.users = window.readCollection("users", (users) => {
-                appState.users = users;
-                if(document.getElementById('users').classList.contains('active')) UsersController.render();
-            }, "username", "asc");
-            window.getDocument("config", "admin").then(doc => {
-                if(doc && doc.pin) {
-                    appState.adminPIN = doc.pin;
-                } else {
-                    console.warn("Admin PIN not found in Firestore. Using default.");
-                    appState.adminPIN = "790707071";
-                }
-            });
-        },
+        try {
+            const response = await fetch('p.json');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const itemsData = await response.json();
+            
+            // ** التعديل الرئيسي هنا للتوافق مع هيكل البيانات الجديد **
+            const categoryKeyWithSpace = "category "; // اسم الحقل كما هو في الملف
+            appState.items = itemsData
+                .filter(item => item.status === true) // 1. تصفية المنتجات الفعالة فقط
+                .map(item => ({
+                    id: item.sku,                           // 2. استخدام SKU كمعرف فريد
+                    code: item.sku,                         // 3. استخدام SKU ككود
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    category: item[categoryKeyWithSpace] ? item[categoryKeyWithSpace].trim() : "غير مصنف", // 4. قراءة الفئة مع معالجة المسافة
+                    unit: "قطعة",                           // 5. قيمة افتراضية للوحدة
+                    stock: 999                              // 6. قيمة افتراضية للمخزون
+                }));
 
-        bindEvents: () => {
-            document.addEventListener('click', (e) => {
-                if (!DOM.searchItemInput.contains(e.target) && !DOM.searchResultsDiv.contains(e.target)) DOM.searchResultsDiv.style.display = 'none';
-                if (!DOM.customerNameInput.contains(e.target) && !DOM.customerSuggestionsDiv.contains(e.target)) DOM.customerSuggestionsDiv.style.display = 'none';
+            SalesController.renderCategoryFilters();
+            SalesController.renderItemsGrid('all'); 
+            ItemsController.render();
+
+            Helpers.showNotification("تم تحميل الأصناف بنجاح.", 2000);
+
+        } catch (error) {
+            console.error("Could not load items from p.json:", error);
+            Helpers.showNotification("فشل تحميل ملف الأصناف p.json", 5000);
+        }
+
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            appState.currentUser = JSON.parse(savedUser);
+            Helpers.showNotification(`أهلاً بعودتك, ${appState.currentUser.username}!`);
+            Auth.showApp(appState.currentUser.role || 'user');
+        }
+
+        for (let i = 1; i <= 100; i++) {
+            const opt = document.createElement("option");
+            opt.value = i;
+            opt.textContent = i;
+            DOM.quantitySelect.appendChild(opt);
+        }
+    },
+
+    listenToFirebase: () => {
+        Object.values(appState.unsubscribe).forEach(unsub => unsub());
+
+        appState.unsubscribe.customers = window.readCollection("customers", (customers) => {
+            appState.customers = customers;
+             if(document.getElementById('customers').classList.contains('active')) {
+                CustomersController.render();
+            }
+        }, "name", "asc");
+
+        appState.unsubscribe.invoices = window.readCollection("invoices", (invoices) => {
+            appState.invoices = invoices;
+            if(document.getElementById('invoices').classList.contains('active')) ReportsController.renderInvoices();
+            if(document.getElementById('summary').classList.contains('active')) ReportsController.renderSummary();
+        }, "createdAt", "desc");
+
+        appState.unsubscribe.users = window.readCollection("users", (users) => {
+            appState.users = users;
+             if(document.getElementById('users').classList.contains('active')) UsersController.render();
+        }, "username", "asc");
+
+        window.getDocument("config", "admin").then(doc => {
+            if(doc && doc.pin) {
+                appState.adminPIN = doc.pin;
+            } else {
+                console.warn("Admin PIN not found in Firestore. Using default.");
+                appState.adminPIN = "790707071";
+            }
+        });
+    },
+
+    bindEvents: () => {
+        document.addEventListener('click', (e) => {
+            if (!DOM.searchItemInput.contains(e.target) && !DOM.searchResultsDiv.contains(e.target)) DOM.searchResultsDiv.style.display = 'none';
+            if (!DOM.customerNameInput.contains(e.target) && !DOM.customerSuggestionsDiv.contains(e.target)) DOM.customerSuggestionsDiv.style.display = 'none';
+        });
+
+        DOM.loginForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            Auth.login(DOM.usernameInput.value, DOM.passwordInput.value);
+        });
+        DOM.logoutBtn.addEventListener("click", Auth.logout);
+
+        DOM.navButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const tab = btn.getAttribute("data-tab");
+                Helpers.updateNavButtons(btn);
+                Helpers.switchTab(tab);
             });
-            DOM.loginForm.addEventListener("submit", (e) => {
-                e.preventDefault();
-                Auth.login(DOM.usernameInput.value, DOM.passwordInput.value);
-            });
-            DOM.logoutBtn.addEventListener("click", Auth.logout);
-            DOM.navButtons.forEach(btn => {
-                btn.addEventListener("click", () => {
-                    const tab = btn.getAttribute("data-tab");
-                    Helpers.updateNavButtons(btn);
-                    Helpers.switchTab(tab);
-                });
-            });
-            // Items Events
-            DOM.saveItemBtn.addEventListener("click", ItemsController.save);
-            DOM.itemsTable.addEventListener("click", (e) => {
-                const target = e.target.closest("button");
-                if (!target) return;
-                const id = target.getAttribute("data-id");
-                if (target.classList.contains("edit-item-btn")) ItemsController.edit(id);
-                else if (target.classList.contains("delete-item-btn")) ItemsController.delete(id);
-            });
-            DOM.filterCategorySelect.addEventListener("change", ItemsController.render);
-            // Customers Events
-            DOM.saveCustomerBtn.addEventListener("click", CustomersController.saveCustomer);
-            DOM.backToCustomersBtn.addEventListener("click", CustomersController.render);
-            DOM.customersList.addEventListener("click", (e) => {
-                const target = e.target.closest("button");
-                if (!target) return;
-                const id = target.getAttribute("data-id");
-                if (target.classList.contains("show-statement-btn")) CustomersController.showStatement(id);
-                else if (target.classList.contains("delete-customer-btn")) CustomersController.deleteCustomer(id);
-                else if (target.classList.contains("edit-customer-btn")) CustomersController.edit(id);
-            });
-            DOM.customerStatementSection.addEventListener("click", (e) => {
-                const target = e.target.closest("button");
-                if (target && target.classList.contains("settle-invoice-btn")) ReportsController.settleInvoice(target.getAttribute("data-invoice-id"));
-            });
-            // Sales Events
-            DOM.salesCategoryFilters.addEventListener('click', (e) => {
-                const target = e.target.closest("button");
-                if (!target) return;
-                document.querySelectorAll('#salesCategoryFilters button').forEach(b => b.classList.remove('active'));
-                target.classList.add('active');
-                SalesController.renderItemsGrid(target.dataset.category);
-            });
-            DOM.prevCategoryBtn.addEventListener('click', () => {
-                if (appState.currentCategoryPage > 0) {
-                    appState.currentCategoryPage--;
-                    SalesController.renderCategoryButtons();
-                }
-            });
-            DOM.nextCategoryBtn.addEventListener('click', () => {
-                const totalPages = Math.ceil(appState.allCategories.length / appState.categoriesPerPage);
-                if (appState.currentCategoryPage < totalPages - 1) {
-                    appState.currentCategoryPage++;
-                    SalesController.renderCategoryButtons();
-                }
-            });
-            DOM.searchItemInput.addEventListener("input", (e) => {
-                const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase());
-                DOM.searchResultsDiv.innerHTML = "";
-                if (q.length > 0) {
-                    const matched = appState.items.filter(item =>
-                        item.code.toLowerCase().includes(q) || item.name.toLowerCase().includes(q)
-                    ).filter(item => item.stock === null || item.stock > 0);
-                    if (matched.length > 0) {
-                        DOM.searchResultsDiv.style.display = "block";
-                        DOM.searchResultsDiv.innerHTML = matched.slice(0, 10).map((item) =>
-                            `<div data-id="${item.id}">${item.code} - ${item.name}</div>`).join("");
-                    } else { DOM.searchResultsDiv.style.display = "none"; }
-                } else { DOM.searchResultsDiv.style.display = "none"; appState.selectedItem = null; }
-            });
-            DOM.searchResultsDiv.addEventListener("click", (e) => {
-                const div = e.target.closest("div");
-                if (div) {
-                    const id = div.getAttribute("data-id");
-                    appState.selectedItem = appState.items.find(item => item.id === id);
-                    DOM.searchItemInput.value = `${appState.selectedItem.name}`;
-                    DOM.searchResultsDiv.style.display = "none";
-                    DOM.quantityInput.focus();
-                }
-            });
-            DOM.customerNameInput.addEventListener("input", (e) => {
-                const q = e.target.value.trim().toLowerCase();
-                DOM.customerSuggestionsDiv.innerHTML = "";
-                if (q.length > 0) {
-                    const matched = appState.customers.filter(cust => cust.name.toLowerCase().includes(q) || cust.customerId.includes(q));
-                    if (matched.length > 0) {
-                        DOM.customerSuggestionsDiv.style.display = "block";
-                        DOM.customerSuggestionsDiv.innerHTML = matched.map(cust => `<div data-id="${cust.id}">${cust.name} (${cust.customerId})</div>`).join("");
-                    } else { DOM.customerSuggestionsDiv.style.display = "none"; }
-                } else { DOM.customerSuggestionsDiv.style.display = "none"; appState.selectedCustomer = null; }
-            });
-            DOM.customerSuggestionsDiv.addEventListener("click", (e) => {
-                const div = e.target.closest("div");
-                if (div) {
-                    const id = div.getAttribute("data-id");
-                    appState.selectedCustomer = appState.customers.find(cust => cust.id === id);
-                    DOM.customerNameInput.value = appState.selectedCustomer.name;
-                    DOM.customerSuggestionsDiv.style.display = "none";
-                }
-            });
-            DOM.incrementQtyBtn.addEventListener('click', () => { DOM.quantityInput.value = parseInt(DOM.quantityInput.value) + 1; });
-            DOM.decrementQtyBtn.addEventListener('click', () => { if (parseInt(DOM.quantityInput.value) > 1) DOM.quantityInput.value = parseInt(DOM.quantityInput.value) - 1; });
-            DOM.quantityInput.addEventListener('input', () => { if (parseInt(DOM.quantityInput.value) < 1) DOM.quantityInput.value = 1; });
-            DOM.incrementDeliveryBtn.addEventListener('click', () => { DOM.deliveryFeeInput.value = parseInt(DOM.deliveryFeeInput.value) + 5; SalesController.renderInvoice(); });
-            DOM.decrementDeliveryBtn.addEventListener('click', () => { if (parseInt(DOM.deliveryFeeInput.value) >= 5) DOM.deliveryFeeInput.value = parseInt(DOM.deliveryFeeInput.value) - 5; SalesController.renderInvoice(); });
-            DOM.deliveryFeeInput.addEventListener('input', SalesController.renderInvoice);
-            DOM.addToInvoiceBtn.addEventListener("click", SalesController.addToInvoice);
-            DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
-            DOM.sendWhatsappBtn.addEventListener("click", () => {
-                const customerId = appState.selectedCustomer ? appState.selectedCustomer.id : null;
-                const customerName = appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim();
-                const customerPhone = appState.selectedCustomer ? appState.selectedCustomer.phone : null;
-                const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
-                const dummyInvoice = {
-                    invoiceNumber: 'مسودة',
-                    customerName: customerName,
-                    customerPhone: customerPhone,
-                    items: [...appState.currentInvoice],
-                    total: invoiceTotal,
-                };
-                Helpers.sendWhatsappMessage(dummyInvoice);
-            });
-            DOM.invoiceTable.addEventListener("click", (e) => {
-                const target = e.target.closest("button");
-                if (target && target.classList.contains("remove-from-invoice-btn")) SalesController.removeFromInvoice(target.getAttribute("data-index"));
-            });
-            DOM.paymentMethodInputs.forEach(input => input.addEventListener('change', Helpers.calculateChange));
-            // Reports Events
-            DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
-            DOM.summaryGroupSelect.addEventListener("change", ReportsController.renderSummary);
-            DOM.invoicesList.addEventListener("click", (e) => {
-                const target = e.target.closest("button");
-                if (!target) return;
-                const id = target.getAttribute("data-id") || target.getAttribute("data-invoice-id");
-                if (target.classList.contains("print-saved-invoice-btn")) ReportsController.printSavedInvoice(id);
-                else if (target.classList.contains("settle-invoice-btn")) ReportsController.settleInvoice(id);
-            });
-            // Users Events
-            DOM.saveUserBtn.addEventListener("click", UsersController.saveUser);
-            DOM.usersList.addEventListener("click", (e) => {
-                const target = e.target.closest("button");
-                if (!target) return;
-                const id = target.getAttribute("data-id");
-                if (target.classList.contains("edit-user-btn")) UsersController.edit(id);
-                else if (target.classList.contains("delete-user-btn")) UsersController.delete(id);
-            });
-            DOM.resetAfterDateBtn.addEventListener("click", UsersController.resetInvoicesAfterDate);
-            DOM.fullResetBtn.addEventListener("click", UsersController.fullReset);
-            DOM.changePinBtn.addEventListener("click", async () => {
-                const oldPin = Helpers.convertToArabicAndEnglishDigits(DOM.oldPinInput.value);
-                const newPin = Helpers.convertToArabicAndEnglishDigits(DOM.newPinInput.value);
-                if (oldPin === appState.adminPIN) {
-                    if (newPin && newPin.length > 3) {
-                        try {
-                            await window.updateDocument("config", "admin", { pin: newPin });
-                            appState.adminPIN = newPin;
-                            DOM.oldPinInput.value = "";
-                            DOM.newPinInput.value = "";
-                            Helpers.showNotification("تم تغيير كلمة مرور المدير العام بنجاح!");
-                        } catch (error) {
-                            console.error("Error changing PIN:", error);
-                            Helpers.showNotification("حدث خطأ أثناء تغيير كلمة المرور.", 5000);
-                        }
-                    } else {
-                        Helpers.showNotification("يجب أن تكون كلمة المرور الجديدة مكونة من 4 أرقام على الأقل.", 5000);
+        });
+
+        // Items Events
+        DOM.saveItemBtn.addEventListener("click", ItemsController.save);
+        DOM.itemsTable.addEventListener("click", (e) => {
+            const target = e.target.closest("button");
+            if (!target) return;
+            const id = target.getAttribute("data-id");
+            if (target.classList.contains("edit-item-btn")) ItemsController.edit(id); 
+            else if (target.classList.contains("delete-item-btn")) ItemsController.delete(id);
+        });
+        DOM.filterCategorySelect.addEventListener("change", ItemsController.render);
+
+        // Customers Events
+        DOM.saveCustomerBtn.addEventListener("click", CustomersController.saveCustomer);
+        DOM.backToCustomersBtn.addEventListener("click", CustomersController.render);
+        DOM.customersList.addEventListener("click", (e) => {
+            const target = e.target.closest("button");
+            if (!target) return;
+            const id = target.getAttribute("data-id");
+            if (target.classList.contains("show-statement-btn")) CustomersController.showStatement(id); 
+            else if (target.classList.contains("delete-customer-btn")) CustomersController.deleteCustomer(id); 
+            else if (target.classList.contains("edit-customer-btn")) CustomersController.edit(id);
+        });
+        DOM.customerStatementSection.addEventListener("click", (e) => {
+            const target = e.target.closest("button");
+            if (target && target.classList.contains("settle-invoice-btn")) ReportsController.settleInvoice(target.getAttribute("data-invoice-id"));
+        });
+
+        // Sales Events
+        DOM.searchItemInput.addEventListener("input", (e) => {
+            const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase());
+            DOM.searchResultsDiv.innerHTML = "";
+            if (q.length > 0) {
+                const matched = appState.items.filter(item => 
+                    item.code.toLowerCase().includes(q) || item.name.toLowerCase().includes(q)
+                ).filter(item => item.stock > 0);
+                if (matched.length > 0) {
+                    DOM.searchResultsDiv.style.display = "block";
+                    DOM.searchResultsDiv.innerHTML = matched.slice(0, 10).map((item) => 
+                        `<div data-id="${item.id}">${item.code} - ${item.name}</div>`).join("");
+                } else { DOM.searchResultsDiv.style.display = "none"; }
+            } else { DOM.searchResultsDiv.style.display = "none"; appState.selectedItem = null; }
+        });
+
+        DOM.searchResultsDiv.addEventListener("click", (e) => {
+            const div = e.target.closest("div");
+            if (div) {
+                const id = div.getAttribute("data-id");
+                appState.selectedItem = appState.items.find(item => item.id === id);
+                DOM.searchItemInput.value = `${appState.selectedItem.name}`;
+                DOM.searchResultsDiv.style.display = "none";
+            }
+        });
+
+        DOM.customerNameInput.addEventListener("input", (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            DOM.customerSuggestionsDiv.innerHTML = "";
+            if (q.length > 0) {
+                const matched = appState.customers.filter(cust => cust.name.toLowerCase().includes(q) || cust.customerId.includes(q));
+                if (matched.length > 0) {
+                    DOM.customerSuggestionsDiv.style.display = "block";
+                    DOM.customerSuggestionsDiv.innerHTML = matched.map(cust => `<div data-id="${cust.id}">${cust.name} (${cust.customerId})</div>`).join("");
+                } else { DOM.customerSuggestionsDiv.style.display = "none"; }
+            } else { DOM.customerSuggestionsDiv.style.display = "none"; appState.selectedCustomer = null; }
+        });
+
+        DOM.customerSuggestionsDiv.addEventListener("click", (e) => {
+            const div = e.target.closest("div");
+            if (div) {
+                const id = div.getAttribute("data-id");
+                appState.selectedCustomer = appState.customers.find(cust => cust.id === id);
+                DOM.customerNameInput.value = appState.selectedCustomer.name;
+                DOM.customerSuggestionsDiv.style.display = "none";
+            }
+        });
+
+        DOM.addToInvoiceBtn.addEventListener("click", SalesController.addToInvoice);
+        DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
+        DOM.invoiceTable.addEventListener("click", (e) => {
+            const target = e.target.closest("button");
+            if (target && target.classList.contains("remove-from-invoice-btn")) SalesController.removeFromInvoice(target.getAttribute("data-index"));
+        });
+
+        // Reports Events
+        DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
+        DOM.summaryGroupSelect.addEventListener("change", ReportsController.renderSummary);
+        DOM.invoicesList.addEventListener("click", (e) => {
+            const target = e.target.closest("button");
+            if (!target) return;
+            const id = target.getAttribute("data-id") || target.getAttribute("data-invoice-id");
+            if (target.classList.contains("print-saved-invoice-btn")) ReportsController.printSavedInvoice(id); 
+            else if (target.classList.contains("settle-invoice-btn")) ReportsController.settleInvoice(id);
+        });
+
+        // Users Events
+        DOM.saveUserBtn.addEventListener("click", UsersController.saveUser);
+        DOM.usersList.addEventListener("click", (e) => {
+            const target = e.target.closest("button");
+            if (!target) return;
+            const id = target.getAttribute("data-id");
+            if (target.classList.contains("edit-user-btn")) UsersController.edit(id);
+            else if (target.classList.contains("delete-user-btn")) UsersController.delete(id);
+        });
+
+        DOM.changePinBtn.addEventListener("click", async () => {
+            const oldPin = Helpers.convertToArabicAndEnglishDigits(DOM.oldPinInput.value);
+            const newPin = Helpers.convertToArabicAndEnglishDigits(DOM.newPinInput.value);
+
+            if (oldPin === appState.adminPIN) {
+                if (newPin && newPin.length > 3) {
+                    try {
+                        await window.updateDocument("config", "admin", { pin: newPin });
+                        appState.adminPIN = newPin;
+                        DOM.oldPinInput.value = "";
+                        DOM.newPinInput.value = "";
+                        Helpers.showNotification("تم تغيير كلمة مرور المدير العام بنجاح!");
+                    } catch (error) {
+                        console.error("Error changing PIN:", error);
+                        Helpers.showNotification("حدث خطأ أثناء تغيير كلمة المرور.", 5000);
                     }
                 } else {
-                    Helpers.showNotification("كلمة المرور القديمة غير صحيحة.", 5000);
+                    Helpers.showNotification("يجب أن تكون كلمة المرور الجديدة مكونة من 4 أرقام على الأقل.", 5000);
                 }
-            });
-            DOM.printInvoiceBtn.addEventListener("click", () => {
+            } else {
+                Helpers.showNotification("كلمة المرور القديمة غير صحيحة.", 5000);
+            }
+        });
+
+        DOM.printInvoiceBtn.addEventListener("click", () => {
                 if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا توجد فاتورة للطباعة.", 5000); return; }
                 const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
                 const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0;
                 const changeOrBalance = amountPaid - invoiceTotal;
                 const dummyInvoice = {
-                    invoiceNumber: 'مسودة',
+                    id: 'مسودة',
                     date: new Date().toISOString(),
-                    createdAt: { toDate: () => new Date() },
+                    createdAt: new Date(),
                     customerName: appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim(),
-                    customerPhone: appState.selectedCustomer ? appState.selectedCustomer.phone : null,
-                    paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
+                    paymentMethod: DOM.paymentMethodSelect.value,
                     amountPaid: amountPaid,
                     changeOrBalance: changeOrBalance,
-                    deliveryFee: parseFloat(DOM.deliveryFeeInput.value) || 0,
                     items: [...appState.currentInvoice],
                     total: invoiceTotal
                 };
                 const printContent = Helpers.generatePrintContent(dummyInvoice);
                 Helpers.printContent(printContent);
             });
-        },
+    },
     };
+
     App.init();
 });
 </script>
