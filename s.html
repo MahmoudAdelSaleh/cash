@@ -846,23 +846,41 @@ document.addEventListener("DOMContentLoaded", () => {
                     DOM.customerSuggestionsDiv.style.display = "none";
                 }
             });
+
+            // --- BARCODE SCANNER LOGIC (UPDATED FOR BOTH FORMATS) ---
             DOM.scanBarcodeBtn.addEventListener('click', () => {
                 DOM.barcodeScannerContainer.style.display = 'block';
                 if (!appState.html5QrCode) { appState.html5QrCode = new Html5Qrcode("reader"); }
+                const onScanSuccess = (decodedText, decodedResult) => {
+                    appState.html5QrCode.stop();
+                    DOM.barcodeScannerContainer.style.display = 'none';
+                    let codeToSearch = null;
+                    const parts = decodedText.split('|');
+                    // Check if it's the complex QR code format
+                    if (parts.length >= 5) {
+                        codeToSearch = parts[4].trim(); // Get the SKU from the 5th part
+                    } else {
+                        codeToSearch = decodedText.trim(); // Assume it's a simple barcode
+                    }
+                    const foundItem = appState.items.find(item => item.code === codeToSearch);
+                    if (foundItem) {
+                        SalesController.addToInvoice(foundItem, 1);
+                    } else {
+                        Helpers.showNotification(`الصنف بالكود ${codeToSearch} غير موجود.`);
+                    }
+                };
                 appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
-                    (decodedText) => {
-                        appState.html5QrCode.stop(); DOM.barcodeScannerContainer.style.display = 'none';
-                        const foundItem = appState.items.find(item => item.code === decodedText);
-                        if (foundItem) { SalesController.addToInvoice(foundItem, 1); } 
-                        else { Helpers.showNotification(`صنف غير موجود: ${decodedText}`); }
-                    }, (err) => {}).catch(err => Helpers.showNotification("خطأ في تشغيل الكاميرا"));
+                    onScanSuccess,
+                    (errorMessage) => { /* Ignore errors */ }
+                ).catch(err => Helpers.showNotification("خطأ في تشغيل الكاميرا"));
             });
-            DOM.closeScannerBtn.addEventListener('click', () => { if (appState.html5QrCode.isScanning) { appState.html5QrCode.stop(); } DOM.barcodeScannerContainer.style.display = 'none'; });
+
+            DOM.closeScannerBtn.addEventListener('click', () => { if (appState.html5QrCode && appState.html5QrCode.isScanning) { appState.html5QrCode.stop(); } DOM.barcodeScannerContainer.style.display = 'none'; });
             DOM.increaseQtyBtn.addEventListener('click', () => { DOM.quantityInput.value = parseInt(DOM.quantityInput.value) + 1; });
             DOM.decreaseQtyBtn.addEventListener('click', () => { if (DOM.quantityInput.value > 1) DOM.quantityInput.value = parseInt(DOM.quantityInput.value) - 1; });
             DOM.addToInvoiceBtn.addEventListener("click", () => { Helpers.showNotification("اختر صنفاً من القائمة أو امسح الباركود"); });
-            DOM.increaseDeliveryBtn.addEventListener('click', () => { DOM.deliveryFeeInput.value = parseInt(DOM.deliveryFeeInput.value) + 5; SalesController.updateTotal(); });
-            DOM.decreaseDeliveryBtn.addEventListener('click', () => { const current = parseInt(DOM.deliveryFeeInput.value); if (current >= 5) DOM.deliveryFeeInput.value = current - 5; SalesController.updateTotal(); });
+            DOM.increaseDeliveryBtn.addEventListener('click', () => { DOM.deliveryFeeInput.value = (parseInt(DOM.deliveryFeeInput.value) || 0) + 5; SalesController.updateTotal(); });
+            DOM.decreaseDeliveryBtn.addEventListener('click', () => { const current = parseInt(DOM.deliveryFeeInput.value) || 0; if (current >= 5) DOM.deliveryFeeInput.value = current - 5; SalesController.updateTotal(); });
             DOM.deliveryFeeInput.addEventListener('input', SalesController.updateTotal);
             DOM.invoiceTable.addEventListener("click", (e) => { const target = e.target.closest(".remove-from-invoice-btn"); if (target) SalesController.removeFromInvoice(target.dataset.index); });
             DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
