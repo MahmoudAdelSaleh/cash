@@ -55,6 +55,14 @@
   .form-group { margin-bottom: 15px; }
   .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
   .flex-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .form-group.flex-container input,
+  .form-group.flex-container select {
+    flex: 1 1 180px;
+    min-width: 120px;
+  }
+  .form-group.flex-container button {
+    flex: 0 0 auto;
+  }
   .flex-end { justify-content: flex-end; }
   #notification-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 90%; }
   .notification { background-color: rgba(0, 0, 0, 0.8); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 16px; opacity: 0; transition: opacity 0.5s ease-in-out; }
@@ -63,25 +71,57 @@
   #login-form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
   #login-form h2 { margin-bottom: 20px; }
   #logoutBtn { background: var(--danger-color); }
-  .item-card { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--white); box-shadow: var(--shadow-light); }
-  .item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-color: var(--primary-color); }
-  .item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
-  .item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
-  #salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
-  #barcode-scanner-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 1001; border: 2px solid var(--primary-color); }
+  
+  .item-card {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--white);
+      box-shadow: var(--shadow-light);
+  }
+  .item-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border-color: var(--primary-color);
+  }
+  .item-card h5 {
+      margin: 5px 0;
+      font-size: 14px;
+      height: 40px; /* لتثبيت ارتفاع العنوان */
+      overflow: hidden;
+  }
+  .item-card p {
+      margin: 5px 0;
+      font-size: 12px;
+      color: var(--success-color);
+      font-weight: bold;
+  }
+  #salesCategoryFilters button.active {
+      background-color: var(--success-color);
+      color: white;
+  }
+  #barcode-scanner-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 400px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      z-index: 1001;
+      border: 2px solid var(--primary-color);
+  }
   #reader { width: 100%; }
   #closeScannerBtn { margin-top: 15px; width: 100%; }
   #paymentMethodRadios { display: flex; gap: 15px; align-items: center; }
   #paymentMethodRadios label { margin-left: 5px; margin-bottom: 0; }
   #paymentMethodRadios input { width: auto; margin: 0; }
-
-  /* --- New Styles for Delivery Input --- */
-  .input-group { display: flex; align-items: center; }
-  .input-group-field { text-align: center; border-radius: 0; padding: 5px 10px; height: 38px; border-left: none; border-right: none; width: 70px; flex-grow: 0 !important; }
-  .input-group-btn { border-radius: 0; padding: 5px 12px; font-size: 18px; line-height: 1; height: 38px; flex-shrink: 0; }
-  #decreaseDeliveryBtn { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
-  #increaseDeliveryBtn { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
-  /* ------------------------------------- */
 
   @media (max-width: 768px) {
     nav button { font-size: 14px; padding: 10px 5px; }
@@ -90,6 +130,10 @@
     table th, table td { font-size: 14px; padding: 8px 4px; }
     .flex-container { flex-direction: column; }
     #login-form { width: 90%; }
+    .form-group.flex-container input,
+    .form-group.flex-container select {
+      flex: 1 1 100%;
+    }
   }
   @media print {
     body > :not(#print-area) { display: none !important; }
@@ -223,9 +267,7 @@
           <button id="nextCategoriesBtn" class="btn-small btn-warning">التالي <i class="fas fa-arrow-left"></i></button>
       </div>
       <div id="itemGrid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;"></div>
-      <div class="form-group" style="text-align: center; margin-top: -10px; margin-bottom: 20px;">
-        <button id="hideCategoriesBtn" class="btn-warning" style="display:none;"><i class="fas fa-eye-slash"></i> إخفاء الفئات والأصناف</button>
-      </div>
+      
       <div class="form-group" style="position: relative;">
           <div class="flex-container">
               <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
@@ -236,14 +278,13 @@
       <div class="form-group">
         <button id="scanBarcodeBtn" style="width:100%;"><i class="fas fa-camera"></i> مسح باركود صنف</button>
       </div>
+
       <div class="form-group flex-container">
-          <label for="deliveryFeeInput" style="flex: 0 1 auto;">خدمة التوصيل:</label>
-          <div class="input-group" style="flex: 1 1 150px;">
-              <button id="decreaseDeliveryBtn" class="input-group-btn btn-warning">-</button>
-              <input type="number" id="deliveryFeeInput" value="30" min="0" step="5" class="input-group-field" />
-              <button id="increaseDeliveryBtn" class="input-group-btn btn-success">+</button>
-          </div>
-          <span style="flex: 2 1 auto; font-weight: bold;">ج.م</span>
+          <label for="deliveryFeeInput" style="flex: 0 0 auto;">خدمة التوصيل:</label>
+          <button id="decreaseDeliveryBtn" class="btn-small btn-warning" style="font-size: 18px; padding: 5px 12px;">-</button>
+          <input type="number" id="deliveryFeeInput" value="0" min="0" step="5" style="text-align: center; flex: 1 1 90px;" />
+          <button id="increaseDeliveryBtn" class="btn-small btn-success" style="font-size: 18px; padding: 5px 12px;">+</button>
+          <span style="flex: 2 1 auto;">ج.م</span>
       </div>
       <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
       <table>
@@ -278,12 +319,44 @@
       <h2><i class="fas fa-file-invoice-dollar"></i> الفواتير</h2>
       <div id="invoicesList"></div>
     </section>
+
     <section id="summary">
       <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
-      </section>
+      <div class="form-group flex-container">
+          <label for="summaryGroupSelect">تجميع حسب:</label>
+          <select id="summaryGroupSelect">
+              <option value="day">اليوم</option><option value="week">الأسبوع</option><option value="month">الشهر</option>
+          </select>
+      </div>
+      <div class="summary-box">
+        <i class="fas fa-coins"></i> <strong>المجموع الكلي للمبيعات:</strong> <span id="totalSalesAmount">0.00</span> ج.م
+      </div>
+      <table>
+        <thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead>
+        <tbody id="salesSummaryTable"></tbody>
+      </table>
+      <div style="margin-top: 30px;">
+        <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
+        <div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div>
+      </div>
+    </section>
+
     <section id="users">
       <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
-      </section>
+      <div class="form-group flex-container">
+        <input type="text" id="newUsernameInput" placeholder="اسم المستخدم" />
+        <input type="password" id="newUserPasswordInput" placeholder="كلمة المرور" />
+        <button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة مستخدم</button>
+      </div>
+      <div id="usersList"></div>
+      <div id="changePinSection">
+          <h4><i class="fas fa-key"></i> تغيير كلمة مرور المدير العام</h4>
+          <div class="form-group flex-container">
+              <input type="password" id="oldPinInput" placeholder="الكلمة القديمة" /><input type="password" id="newPinInput" placeholder="الكلمة الجديدة" />
+              <button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button>
+          </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -299,7 +372,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const DOM = {
         appContainer: document.getElementById("app-container"),
         loginContainer: document.getElementById("login-container"),
-        // ... (all other elements)
+        loginForm: document.getElementById("login-form"),
+        usernameInput: document.getElementById("usernameInput"),
+        passwordInput: document.getElementById("passwordInput"),
+        loginBtn: document.getElementById("loginBtn"),
+        logoutBtn: document.getElementById("logoutBtn"),
+        navButtons: document.querySelectorAll("nav button"),
+        sections: document.querySelectorAll("main section"),
+        itemCodeInput: document.getElementById("itemCode"),
+        itemNameInput: document.getElementById("itemName"),
+        itemUnitInput: document.getElementById("itemUnit"),
+        itemPriceInput: document.getElementById("itemPrice"),
+        itemStockInput: document.getElementById("itemStock"),
+        itemCategorySelect: document.getElementById("itemCategorySelect"),
+        filterCategorySelect: document.getElementById("filterCategorySelect"),
+        saveItemBtn: document.getElementById("saveItemBtn"),
+        itemsTable: document.getElementById("itemsTable"),
+        newCustomerIdInput: document.getElementById("newCustomerId"),
+        newCustomerNameInput: document.getElementById("newCustomerName"),
+        newCustomerPhoneInput: document.getElementById("newCustomerPhone"),
+        saveCustomerBtn: document.getElementById("saveCustomerBtn"),
+        customersList: document.getElementById("customersList"),
         customerNameInput: document.getElementById("customerName"),
         customerPhoneInput: document.getElementById("customerPhone"),
         customerSuggestionsDiv: document.getElementById("customerSuggestions"),
@@ -311,6 +404,23 @@ document.addEventListener("DOMContentLoaded", () => {
         amountPaidInput: document.getElementById("amountPaidInput"),
         changeTextSpan: document.getElementById("changeText"),
         changeAmountSpan: document.getElementById("changeAmount"),
+        invoicesList: document.getElementById("invoicesList"),
+        salesSummaryTable: document.getElementById("salesSummaryTable"),
+        totalSalesAmount: document.getElementById("totalSalesAmount"),
+        summaryGroupSelect: document.getElementById("summaryGroupSelect"),
+        customerStatementSection: document.getElementById("customerStatement"),
+        statementCustomerName: document.getElementById("statementCustomerName"),
+        statementDetails: document.getElementById("statementDetails"),
+        backToCustomersBtn: document.getElementById("backToCustomersBtn"),
+        bestSellingItemsDiv: document.getElementById("bestSellingItems"),
+        changePinBtn: document.getElementById("changePinBtn"),
+        oldPinInput: document.getElementById("oldPinInput"),
+        newPinInput: document.getElementById("newPinInput"),
+        notificationContainer: document.getElementById("notification-container"),
+        newUsernameInput: document.getElementById("newUsernameInput"),
+        newUserPasswordInput: document.getElementById("newUserPasswordInput"),
+        saveUserBtn: document.getElementById("saveUserBtn"),
+        usersList: document.getElementById("usersList"),
         showCategoriesBtn: document.getElementById("showCategoriesBtn"),
         salesCategoryFilters: document.getElementById("salesCategoryFilters"),
         categoryPagination: document.getElementById("categoryPagination"),
@@ -324,14 +434,12 @@ document.addEventListener("DOMContentLoaded", () => {
         deliveryFeeInput: document.getElementById("deliveryFeeInput"),
         increaseDeliveryBtn: document.getElementById("increaseDeliveryBtn"),
         decreaseDeliveryBtn: document.getElementById("decreaseDeliveryBtn"),
-        sendWhatsappBtn: document.getElementById("sendWhatsappBtn"),
-        hideCategoriesBtn: document.getElementById("hideCategoriesBtn") // New button
+        sendWhatsappBtn: document.getElementById("sendWhatsappBtn")
     };
 
     let appState = {
         items: [], invoices: [], customers: [], users: [], adminPIN: null, currentUser: null,
-        currentInvoice: [], deliveryFee: 30, // Default to 30
-        editingItemId: null, editingCustomerId: null,
+        currentInvoice: [], deliveryFee: 0, editingItemId: null, editingCustomerId: null,
         editingUserId: null, selectedItem: null, selectedCustomer: null, unsubscribe: {},
         allCategories: [], categoryCurrentPage: 1, categoriesPerPage: 20, html5QrCode: null
     };
@@ -364,13 +472,35 @@ document.addEventListener("DOMContentLoaded", () => {
             DOM.navButtons.forEach(btn => btn.classList.remove("active"));
             activeButton.classList.add("active");
         },
-        // ... (other helper functions are the same)
+        clearCustomerForm: () => {
+            DOM.newCustomerIdInput.value = "";
+            DOM.newCustomerNameInput.value = "";
+            DOM.newCustomerPhoneInput.value = "";
+            appState.editingCustomerId = null;
+            DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العميل';
+        },
         calculateChange: () => {
             const total = parseFloat(DOM.invoiceTotalSpan.textContent) || 0;
             const paid = parseFloat(DOM.amountPaidInput.value) || 0;
             const change = paid - total;
             DOM.changeTextSpan.textContent = change >= 0 ? "الباقي للعميل:" : "المطلوب منه:";
             DOM.changeAmountSpan.textContent = Math.abs(change).toFixed(2);
+        },
+        convertToArabicAndEnglishDigits: (text) => {
+            if (!text) return "";
+            const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+            const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            let convertedText = text.toString();
+            for (let i = 0; i < arabicDigits.length; i++) {
+                convertedText = convertedText.replace(new RegExp(arabicDigits[i], 'g'), englishDigits[i]);
+            }
+            return convertedText;
+        },
+        getWeekNumber: (d) => {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         },
         generatePrintContent: (invoice) => {
             const itemsHtml = invoice.items.map(item => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.price * item.qty).toFixed(2)}</td></tr>`).join("");
@@ -388,30 +518,108 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div class="print-table"><table><thead><tr style="background-color:#eee;"><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
                   <div class="print-summary"><p><strong>إجمالي الأصناف:</strong> ${subtotal.toFixed(2)} ج.م</p>${deliveryHtml}<p><strong>إجمالي الفاتورة:</strong> ${invoice.total.toFixed(2)} ج.م</p><p><strong>طريقة الدفع:</strong> ${paymentMethodText}</p><p><strong>المبلغ المدفوع:</strong> ${invoice.amountPaid.toFixed(2)} ج.م</p><p><strong>${changeText}:</strong> ${Math.abs(invoice.changeOrBalance).toFixed(2)} ج.م</p></div></div>`;
         },
+        printContent: (content) => {
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write(`<html><head><title>طباعة</title><style>@media print{body{-webkit-print-color-adjust:exact}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:8px;text-align:right}th{background-color:#f2f2f2}}</style></head><body>${content}</body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+        }
     };
     // #endregion
     
-    // #region Controllers (Auth, Items, Customers are unchanged)
-    const Auth = {/* ... same as code 5 ... */};
-    const ItemsController = {/* ... same as code 5 ... */};
-    const CustomersController = {/* ... same as code 5 ... */};
+    // #region Controllers (Auth, Items, Customers)
+    const Auth = {
+      login: (username, password) => {
+        const pin = Helpers.convertToArabicAndEnglishDigits(password);
+        if (pin === appState.adminPIN) {
+          appState.currentUser = { username: "المدير العام", role: "admin" };
+          localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
+          Helpers.showNotification("تم تسجيل الدخول كمدير عام.");
+          Auth.showApp("admin");
+          return;
+        }
+        const user = appState.users.find(u => u.username === username && u.password === pin);
+        if (user) {
+          appState.currentUser = user;
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          Helpers.showNotification(`أهلاً بك, ${user.username}!`);
+          Auth.showApp("user");
+        } else { Helpers.showNotification("اسم المستخدم أو كلمة المرور غير صحيحة.", 5000); }
+      },
+      logout: () => {
+        appState.currentUser = null;
+        localStorage.removeItem('currentUser');
+        DOM.appContainer.style.display = "none";
+        DOM.loginContainer.style.display = "flex";
+        DOM.usernameInput.value = "";
+        DOM.passwordInput.value = "";
+        Helpers.showNotification("تم تسجيل الخروج بنجاح.");
+      },
+      showApp: (role) => {
+        DOM.loginContainer.style.display = "none";
+        DOM.appContainer.style.display = "block";
+        document.querySelector('[data-tab="users"]').classList.toggle("hidden", role !== "admin");
+        document.querySelector('[data-tab="sales"]').click();
+      }
+    };
+    const ItemsController = {
+        render: () => {
+            const filterCategory = DOM.filterCategorySelect.value;
+            const filteredItems = filterCategory === "all" ? appState.items : appState.items.filter(item => item.category === filterCategory);
+            DOM.itemsTable.innerHTML = filteredItems.map(item => `<tr><td>${item.code}</td><td>${item.name}</td><td>${item.unit}</td><td>${parseFloat(item.price).toFixed(2)}</td><td>${item.stock}</td><td>${item.category||'غير محدد'}</td><td><button disabled class="btn-small btn-warning"><i class="fas fa-edit"></i></button></td><td><button disabled class="btn-small btn-danger"><i class="fas fa-trash-alt"></i></button></td></tr>`).join("");
+            const categories = [...new Set(appState.items.map(item => item.category))];
+            DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>';
+            categories.forEach(category => { DOM.filterCategorySelect.innerHTML += `<option value="${category}">${category}</option>`; });
+        }
+    };
+    const CustomersController = {
+        render: () => {
+            DOM.customersList.style.display = 'block';
+            DOM.customerStatementSection.style.display = 'none';
+            DOM.customersList.innerHTML = appState.customers.map(cust => `<div class="customer-card"><div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"><div><b>${cust.name}</b><br/><small>رقم: ${cust.customerId} | هاتف: ${cust.phone || 'غير مسجل'}</small></div><div class="flex-container"><button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button></div></div></div>`).join("");
+        },
+        saveCustomer: async () => {
+            const customerId = Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerIdInput.value.trim());
+            const name = DOM.newCustomerNameInput.value.trim();
+            const phone = Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerPhoneInput.value.trim());
+            if (!customerId || !name) { Helpers.showNotification("يرجى إدخال رقم واسم العميل.", 5000); return; }
+            const customerData = { customerId, name, phone };
+            try {
+                if (appState.editingCustomerId) { await window.updateDocument("customers", appState.editingCustomerId, customerData); Helpers.showNotification("تم تعديل العميل بنجاح."); } 
+                else { await window.addDocument("customers", customerData); Helpers.showNotification("تم حفظ العميل بنجاح."); }
+                Helpers.clearCustomerForm();
+            } catch (error) { Helpers.showNotification("حدث خطأ أثناء حفظ العميل.", 5000); }
+        },
+        edit: (id) => {
+            const customer = appState.customers.find(c => c.id === id); if (!customer) return;
+            DOM.newCustomerIdInput.value = customer.customerId;
+            DOM.newCustomerNameInput.value = customer.name;
+            DOM.newCustomerPhoneInput.value = customer.phone || "";
+            appState.editingCustomerId = id;
+            DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل العميل';
+        },
+        deleteCustomer: async (id) => {
+            if (confirm("هل أنت متأكد من حذف هذا العميل؟")) {
+                try { await window.deleteDocument("customers", id); Helpers.showNotification("تم حذف العميل بنجاح."); } 
+                catch (error) { Helpers.showNotification("حدث خطأ أثناء حذف العميل.", 5000); }
+            }
+        }
+    };
     // #endregion
 
-    // #region Sales Controller (Updated)
+    // #region Sales Controller
     const SalesController = {
         initSalesPage: () => {
             DOM.showCategoriesBtn.style.display = 'block';
             DOM.salesCategoryFilters.style.display = 'none';
             DOM.categoryPagination.style.display = 'none';
             DOM.itemGrid.style.display = 'none';
-            DOM.hideCategoriesBtn.style.display = 'none'; // Hide the new button on init
-            appState.deliveryFee = 30; // Set default delivery fee
-            DOM.deliveryFeeInput.value = 30; // Update UI
-            SalesController.renderInvoice(); // Reset invoice display and update total
+            appState.deliveryFee = 0;
+            DOM.deliveryFeeInput.value = 0;
+            SalesController.renderInvoice();
         },
         renderCategoryFilters: () => {
-            DOM.hideCategoriesBtn.style.display = 'inline-flex'; // Show the hide button
-            // ... (rest of the function is the same)
             const { allCategories, categoryCurrentPage, categoriesPerPage } = appState;
             const totalPages = Math.ceil(allCategories.length / categoriesPerPage);
             const startIndex = (categoryCurrentPage - 1) * categoriesPerPage;
@@ -431,8 +639,6 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         renderItemsGrid: (category) => {
             DOM.itemGrid.style.display = 'grid';
-            DOM.hideCategoriesBtn.style.display = 'inline-flex'; // Also show it here
-            // ... (rest of the function is the same)
             const itemsToRender = appState.items.filter(item => item.category === category && item.stock > 0);
             DOM.itemGrid.innerHTML = itemsToRender.map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name}</h5><p>${item.price.toFixed(2)} ج.م</p></div>`).join("");
             DOM.itemGrid.querySelectorAll('.item-card').forEach(card => {
@@ -484,8 +690,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا يمكن حفظ فاتورة فارغة.", 4000); return; }
             const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
             const newInvoice = {
-                // ... (same as before)
+                customerId: appState.selectedCustomer ? appState.selectedCustomer.id : null,
                 customerName: DOM.customerNameInput.value.trim(),
+                customerPhone: DOM.customerPhoneInput.value.trim(),
                 paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
                 amountPaid: parseFloat(DOM.amountPaidInput.value) || 0,
                 changeOrBalance: (parseFloat(DOM.amountPaidInput.value) || 0) - invoiceTotal,
@@ -499,47 +706,144 @@ document.addEventListener("DOMContentLoaded", () => {
                 appState.currentInvoice = [];
                 DOM.customerNameInput.value = ""; DOM.customerPhoneInput.value = "";
                 DOM.amountPaidInput.value = ""; appState.selectedCustomer = null;
-                DOM.deliveryFeeInput.value = 30; // Reset delivery fee to 30
-                SalesController.renderInvoice();
+                DOM.deliveryFeeInput.value = 0; SalesController.renderInvoice();
             } catch (error) { Helpers.showNotification("حدث خطأ أثناء حفظ الفاتورة.", 5000); }
         },
     };
     // #endregion
 
-    // #region Reports & Users Controllers (Unchanged)
-    const ReportsController = {/* ... same as code 5 ... */};
-    const UsersController = {/* ... same as code 5 ... */};
+    // #region Reports Controller
+    const ReportsController = {
+        renderInvoices: () => {
+            DOM.invoicesList.innerHTML = "";
+            if (appState.invoices.length === 0) {
+                DOM.invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>";
+                return;
+            }
+            appState.invoices.forEach(inv => {
+                const date = inv.createdAt.toDate();
+                const paymentMethodText = inv.paymentMethod === 'cash' ? 'نقداً' : inv.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
+                DOM.invoicesList.innerHTML += `<div class="summary-box"><b>فاتورة رقم: ${inv.id.substring(0,8)}</b> <p><small>التاريخ: ${date.toLocaleString('ar-EG',{dateStyle:'long',timeStyle:'short'})}</small></p><p><small>العميل: ${inv.customerName||"بدون اسم"}</small></p><p><strong>الإجمالي: ${inv.total.toFixed(2)} ج.م</strong></p><table><thead><tr><th>اسم الصنف</th><th>كمية</th><th>الإجمالي</th></tr></thead><tbody>${inv.items.map(i=>`<tr><td>${i.name}</td><td>${i.qty}</td><td>${(i.price*i.qty).toFixed(2)}</td></tr>`).join("")}</tbody></table></div>`;
+            });
+        },
+        renderSummary: () => {
+            const groupBy = DOM.summaryGroupSelect.value;
+            let summary = {}; let itemSales = {}; let totalAmount = 0;
+            appState.invoices.forEach(inv => {
+                const invDate = inv.createdAt.toDate();
+                let key, displayKey;
+                if (groupBy === 'day') { key = invDate.toISOString().slice(0, 10); displayKey = invDate.toLocaleDateString('ar-EG', { dateStyle: 'long' }); } 
+                else if (groupBy === 'week') { const week = Helpers.getWeekNumber(invDate); key = `${invDate.getFullYear()}-${week}`; displayKey = `الأسبوع ${week} من عام ${invDate.getFullYear()}`; } 
+                else { key = invDate.toISOString().slice(0, 7); displayKey = invDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' }); }
+                if (!summary[key]) { summary[key] = { count: 0, amount: 0, display: displayKey }; }
+                summary[key].count++;
+                summary[key].amount += inv.total;
+                totalAmount += inv.total;
+                inv.items.forEach(item => {
+                    if (!itemSales[item.code]) { itemSales[item.code] = { name: item.name, totalQty: 0 }; }
+                    itemSales[item.code].totalQty += item.qty;
+                });
+            });
+            DOM.totalSalesAmount.textContent = totalAmount.toFixed(2);
+            DOM.salesSummaryTable.innerHTML = Object.values(summary).sort((a,b) => b.display.localeCompare(a.display)).map(row => `<tr><td>${row.display}</td><td>${row.count}</td><td>${row.amount.toFixed(2)}</td></tr>`).join("");
+            const sortedItems = Object.values(itemSales).sort((a, b) => b.totalQty - a.totalQty).slice(0, 10);
+            if (sortedItems.length > 0) {
+                DOM.bestSellingItemsDiv.innerHTML = `<table><thead><tr><th>اسم الصنف</th><th>الكمية المباعة</th></tr></thead><tbody>${sortedItems.map(item => `<tr><td>${item.name}</td><td>${item.totalQty}</td></tr>`).join("")}</tbody></table>`;
+            } else { DOM.bestSellingItemsDiv.innerHTML = "<p>لا توجد بيانات متاحة.</p>"; }
+        }
+    };
     // #endregion
 
-    // #region App Logic & Event Listeners (Updated)
+    // #region User Management Controller
+    const UsersController = {
+        render: () => {
+            DOM.usersList.innerHTML = appState.users.map(user => `<div class="customer-card"><div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;"><b>${user.username}</b><div class="flex-container"><button class="btn-small btn-warning edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-user-btn" data-id="${user.id}"><i class="fas fa-trash-alt"></i></button></div></div></div>`).join("");
+        },
+        saveUser: async () => {
+            const username = DOM.newUsernameInput.value.trim();
+            const password = Helpers.convertToArabicAndEnglishDigits(DOM.newUserPasswordInput.value.trim());
+            if (!username || !password) { Helpers.showNotification("يرجى إدخال اسم المستخدم وكلمة المرور.", 5000); return; }
+            const userData = { username, password, role: 'user' };
+            try {
+                if (appState.editingUserId) { await window.updateDocument("users", appState.editingUserId, userData); Helpers.showNotification("تم تعديل المستخدم."); } 
+                else { await window.addDocument("users", userData); Helpers.showNotification("تم إضافة مستخدم جديد."); }
+                DOM.newUsernameInput.value = ""; DOM.newUserPasswordInput.value = ""; appState.editingUserId = null;
+            } catch(error) { Helpers.showNotification("حدث خطأ أثناء حفظ المستخدم.", 5000); }
+        },
+        edit: (id) => {
+            const user = appState.users.find(u => u.id === id); if (!user) return;
+            DOM.newUsernameInput.value = user.username;
+            DOM.newUserPasswordInput.value = user.password;
+            appState.editingUserId = id;
+        },
+        delete: async (id) => {
+            if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
+                try { await window.deleteDocument("users", id); Helpers.showNotification("تم حذف المستخدم."); } 
+                catch(error) { Helpers.showNotification("حدث خطأ أثناء حذف المستخدم.", 5000); }
+            }
+        }
+    };
+    // #endregion
+
+    // #region App Logic & Event Listeners
     const App = {
         init: async () => {
             App.bindEvents();
             App.listenToFirebase();
             try {
                 const response = await fetch('p.json');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const itemsData = await response.json();
                 const categoryKey = "category ";
                 appState.items = itemsData.filter(item => item.status === true)
                     .map(item => ({ id: item.sku, code: item.sku, name: item.name, price: parseFloat(item.price) || 0, category: item[categoryKey]?.trim() || "غير مصنف", unit: "قطعة", stock: 999 }));
                 appState.allCategories = [...new Set(appState.items.map(item => item.category).filter(Boolean))].sort();
-                SalesController.initSalesPage();
+                SalesController.initSalesPage(); ItemsController.render();
+                Helpers.showNotification("تم تحميل الأصناف بنجاح.", 2000);
             } catch (error) { Helpers.showNotification("فشل تحميل ملف الأصناف p.json", 5000); }
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) { appState.currentUser = JSON.parse(savedUser); Auth.showApp(appState.currentUser.role || 'user'); }
         },
         listenToFirebase: () => {
-            // ... (same as code 5)
+            window.readCollection("customers", (customers) => { appState.customers = customers; if(document.getElementById('customers').classList.contains('active')) CustomersController.render(); }, "name", "asc");
+            window.readCollection("invoices", (invoices) => { appState.invoices = invoices; if(document.getElementById('invoices').classList.contains('active')) ReportsController.renderInvoices(); if(document.getElementById('summary').classList.contains('active')) ReportsController.renderSummary(); });
+            window.readCollection("users", (users) => { appState.users = users; if(document.getElementById('users').classList.contains('active')) UsersController.render(); }, "username", "asc");
+            window.getDocument("config", "admin").then(doc => { appState.adminPIN = doc ? doc.pin : "790707071"; });
         },
         bindEvents: () => {
-            // ... (listeners for login, nav, customers are the same)
+            document.addEventListener('click', (e) => {
+                if (!DOM.customerNameInput.contains(e.target) && !DOM.customerSuggestionsDiv.contains(e.target)) DOM.customerSuggestionsDiv.style.display = 'none';
+            });
+            DOM.loginForm.addEventListener("submit", (e) => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
+            DOM.logoutBtn.addEventListener("click", Auth.logout);
+            DOM.navButtons.forEach(btn => { btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }); });
+            DOM.saveCustomerBtn.addEventListener("click", CustomersController.saveCustomer);
+            DOM.customersList.addEventListener("click", (e) => {
+                const target = e.target.closest("button"); if (!target) return;
+                if (target.classList.contains("edit-customer-btn")) CustomersController.edit(target.dataset.id);
+                else if (target.classList.contains("delete-customer-btn")) CustomersController.deleteCustomer(target.dataset.id);
+            });
             // --- SALES EVENTS ---
             DOM.showCategoriesBtn.addEventListener('click', () => { DOM.showCategoriesBtn.style.display = 'none'; DOM.salesCategoryFilters.style.display = 'flex'; DOM.categoryPagination.style.display = 'flex'; SalesController.renderCategoryFilters(); });
-            DOM.hideCategoriesBtn.addEventListener('click', () => { SalesController.initSalesPage(); });
             DOM.nextCategoriesBtn.addEventListener('click', () => { if (appState.categoryCurrentPage < Math.ceil(appState.allCategories.length / appState.categoriesPerPage)) { appState.categoryCurrentPage++; SalesController.renderCategoryFilters(); } });
             DOM.prevCategoriesBtn.addEventListener('click', () => { if (appState.categoryCurrentPage > 1) { appState.categoryCurrentPage--; SalesController.renderCategoryFilters(); } });
-            // ... (customer suggestions listener is the same)
-            
+            DOM.customerNameInput.addEventListener("input", (e) => {
+                const q = e.target.value.trim().toLowerCase();
+                if (q.length > 0) {
+                    const matched = appState.customers.filter(c => c.name.toLowerCase().includes(q) || c.customerId.includes(q));
+                    DOM.customerSuggestionsDiv.style.display = matched.length > 0 ? "block" : "none";
+                    DOM.customerSuggestionsDiv.innerHTML = matched.map(c => `<div data-id="${c.id}">${c.name} (${c.customerId})</div>`).join("");
+                } else { DOM.customerSuggestionsDiv.style.display = "none"; appState.selectedCustomer = null; }
+            });
+            DOM.customerSuggestionsDiv.addEventListener("click", (e) => {
+                const div = e.target.closest("div");
+                if (div) {
+                    appState.selectedCustomer = appState.customers.find(c => c.id === div.dataset.id);
+                    DOM.customerNameInput.value = appState.selectedCustomer.name;
+                    DOM.customerPhoneInput.value = appState.selectedCustomer.phone || "";
+                    DOM.customerSuggestionsDiv.style.display = "none";
+                }
+            });
             DOM.scanBarcodeBtn.addEventListener('click', () => {
                 DOM.barcodeScannerContainer.style.display = 'block';
                 if (!appState.html5QrCode) { appState.html5QrCode = new Html5Qrcode("reader"); }
@@ -559,31 +863,58 @@ document.addEventListener("DOMContentLoaded", () => {
                 .catch(err => Helpers.showNotification("خطأ في تشغيل الكاميرا"));
             });
             DOM.closeScannerBtn.addEventListener('click', () => { if (appState.html5QrCode && appState.html5QrCode.isScanning) { appState.html5QrCode.stop(); } DOM.barcodeScannerContainer.style.display = 'none'; });
-            
             DOM.increaseDeliveryBtn.addEventListener('click', () => { DOM.deliveryFeeInput.value = (parseInt(DOM.deliveryFeeInput.value) || 0) + 5; SalesController.updateTotal(); });
             DOM.decreaseDeliveryBtn.addEventListener('click', () => { const current = parseInt(DOM.deliveryFeeInput.value) || 0; if (current >= 5) DOM.deliveryFeeInput.value = current - 5; SalesController.updateTotal(); });
             DOM.deliveryFeeInput.addEventListener('input', SalesController.updateTotal);
-            
             DOM.invoiceTable.addEventListener("click", (e) => { 
                 const target = e.target.closest("button");
                 if (!target) return;
                 const index = target.dataset.index;
                 if (target.classList.contains("remove-from-invoice-btn")) {
                     appState.currentInvoice.splice(index, 1);
+                    SalesController.renderInvoice();
                 } else if (target.classList.contains("increase-invoice-qty-btn")) {
                     appState.currentInvoice[index].qty++;
+                    SalesController.renderInvoice();
                 } else if (target.classList.contains("decrease-invoice-qty-btn")) {
-                    if (appState.currentInvoice[index].qty > 1) {
-                        appState.currentInvoice[index].qty--;
-                    } else { // If qty is 1, remove it
+                    appState.currentInvoice[index].qty--;
+                    if (appState.currentInvoice[index].qty === 0) {
                         appState.currentInvoice.splice(index, 1);
                     }
+                    SalesController.renderInvoice();
                 }
-                SalesController.renderInvoice();
             });
-            
             DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
-            // ... (rest of the listeners are the same as code 5)
+            DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
+            DOM.sendWhatsappBtn.addEventListener('click', () => {
+                const phone = Helpers.convertToArabicAndEnglishDigits(DOM.customerPhoneInput.value.trim());
+                if (!phone) { Helpers.showNotification("يرجى إدخال رقم هاتف العميل.", 4000); return; }
+                if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة!", 4000); return; }
+                const customerName = DOM.customerNameInput.value.trim() || 'عميلنا العزيز';
+                let message = `مرحباً ${customerName}،\nتفاصيل فاتورتك من متجرنا:\n\n`;
+                appState.currentInvoice.forEach(item => { message += `- ${item.name} (كمية:${item.qty}) = ${(item.price * item.qty).toFixed(2)} ج.م\n`; });
+                const subtotal = parseFloat(DOM.itemsSubtotalSpan.textContent);
+                const delivery = parseFloat(DOM.deliveryFeeInput.value);
+                const total = parseFloat(DOM.invoiceTotalSpan.textContent);
+                message += `\nإجمالي الأصناف: ${subtotal.toFixed(2)} ج.م\n`;
+                if (delivery > 0) message += `خدمة التوصيل: ${delivery.toFixed(2)} ج.م\n`;
+                message += `*الإجمالي الكلي: ${total.toFixed(2)} ج.م*\n\nشكراً لثقتكم بنا! ✨`;
+                const whatsappUrl = `https://wa.me/2${phone}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+            });
+            DOM.printInvoiceBtn.addEventListener("click", () => {
+                if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا توجد فاتورة للطباعة.", 4000); return; }
+                const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
+                const dummyInvoice = {
+                    id: 'مسودة', date: new Date().toISOString(),
+                    customerName: DOM.customerNameInput.value.trim(),
+                    paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
+                    amountPaid: parseFloat(DOM.amountPaidInput.value) || 0,
+                    changeOrBalance: (parseFloat(DOM.amountPaidInput.value) || 0) - invoiceTotal,
+                    items: [...appState.currentInvoice], deliveryFee: appState.deliveryFee, total: invoiceTotal
+                };
+                Helpers.printContent(Helpers.generatePrintContent(dummyInvoice));
+            });
         },
     };
     App.init();
