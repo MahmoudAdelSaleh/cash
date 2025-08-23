@@ -66,24 +66,26 @@
     .item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
     .item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
     #salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
-    /* تم تعديل هذا الجزء لتقليل الارتفاع الكلي لإطار الكاميرا */
+    /* تم تعديل هذا الجزء لتقليل الارتفاع الكلي وإزالة الحواف */
     #barcode-scanner-container {
         position: fixed;
-        top: 10%;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90%;
-        max-width: 400px;
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
         z-index: 1001;
-        border: 2px solid var(--primary-color);
-        max-height: 50vh; /* تحديد أقصى ارتفاع */
-        overflow: hidden;
+        padding: 0;
+        margin: 0;
     }
-    #reader { width: 100%; }
+    #reader {
+        width: 100%;
+        height: 100%;
+    }
     #closeScannerBtn { margin-top: 15px; width: 100%; }
     #paymentMethodRadios { display: flex; gap: 15px; align-items: center; }
     #paymentMethodRadios label { margin-left: 5px; margin-bottom: 0; }
@@ -136,6 +138,777 @@
                 return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
             } else {
                 return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+            }
+        });
+        callback(sortedData);
+        return () => {};
+    };
+    window.getDocument = (collectionName, docId) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const doc = collectionData.find(d => d.id === docId);
+            resolve(doc ? { ...doc, exists: () => true } : null);
+        });
+    };
+    window.updateDocument = (collectionName, docId, data) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const docIndex = collectionData.findIndex(d => d.id === docId);
+            if (docIndex !== -1) {
+                collectionData[docIndex] = { ...collectionData[docIndex], ...data };
+                localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            }
+            resolve();
+        });
+    };
+    window.deleteDocument = (collectionName, docId) => {
+        return new Promise(resolve => {
+            let collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            collectionData = collectionData.filter(d => d.id !== docId);
+            localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            resolve();
+        });
+    };
+    
+    async function importItemsFromJSON() {
+        if (!confirm("هل أنت متأكد أنك تريد استيراد الأصناف من ملف p.json؟ هذه العملية لا يمكن التراجع عنها.")) {
+            console.log("تم إلغاء عملية الاستيراد.");
+            return;
+        }
+        try {
+            console.log("بدء عملية الاستيراد...");
+            const response = await fetch('p.json');
+            if (!response.ok) throw new Error('لا يمكن تحميل ملف p.json. تأكد من وجوده في نفس المجلد.');
+            const itemsData = await response.json();
+            const categoryKey = "category ";
+            const itemsToImport = itemsData
+                .filter(item => item.status === true)
+                .map(item => ({
+                    code: item.sku,
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    category: item[categoryKey]?.trim() || "غير مصنف",
+                    unit: "قطعة",
+                    stock: 999
+                }));
+            if (itemsToImport.length === 0) {
+                alert("لم يتم العثور على أصناف صالحة للاستيراد في ملف p.json.");
+                return;
+            }
+            console.log(`تم العثور على ${itemsToImport.length} صنف سيتم استيرادها.`);
+            localStorage.setItem("items", JSON.stringify(itemsToImport.map(item => ({ id: generateId(), ...item }))));
+            alert(`✅ اكتمل الاستيراد بنجاح! تم إضافة ${itemsToImport.length} صنف إلى قاعدة البيانات.`);
+            console.log(`اكتمل الاستيراد بنجاح!`);
+            location.reload();
+        } catch (error) {
+            console.error("فشل الاستيراد:", error);
+            alert("فشلت عملية الاستيراد. تحقق من الـ Console لمزيد من التفاصيل.");
+        }
+    }
+    window.importItemsFromJSON = importItemsFromJSON;
+</script>
+
+<div id="login-container">
+    <form id="login-form">
+        <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
+        <div class="form-group"><input type="text" id="usernameInput" placeholder="اسم المستخدم" required /></div>
+        <div class="form-group"><input type="password" id="passwordInput" placeholder="كلمة المرور" required /></div>
+        <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
+    </form>
+</div>
+
+<div id="app-container">
+    <header><span>كاشير متكامل</span><button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button></header>
+    <nav>
+        <button data-tab="sales" class="active"><i class="fas fa-cash-register"></i> المبيعات</button>
+        <button data-tab="items"><i class="fas fa-box"></i> الأصناف</button>
+        <button data-tab="customers"><i class="fas fa-users"></i> العملاء</button>
+        <button data-tab="invoices"><i class="fas fa-file-invoice"></i> الفواتير</button>
+        <button data-tab="summary"><i class="fas fa-chart-bar"></i> التقارير</button>
+        <button data-tab="users" class="hidden"><i class="fas fa-user-shield"></i> المستخدمون</button>
+    </nav>
+    <main>
+        <section id="sales" class="active">
+            <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
+            <div id="categoryContainer" style="margin-bottom: 20px;">
+                <button id="showCategoriesBtn" style="width: 100%; padding: 15px; font-size: 18px;" class="btn-success"><i class="fas fa-tags"></i> عرض الفئات</button>
+            </div>
+            <div id="salesCategoryFilters" class="flex-container" style="justify-content: flex-start; margin-bottom: 15px; display: none;"></div>
+            <div id="categoryPagination" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <button id="prevCategoriesBtn" class="btn-small btn-warning"><i class="fas fa-arrow-right"></i> السابق</button>
+                <span id="categoryPageIndicator" style="font-weight: bold;"></span>
+                <button id="nextCategoriesBtn" class="btn-small btn-warning">التالي <i class="fas fa-arrow-left"></i></button>
+            </div>
+            <div id="itemGrid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;"></div>
+            <div class="form-group" style="text-align: center; margin-top: -10px; margin-bottom: 20px;">
+                <button id="hideCategoriesBtn" class="btn-warning" style="display:none;"><i class="fas fa-eye-slash"></i> إخفاء الفئات والأصناف</button>
+            </div>
+            <div class="form-group" style="position: relative;">
+                <div class="flex-container">
+                    <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
+                    <input type="tel" id="customerPhone" placeholder="رقم هاتف العميل (واتساب)" />
+                </div>
+                <div id="customerSuggestions"></div>
+            </div>
+            <div class="form-group">
+                <button id="scanBarcodeBtn" style="width:100%;"><i class="fas fa-camera"></i> مسح باركود صنف</button>
+            </div>
+            <div class="form-group flex-container">
+                <label for="deliveryFeeInput" style="flex: 0 1 auto;">خدمة التوصيل:</label>
+                <div class="input-group" style="flex: 1 1 150px;">
+                    <button id="decreaseDeliveryBtn" class="input-group-btn btn-warning">-</button>
+                    <input type="number" id="deliveryFeeInput" value="30" min="0" step="5" class="input-group-field" />
+                    <button id="increaseDeliveryBtn" class="input-group-btn btn-success">+</button>
+                </div>
+                <span style="flex: 2 1 auto; font-weight: bold;">ج.م</span>
+            </div>
+            <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
+            <table>
+                <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>حذف</th></tr></thead>
+                <tbody id="invoiceTable"></tbody>
+            </table>
+            <h4 style="text-align: left;">إجمالي الأصناف: <span id="itemsSubtotal">0.00</span> ج.م</h4>
+            <h3 style="text-align: left;">الإجمالي الكلي: <span id="invoiceTotal">0.00</span> ج.م</h3>
+            <div class="form-group flex-container">
+                <label for="amountPaidInput">المدفوع:</label>
+                <input type="number" id="amountPaidInput" placeholder="المبلغ المدفوع" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+                <label>طريقة الدفع:</label>
+                <div id="paymentMethodRadios">
+                    <input type="radio" id="payCash" name="paymentMethod" value="cash" checked> <label for="payCash">نقداً</label>
+                    <input type="radio" id="payVisa" name="paymentMethod" value="visa"> <label for="payVisa">فيزا</label>
+                    <input type="radio" id="payWallet" name="paymentMethod" value="wallet"> <label for="payWallet">محفظة</label>
+                </div>
+            </div>
+            <h3 style="text-align: left;">
+                <span id="changeText">الباقي للعميل:</span><span id="changeAmount">0.00</span> ج.م
+            </h3>
+            <div class="flex-container flex-end" style="margin-top: 20px; flex-direction: row !important; gap: 10px;">
+                <button id="sendWhatsappBtn" class="btn-success" style="background-color: #25D366;"><i class="fab fa-whatsapp"></i> واتساب</button>
+                <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة</button>
+                <button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ</button>
+            </div>
+        </section>
+        <section id="items">
+            <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="itemCode" placeholder="كود الصنف (SKU)" />
+                <input type="text" id="itemName" placeholder="اسم الصنف" required />
+                <input type="text" id="itemCategory" placeholder="الفئة" />
+            </div>
+            <div class="form-group flex-container">
+                <input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" required/>
+                <input type="number" id="itemStock" placeholder="المخزون" min="0" />
+                <input type="text" id="itemUnit" placeholder="الوحدة (قطعة، كجم)" />
+                <button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button>
+            </div>
+            <table>
+                <thead><tr><th>كود</th><th>اسم</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th><th>حذف</th></tr></thead>
+                <tbody id="itemsTable"></tbody>
+            </table>
+        </section>
+        <section id="customers">
+            <h2><i class="fas fa-users"></i> إدارة العملاء</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="newCustomerId" placeholder="رقم العميل" />
+                <input type="text" id="newCustomerName" placeholder="اسم العميل" />
+                <input type="tel" id="newCustomerPhone" placeholder="هاتف العميل" />
+                <button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ العميل</button>
+            </div>
+            <div id="customersList"></div>
+        </section>
+        <section id="invoices">
+            <h2><i class="fas fa-file-invoice-dollar"></i> الفواتير</h2>
+            <div id="invoicesList"></div>
+        </section>
+        <section id="summary">
+            <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
+            <div class="form-group flex-container">
+                <label for="summaryGroupSelect">تجميع حسب:</label>
+                <select id="summaryGroupSelect">
+                    <option value="day">اليوم</option><option value="week">الأسبوع</option><option value="month">الشهر</option>
+                </select>
+            </div>
+            <div class="summary-box">
+                <i class="fas fa-coins"></i> <strong>المجموع الكلي للمبيعات:</strong> <span id="totalSalesAmount">0.00</span> ج.م
+            </div>
+            <table>
+                <thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead>
+                <tbody id="salesSummaryTable"></tbody>
+            </table>
+            <div style="margin-top: 30px;">
+                <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
+                <div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div>
+            </div>
+        </section>
+        <section id="users">
+            <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="newUsernameInput" placeholder="اسم المستخدم" />
+                <input type="password" id="newUserPasswordInput" placeholder="كلمة المرور" />
+                <button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة مستخدم</button>
+            </div>
+            <div id="usersList"></div>
+            <div id="changePinSection">
+                <h4><i class="fas fa-key"></i> تغيير كلمة مرور المدير العام</h4>
+                <div class="form-group flex-container">
+                    <input type="password" id="oldPinInput" placeholder="الكلمة القديمة" /><input type="password" id="newPinInput" placeholder="الكلمة الجديدة" />
+                    <button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="barcode-scanner-container" style="display:none;">
+    <div id="reader"></div>
+    <button id="closeScannerBtn" class="btn-danger btn-small">إغلاق الكاميرا</button>
+</div>
+<div id="notification-container"></div>
+
+<script>
+    function generateId() {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    }
+    window.addDocument = (collectionName, data) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const doc = { id: generateId(), ...data, createdAt: new Date().toISOString() };
+            collectionData.push(doc);
+            localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            resolve(doc);
+        });
+    };
+    window.readCollection = (collectionName, callback, orderByField, orderDirection) => {
+        const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+        const sortedData = collectionData.sort((a, b) => {
+            if (orderByField === "createdAt") {
+                const aVal = new Date(a.createdAt).getTime();
+                const bVal = new Date(b.createdAt).getTime();
+                return orderDirection === "desc" ? bVal - aVal : aVal - bVal;
+            } else {
+                const aVal = a[orderByField];
+                const bVal = b[orderByField];
+                if (orderDirection === "desc") {
+                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+                } else {
+                    return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                }
+            }
+        });
+        callback(sortedData);
+        return () => {};
+    };
+    window.getDocument = (collectionName, docId) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const doc = collectionData.find(d => d.id === docId);
+            resolve(doc ? { ...doc, exists: () => true } : null);
+        });
+    };
+    window.updateDocument = (collectionName, docId, data) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const docIndex = collectionData.findIndex(d => d.id === docId);
+            if (docIndex !== -1) {
+                collectionData[docIndex] = { ...collectionData[docIndex], ...data };
+                localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            }
+            resolve();
+        });
+    };
+    window.deleteDocument = (collectionName, docId) => {
+        return new Promise(resolve => {
+            let collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            collectionData = collectionData.filter(d => d.id !== docId);
+            localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            resolve();
+        });
+    };
+    
+    async function importItemsFromJSON() {
+        if (!confirm("هل أنت متأكد أنك تريد استيراد الأصناف من ملف p.json؟ هذه العملية لا يمكن التراجع عنها.")) {
+            console.log("تم إلغاء عملية الاستيراد.");
+            return;
+        }
+        try {
+            console.log("بدء عملية الاستيراد...");
+            const response = await fetch('p.json');
+            if (!response.ok) throw new Error('لا يمكن تحميل ملف p.json. تأكد من وجوده في نفس المجلد.');
+            const itemsData = await response.json();
+            const categoryKey = "category ";
+            const itemsToImport = itemsData
+                .filter(item => item.status === true)
+                .map(item => ({
+                    code: item.sku,
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    category: item[categoryKey]?.trim() || "غير مصنف",
+                    unit: "قطعة",
+                    stock: 999
+                }));
+            if (itemsToImport.length === 0) {
+                alert("لم يتم العثور على أصناف صالحة للاستيراد في ملف p.json.");
+                return;
+            }
+            console.log(`تم العثور على ${itemsToImport.length} صنف سيتم استيرادها.`);
+            localStorage.setItem("items", JSON.stringify(itemsToImport.map(item => ({ id: generateId(), ...item }))));
+            alert(`✅ اكتمل الاستيراد بنجاح! تم إضافة ${itemsToImport.length} صنف إلى قاعدة البيانات.`);
+            console.log(`اكتمل الاستيراد بنجاح!`);
+            location.reload();
+        } catch (error) {
+            console.error("فشل الاستيراد:", error);
+            alert("فشلت عملية الاستيراد. تحقق من الـ Console لمزيد من التفاصيل.");
+        }
+    }
+    window.importItemsFromJSON = importItemsFromJSON;
+</script>
+
+<div id="login-container">
+    <form id="login-form">
+        <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
+        <div class="form-group"><input type="text" id="usernameInput" placeholder="اسم المستخدم" required /></div>
+        <div class="form-group"><input type="password" id="passwordInput" placeholder="كلمة المرور" required /></div>
+        <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
+    </form>
+</div>
+
+<div id="app-container">
+    <header><span>كاشير متكامل</span><button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button></header>
+    <nav>
+        <button data-tab="sales" class="active"><i class="fas fa-cash-register"></i> المبيعات</button>
+        <button data-tab="items"><i class="fas fa-box"></i> الأصناف</button>
+        <button data-tab="customers"><i class="fas fa-users"></i> العملاء</button>
+        <button data-tab="invoices"><i class="fas fa-file-invoice"></i> الفواتير</button>
+        <button data-tab="summary"><i class="fas fa-chart-bar"></i> التقارير</button>
+        <button data-tab="users" class="hidden"><i class="fas fa-user-shield"></i> المستخدمون</button>
+    </nav>
+    <main>
+        <section id="sales" class="active">
+            <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
+            <div id="categoryContainer" style="margin-bottom: 20px;">
+                <button id="showCategoriesBtn" style="width: 100%; padding: 15px; font-size: 18px;" class="btn-success"><i class="fas fa-tags"></i> عرض الفئات</button>
+            </div>
+            <div id="salesCategoryFilters" class="flex-container" style="justify-content: flex-start; margin-bottom: 15px; display: none;"></div>
+            <div id="categoryPagination" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <button id="prevCategoriesBtn" class="btn-small btn-warning"><i class="fas fa-arrow-right"></i> السابق</button>
+                <span id="categoryPageIndicator" style="font-weight: bold;"></span>
+                <button id="nextCategoriesBtn" class="btn-small btn-warning">التالي <i class="fas fa-arrow-left"></i></button>
+            </div>
+            <div id="itemGrid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;"></div>
+            <div class="form-group" style="text-align: center; margin-top: -10px; margin-bottom: 20px;">
+                <button id="hideCategoriesBtn" class="btn-warning" style="display:none;"><i class="fas fa-eye-slash"></i> إخفاء الفئات والأصناف</button>
+            </div>
+            <div class="form-group" style="position: relative;">
+                <div class="flex-container">
+                    <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
+                    <input type="tel" id="customerPhone" placeholder="رقم هاتف العميل (واتساب)" />
+                </div>
+                <div id="customerSuggestions"></div>
+            </div>
+            <div class="form-group">
+                <button id="scanBarcodeBtn" style="width:100%;"><i class="fas fa-camera"></i> مسح باركود صنف</button>
+            </div>
+            <div class="form-group flex-container">
+                <label for="deliveryFeeInput" style="flex: 0 1 auto;">خدمة التوصيل:</label>
+                <div class="input-group" style="flex: 1 1 150px;">
+                    <button id="decreaseDeliveryBtn" class="input-group-btn btn-warning">-</button>
+                    <input type="number" id="deliveryFeeInput" value="30" min="0" step="5" class="input-group-field" />
+                    <button id="increaseDeliveryBtn" class="input-group-btn btn-success">+</button>
+                </div>
+                <span style="flex: 2 1 auto; font-weight: bold;">ج.م</span>
+            </div>
+            <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
+            <table>
+                <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>حذف</th></tr></thead>
+                <tbody id="invoiceTable"></tbody>
+            </table>
+            <h4 style="text-align: left;">إجمالي الأصناف: <span id="itemsSubtotal">0.00</span> ج.م</h4>
+            <h3 style="text-align: left;">الإجمالي الكلي: <span id="invoiceTotal">0.00</span> ج.م</h3>
+            <div class="form-group flex-container">
+                <label for="amountPaidInput">المدفوع:</label>
+                <input type="number" id="amountPaidInput" placeholder="المبلغ المدفوع" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+                <label>طريقة الدفع:</label>
+                <div id="paymentMethodRadios">
+                    <input type="radio" id="payCash" name="paymentMethod" value="cash" checked> <label for="payCash">نقداً</label>
+                    <input type="radio" id="payVisa" name="paymentMethod" value="visa"> <label for="payVisa">فيزا</label>
+                    <input type="radio" id="payWallet" name="paymentMethod" value="wallet"> <label for="payWallet">محفظة</label>
+                </div>
+            </div>
+            <h3 style="text-align: left;">
+                <span id="changeText">الباقي للعميل:</span><span id="changeAmount">0.00</span> ج.م
+            </h3>
+            <div class="flex-container flex-end" style="margin-top: 20px; flex-direction: row !important; gap: 10px;">
+                <button id="sendWhatsappBtn" class="btn-success" style="background-color: #25D366;"><i class="fab fa-whatsapp"></i> واتساب</button>
+                <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة</button>
+                <button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ</button>
+            </div>
+        </section>
+        <section id="items">
+            <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="itemCode" placeholder="كود الصنف (SKU)" />
+                <input type="text" id="itemName" placeholder="اسم الصنف" required />
+                <input type="text" id="itemCategory" placeholder="الفئة" />
+            </div>
+            <div class="form-group flex-container">
+                <input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" required/>
+                <input type="number" id="itemStock" placeholder="المخزون" min="0" />
+                <input type="text" id="itemUnit" placeholder="الوحدة (قطعة، كجم)" />
+                <button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button>
+            </div>
+            <table>
+                <thead><tr><th>كود</th><th>اسم</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th><th>حذف</th></tr></thead>
+                <tbody id="itemsTable"></tbody>
+            </table>
+        </section>
+        <section id="customers">
+            <h2><i class="fas fa-users"></i> إدارة العملاء</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="newCustomerId" placeholder="رقم العميل" />
+                <input type="text" id="newCustomerName" placeholder="اسم العميل" />
+                <input type="tel" id="newCustomerPhone" placeholder="هاتف العميل" />
+                <button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ العميل</button>
+            </div>
+            <div id="customersList"></div>
+        </section>
+        <section id="invoices">
+            <h2><i class="fas fa-file-invoice-dollar"></i> الفواتير</h2>
+            <div id="invoicesList"></div>
+        </section>
+        <section id="summary">
+            <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
+            <div class="form-group flex-container">
+                <label for="summaryGroupSelect">تجميع حسب:</label>
+                <select id="summaryGroupSelect">
+                    <option value="day">اليوم</option><option value="week">الأسبوع</option><option value="month">الشهر</option>
+                </select>
+            </div>
+            <div class="summary-box">
+                <i class="fas fa-coins"></i> <strong>المجموع الكلي للمبيعات:</strong> <span id="totalSalesAmount">0.00</span> ج.م
+            </div>
+            <table>
+                <thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead>
+                <tbody id="salesSummaryTable"></tbody>
+            </table>
+            <div style="margin-top: 30px;">
+                <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
+                <div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div>
+            </div>
+        </section>
+        <section id="users">
+            <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="newUsernameInput" placeholder="اسم المستخدم" />
+                <input type="password" id="newUserPasswordInput" placeholder="كلمة المرور" />
+                <button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة مستخدم</button>
+            </div>
+            <div id="usersList"></div>
+            <div id="changePinSection">
+                <h4><i class="fas fa-key"></i> تغيير كلمة مرور المدير العام</h4>
+                <div class="form-group flex-container">
+                    <input type="password" id="oldPinInput" placeholder="الكلمة القديمة" /><input type="password" id="newPinInput" placeholder="الكلمة الجديدة" />
+                    <button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="barcode-scanner-container" style="display:none;">
+    <div id="reader"></div>
+    <button id="closeScannerBtn" class="btn-danger btn-small">إغلاق الكاميرا</button>
+</div>
+<div id="notification-container"></div>
+
+<script>
+    function generateId() {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    }
+    window.addDocument = (collectionName, data) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const doc = { id: generateId(), ...data, createdAt: new Date().toISOString() };
+            collectionData.push(doc);
+            localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            resolve(doc);
+        });
+    };
+    window.readCollection = (collectionName, callback, orderByField, orderDirection) => {
+        const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+        const sortedData = collectionData.sort((a, b) => {
+            if (orderByField === "createdAt") {
+                const aVal = new Date(a.createdAt).getTime();
+                const bVal = new Date(b.createdAt).getTime();
+                return orderDirection === "desc" ? bVal - aVal : aVal - bVal;
+            } else {
+                const aVal = a[orderByField];
+                const bVal = b[orderByField];
+                if (orderDirection === "desc") {
+                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+                } else {
+                    return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                }
+            }
+        });
+        callback(sortedData);
+        return () => {};
+    };
+    window.getDocument = (collectionName, docId) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const doc = collectionData.find(d => d.id === docId);
+            resolve(doc ? { ...doc, exists: () => true } : null);
+        });
+    };
+    window.updateDocument = (collectionName, docId, data) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const docIndex = collectionData.findIndex(d => d.id === docId);
+            if (docIndex !== -1) {
+                collectionData[docIndex] = { ...collectionData[docIndex], ...data };
+                localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            }
+            resolve();
+        });
+    };
+    window.deleteDocument = (collectionName, docId) => {
+        return new Promise(resolve => {
+            let collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            collectionData = collectionData.filter(d => d.id !== docId);
+            localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            resolve();
+        });
+    };
+    
+    async function importItemsFromJSON() {
+        if (!confirm("هل أنت متأكد أنك تريد استيراد الأصناف من ملف p.json؟ هذه العملية لا يمكن التراجع عنها.")) {
+            console.log("تم إلغاء عملية الاستيراد.");
+            return;
+        }
+        try {
+            console.log("بدء عملية الاستيراد...");
+            const response = await fetch('p.json');
+            if (!response.ok) throw new Error('لا يمكن تحميل ملف p.json. تأكد من وجوده في نفس المجلد.');
+            const itemsData = await response.json();
+            const categoryKey = "category ";
+            const itemsToImport = itemsData
+                .filter(item => item.status === true)
+                .map(item => ({
+                    code: item.sku,
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    category: item[categoryKey]?.trim() || "غير مصنف",
+                    unit: "قطعة",
+                    stock: 999
+                }));
+            if (itemsToImport.length === 0) {
+                alert("لم يتم العثور على أصناف صالحة للاستيراد في ملف p.json.");
+                return;
+            }
+            console.log(`تم العثور على ${itemsToImport.length} صنف سيتم استيرادها.`);
+            localStorage.setItem("items", JSON.stringify(itemsToImport.map(item => ({ id: generateId(), ...item }))));
+            alert(`✅ اكتمل الاستيراد بنجاح! تم إضافة ${itemsToImport.length} صنف إلى قاعدة البيانات.`);
+            console.log(`اكتمل الاستيراد بنجاح!`);
+            location.reload();
+        } catch (error) {
+            console.error("فشل الاستيراد:", error);
+            alert("فشلت عملية الاستيراد. تحقق من الـ Console لمزيد من التفاصيل.");
+        }
+    }
+    window.importItemsFromJSON = importItemsFromJSON;
+</script>
+
+<div id="login-container">
+    <form id="login-form">
+        <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
+        <div class="form-group"><input type="text" id="usernameInput" placeholder="اسم المستخدم" required /></div>
+        <div class="form-group"><input type="password" id="passwordInput" placeholder="كلمة المرور" required /></div>
+        <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
+    </form>
+</div>
+
+<div id="app-container">
+    <header><span>كاشير متكامل</span><button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button></header>
+    <nav>
+        <button data-tab="sales" class="active"><i class="fas fa-cash-register"></i> المبيعات</button>
+        <button data-tab="items"><i class="fas fa-box"></i> الأصناف</button>
+        <button data-tab="customers"><i class="fas fa-users"></i> العملاء</button>
+        <button data-tab="invoices"><i class="fas fa-file-invoice"></i> الفواتير</button>
+        <button data-tab="summary"><i class="fas fa-chart-bar"></i> التقارير</button>
+        <button data-tab="users" class="hidden"><i class="fas fa-user-shield"></i> المستخدمون</button>
+    </nav>
+    <main>
+        <section id="sales" class="active">
+            <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
+            <div id="categoryContainer" style="margin-bottom: 20px;">
+                <button id="showCategoriesBtn" style="width: 100%; padding: 15px; font-size: 18px;" class="btn-success"><i class="fas fa-tags"></i> عرض الفئات</button>
+            </div>
+            <div id="salesCategoryFilters" class="flex-container" style="justify-content: flex-start; margin-bottom: 15px; display: none;"></div>
+            <div id="categoryPagination" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <button id="prevCategoriesBtn" class="btn-small btn-warning"><i class="fas fa-arrow-right"></i> السابق</button>
+                <span id="categoryPageIndicator" style="font-weight: bold;"></span>
+                <button id="nextCategoriesBtn" class="btn-small btn-warning">التالي <i class="fas fa-arrow-left"></i></button>
+            </div>
+            <div id="itemGrid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;"></div>
+            <div class="form-group" style="text-align: center; margin-top: -10px; margin-bottom: 20px;">
+                <button id="hideCategoriesBtn" class="btn-warning" style="display:none;"><i class="fas fa-eye-slash"></i> إخفاء الفئات والأصناف</button>
+            </div>
+            <div class="form-group" style="position: relative;">
+                <div class="flex-container">
+                    <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
+                    <input type="tel" id="customerPhone" placeholder="رقم هاتف العميل (واتساب)" />
+                </div>
+                <div id="customerSuggestions"></div>
+            </div>
+            <div class="form-group">
+                <button id="scanBarcodeBtn" style="width:100%;"><i class="fas fa-camera"></i> مسح باركود صنف</button>
+            </div>
+            <div class="form-group flex-container">
+                <label for="deliveryFeeInput" style="flex: 0 1 auto;">خدمة التوصيل:</label>
+                <div class="input-group" style="flex: 1 1 150px;">
+                    <button id="decreaseDeliveryBtn" class="input-group-btn btn-warning">-</button>
+                    <input type="number" id="deliveryFeeInput" value="30" min="0" step="5" class="input-group-field" />
+                    <button id="increaseDeliveryBtn" class="input-group-btn btn-success">+</button>
+                </div>
+                <span style="flex: 2 1 auto; font-weight: bold;">ج.م</span>
+            </div>
+            <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
+            <table>
+                <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th>حذف</th></tr></thead>
+                <tbody id="invoiceTable"></tbody>
+            </table>
+            <h4 style="text-align: left;">إجمالي الأصناف: <span id="itemsSubtotal">0.00</span> ج.م</h4>
+            <h3 style="text-align: left;">الإجمالي الكلي: <span id="invoiceTotal">0.00</span> ج.م</h3>
+            <div class="form-group flex-container">
+                <label for="amountPaidInput">المدفوع:</label>
+                <input type="number" id="amountPaidInput" placeholder="المبلغ المدفوع" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+                <label>طريقة الدفع:</label>
+                <div id="paymentMethodRadios">
+                    <input type="radio" id="payCash" name="paymentMethod" value="cash" checked> <label for="payCash">نقداً</label>
+                    <input type="radio" id="payVisa" name="paymentMethod" value="visa"> <label for="payVisa">فيزا</label>
+                    <input type="radio" id="payWallet" name="paymentMethod" value="wallet"> <label for="payWallet">محفظة</label>
+                </div>
+            </div>
+            <h3 style="text-align: left;">
+                <span id="changeText">الباقي للعميل:</span><span id="changeAmount">0.00</span> ج.م
+            </h3>
+            <div class="flex-container flex-end" style="margin-top: 20px; flex-direction: row !important; gap: 10px;">
+                <button id="sendWhatsappBtn" class="btn-success" style="background-color: #25D366;"><i class="fab fa-whatsapp"></i> واتساب</button>
+                <button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة</button>
+                <button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ</button>
+            </div>
+        </section>
+        <section id="items">
+            <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="itemCode" placeholder="كود الصنف (SKU)" />
+                <input type="text" id="itemName" placeholder="اسم الصنف" required />
+                <input type="text" id="itemCategory" placeholder="الفئة" />
+            </div>
+            <div class="form-group flex-container">
+                <input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" required/>
+                <input type="number" id="itemStock" placeholder="المخزون" min="0" />
+                <input type="text" id="itemUnit" placeholder="الوحدة (قطعة، كجم)" />
+                <button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button>
+            </div>
+            <table>
+                <thead><tr><th>كود</th><th>اسم</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th><th>حذف</th></tr></thead>
+                <tbody id="itemsTable"></tbody>
+            </table>
+        </section>
+        <section id="customers">
+            <h2><i class="fas fa-users"></i> إدارة العملاء</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="newCustomerId" placeholder="رقم العميل" />
+                <input type="text" id="newCustomerName" placeholder="اسم العميل" />
+                <input type="tel" id="newCustomerPhone" placeholder="هاتف العميل" />
+                <button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ العميل</button>
+            </div>
+            <div id="customersList"></div>
+        </section>
+        <section id="invoices">
+            <h2><i class="fas fa-file-invoice-dollar"></i> الفواتير</h2>
+            <div id="invoicesList"></div>
+        </section>
+        <section id="summary">
+            <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
+            <div class="form-group flex-container">
+                <label for="summaryGroupSelect">تجميع حسب:</label>
+                <select id="summaryGroupSelect">
+                    <option value="day">اليوم</option><option value="week">الأسبوع</option><option value="month">الشهر</option>
+                </select>
+            </div>
+            <div class="summary-box">
+                <i class="fas fa-coins"></i> <strong>المجموع الكلي للمبيعات:</strong> <span id="totalSalesAmount">0.00</span> ج.م
+            </div>
+            <table>
+                <thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead>
+                <tbody id="salesSummaryTable"></tbody>
+            </table>
+            <div style="margin-top: 30px;">
+                <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
+                <div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div>
+            </div>
+        </section>
+        <section id="users">
+            <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
+            <div class="form-group flex-container">
+                <input type="text" id="newUsernameInput" placeholder="اسم المستخدم" />
+                <input type="password" id="newUserPasswordInput" placeholder="كلمة المرور" />
+                <button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة مستخدم</button>
+            </div>
+            <div id="usersList"></div>
+            <div id="changePinSection">
+                <h4><i class="fas fa-key"></i> تغيير كلمة مرور المدير العام</h4>
+                <div class="form-group flex-container">
+                    <input type="password" id="oldPinInput" placeholder="الكلمة القديمة" /><input type="password" id="newPinInput" placeholder="الكلمة الجديدة" />
+                    <button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="barcode-scanner-container" style="display:none;">
+    <div id="reader"></div>
+    <button id="closeScannerBtn" class="btn-danger btn-small">إغلاق الكاميرا</button>
+</div>
+<div id="notification-container"></div>
+
+<script>
+    function generateId() {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    }
+    window.addDocument = (collectionName, data) => {
+        return new Promise(resolve => {
+            const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+            const doc = { id: generateId(), ...data, createdAt: new Date().toISOString() };
+            collectionData.push(doc);
+            localStorage.setItem(collectionName, JSON.stringify(collectionData));
+            resolve(doc);
+        });
+    };
+    window.readCollection = (collectionName, callback, orderByField, orderDirection) => {
+        const collectionData = JSON.parse(localStorage.getItem(collectionName)) || [];
+        const sortedData = collectionData.sort((a, b) => {
+            if (orderByField === "createdAt") {
+                const aVal = new Date(a.createdAt).getTime();
+                const bVal = new Date(b.createdAt).getTime();
+                return orderDirection === "desc" ? bVal - aVal : aVal - bVal;
+            } else {
+                const aVal = a[orderByField];
+                const bVal = b[orderByField];
+                if (orderDirection === "desc") {
+                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+                } else {
+                    return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                }
             }
         });
         callback(sortedData);
@@ -482,7 +1255,7 @@
                 const changeText = invoice.changeOrBalance >= 0 ? 'الباقي للعميل' : 'المطلوب منه';
                 return `<div style="direction:rtl; font-family: 'Segoe UI', sans-serif;" id="print-area">
                         <h2 class="print-header">فاتورة مبيعات</h2>
-                        <div class="print-details"><p>رقم الفاتورة: <span>${invoice.id ? inv.id.substring(0, 8) : 'مسودة'}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div>
+                        <div class="print-details"><p>رقم الفاتورة: <span>${invoice.id ? invoice.id.substring(0, 8) : 'مسودة'}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div>
                         <div class="print-table"><table><thead><tr style="background-color:#eee;"><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
                         <div class="print-summary"><p><strong>إجمالي الأصناف:</strong> ${subtotal.toFixed(2)} ج.م</p>${deliveryHtml}<p><strong>إجمالي الفاتورة:</strong> ${invoice.total.toFixed(2)} ج.م</p><p><strong>طريقة الدفع:</strong> ${paymentMethodText}</p><p><strong>المبلغ المدفوع:</strong> ${invoice.amountPaid.toFixed(2)} ج.م</p><p><strong>${changeText}:</strong> ${Math.abs(invoice.changeOrBalance).toFixed(2)} ج.م</p></div></div>`;
             },
@@ -914,7 +1687,7 @@
                 DOM.nextCategoriesBtn.addEventListener('click', () => { if (appState.categoryCurrentPage < Math.ceil(appState.allCategories.length / appState.categoriesPerPage)) { appState.categoryCurrentPage++; SalesController.renderCategoryFilters(); } });
                 DOM.prevCategoriesBtn.addEventListener('click', () => { if (appState.categoryCurrentPage > 1) { appState.categoryCurrentPage--; SalesController.renderCategoryFilters(); } });
                 DOM.scanBarcodeBtn.addEventListener('click', () => {
-                    DOM.barcodeScannerContainer.style.display = 'block';
+                    DOM.barcodeScannerContainer.style.display = 'flex';
                     if (!appState.html5QrCode) { appState.html5QrCode = new Html5Qrcode("reader"); }
                     const onScanSuccess = (decodedText) => {
                         appState.html5QrCode.stop().then(() => {
@@ -924,7 +1697,7 @@
                             else { Helpers.showNotification(`صنف غير موجود: ${decodedText}`); }
                         });
                     };
-                    appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, onScanSuccess, () => {})
+                    appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 900, height: 900} }, onScanSuccess, () => {})
                     .catch(() => Helpers.showNotification("خطأ في تشغيل الكاميرا"));
                 });
                 DOM.closeScannerBtn.addEventListener('click', () => { if (appState.html5QrCode?.isScanning) { appState.html5QrCode.stop(); } DOM.barcodeScannerContainer.style.display = 'none'; });
