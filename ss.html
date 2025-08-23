@@ -124,7 +124,73 @@
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   };
   window.updateDocument = async (collectionName, docId, data) => await updateDoc(doc(db, collectionName, docId), data);
-  window.deleteDocument = async (collectionName, docId) => await deleteDoc(doc(db, collectionName, docId));
+  window.deleteDocument = async (collectionName, docId) => await deleteDoc(doc(db, collectionName, docId));// --- دالة مؤقتة لاستيراد الأصناف من ملف JSON ---
+async function importItemsFromJSON() {
+    if (!confirm("هل أنت متأكد أنك تريد استيراد الأصناف من ملف p.json؟ هذه العملية لا يمكن التراجع عنها.")) {
+        console.log("تم إلغاء عملية الاستيراد.");
+        return;
+    }
+
+    try {
+        console.log("بدء عملية الاستيراد...");
+        const response = await fetch('p.json');
+        if (!response.ok) throw new Error('لا يمكن تحميل ملف p.json. تأكد من وجوده في نفس المجلد.');
+        
+        const itemsData = await response.json();
+        
+        // تحويل بيانات JSON إلى الصيغة المطلوبة في Firestore
+        const categoryKey = "category ";
+        const itemsToImport = itemsData
+            .filter(item => item.status === true)
+            .map(item => ({
+                code: item.sku,
+                name: item.name,
+                price: parseFloat(item.price) || 0,
+                category: item[categoryKey]?.trim() || "غير مصنف",
+                unit: "قطعة",
+                stock: 999 
+            }));
+
+        if (itemsToImport.length === 0) {
+            alert("لم يتم العثور على أصناف صالحة للاستيراد في ملف p.json.");
+            return;
+        }
+
+        console.log(`تم العثور على ${itemsToImport.length} صنف سيتم استيرادها.`);
+
+        // استخدام "Batch Write" لرفع البيانات بكفاءة عالية
+        const { writeBatch, doc, collection } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
+        
+        let batch = writeBatch(db);
+        const itemsRef = collection(db, "items");
+        let counter = 0;
+
+        for (const item of itemsToImport) {
+            const docRef = doc(itemsRef); // إنشاء مستند جديد بمعرف تلقائي
+            batch.set(docRef, item);
+            counter++;
+            // Firestore تسمح بـ 500 عملية في الدفعة الواحدة، لذلك نقسمها
+            if (counter % 499 === 0) {
+               await batch.commit();
+               batch = writeBatch(db); // بدء دفعة جديدة
+               console.log(`تم حفظ ${counter} صنف...`);
+            }
+        }
+        await batch.commit(); // حفظ ما تبقى في الدفعة الأخيرة
+
+        alert(`✅ اكتمل الاستيراد بنجاح! تم إضافة ${itemsToImport.length} صنف إلى قاعدة البيانات.`);
+        console.log(`اكتمل الاستيراد بنجاح!`);
+        location.reload(); // إعادة تحميل الصفحة لرؤية البيانات الجديدة
+
+    } catch (error) {
+        console.error("فشل الاستيراد:", error);
+        alert("فشلت عملية الاستيراد. تحقق من الـ Console لمزيد من التفاصيل.");
+    }
+}
+// --- نهاية الدالة المؤقتة ---
+
+// اجعل الدالة متاحة للاستدعاء من الـ Console
+window.importItemsFromJSON = importItemsFromJSON;
 </script>
 
 <div id="login-container">
