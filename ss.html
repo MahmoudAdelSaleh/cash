@@ -66,8 +66,22 @@
     .item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
     .item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
     #salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
+    /* تم تعديل هذا الجزء لتقليل الارتفاع الكلي لإطار الكاميرا */
     #barcode-scanner-container {
-        position: fixed; top: 10%; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 1001; border: 2px solid var(--primary-color);
+        position: fixed;
+        top: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 400px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        z-index: 1001;
+        border: 2px solid var(--primary-color);
+        max-height: 50vh; /* تحديد أقصى ارتفاع */
+        overflow: hidden;
     }
     #reader { width: 100%; }
     #closeScannerBtn { margin-top: 15px; width: 100%; }
@@ -101,14 +115,6 @@
 <body>
 
 <script>
-    // #1: إزالة استدعاءات Firebase SDK
-    // import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    // import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-    // const firebaseConfig = { ... };
-    // const app = initializeApp(firebaseConfig);
-    // const db = getFirestore(app);
-
-    // #2: تعريف دوال تخزين محلية تحاكي Firebase
     function generateId() {
         return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     }
@@ -133,8 +139,7 @@
             }
         });
         callback(sortedData);
-        // لا يوجد "استماع لحظي" في localStorage، لذا يتم استدعاء callback مرة واحدة فقط.
-        return () => {}; // إرجاع دالة فارغة لتجنب الأخطاء
+        return () => {};
     };
     window.getDocument = (collectionName, docId) => {
         return new Promise(resolve => {
@@ -163,7 +168,6 @@
         });
     };
     
-    // دالة مؤقتة لاستيراد الأصناف من ملف JSON (تم تعديلها لتستخدم الدوال المحلية)
     async function importItemsFromJSON() {
         if (!confirm("هل أنت متأكد أنك تريد استيراد الأصناف من ملف p.json؟ هذه العملية لا يمكن التراجع عنها.")) {
             console.log("تم إلغاء عملية الاستيراد.");
@@ -190,10 +194,7 @@
                 return;
             }
             console.log(`تم العثور على ${itemsToImport.length} صنف سيتم استيرادها.`);
-            
-            // استخدام الدوال المحلية للتخزين
             localStorage.setItem("items", JSON.stringify(itemsToImport.map(item => ({ id: generateId(), ...item }))));
-            
             alert(`✅ اكتمل الاستيراد بنجاح! تم إضافة ${itemsToImport.length} صنف إلى قاعدة البيانات.`);
             console.log(`اكتمل الاستيراد بنجاح!`);
             location.reload();
@@ -481,7 +482,7 @@
                 const changeText = invoice.changeOrBalance >= 0 ? 'الباقي للعميل' : 'المطلوب منه';
                 return `<div style="direction:rtl; font-family: 'Segoe UI', sans-serif;" id="print-area">
                         <h2 class="print-header">فاتورة مبيعات</h2>
-                        <div class="print-details"><p>رقم الفاتورة: <span>${invoice.id ? invoice.id.substring(0, 8) : 'مسودة'}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div>
+                        <div class="print-details"><p>رقم الفاتورة: <span>${invoice.id ? inv.id.substring(0, 8) : 'مسودة'}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div>
                         <div class="print-table"><table><thead><tr style="background-color:#eee;"><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
                         <div class="print-summary"><p><strong>إجمالي الأصناف:</strong> ${subtotal.toFixed(2)} ج.م</p>${deliveryHtml}<p><strong>إجمالي الفاتورة:</strong> ${invoice.total.toFixed(2)} ج.م</p><p><strong>طريقة الدفع:</strong> ${paymentMethodText}</p><p><strong>المبلغ المدفوع:</strong> ${invoice.amountPaid.toFixed(2)} ج.م</p><p><strong>${changeText}:</strong> ${Math.abs(invoice.changeOrBalance).toFixed(2)} ج.م</p></div></div>`;
             },
@@ -570,7 +571,7 @@
                         Helpers.showNotification("تم حفظ الصنف بنجاح.");
                     }
                     ItemsController.clearForm();
-                    App.listenToFirebase(); // إعادة قراءة البيانات بعد التغيير
+                    App.listenToDataChanges();
                 } catch (error) {
                     console.error("Error saving item:", error);
                     Helpers.showNotification("حدث خطأ أثناء حفظ الصنف.");
@@ -593,7 +594,7 @@
                     try {
                         await window.deleteDocument("items", id);
                         Helpers.showNotification("تم حذف الصنف بنجاح.");
-                        App.listenToFirebase(); // إعادة قراءة البيانات بعد الحذف
+                        App.listenToDataChanges();
                     } catch (error) {
                         console.error("Error deleting item:", error);
                         Helpers.showNotification("حدث خطأ أثناء حذف الصنف.");
@@ -623,7 +624,7 @@
                     if (appState.editingCustomerId) { await window.updateDocument("customers", appState.editingCustomerId, customerData); Helpers.showNotification("تم تعديل العميل."); }
                     else { await window.addDocument("customers", customerData); Helpers.showNotification("تم حفظ العميل."); }
                     CustomersController.clearForm();
-                    App.listenToFirebase(); // إعادة قراءة البيانات بعد التغيير
+                    App.listenToDataChanges();
                 } catch (error) { Helpers.showNotification("حدث خطأ."); }
             },
             edit: (id) => {
@@ -726,7 +727,7 @@
                     appState.selectedCustomer = null;
                     DOM.deliveryFeeInput.value = 30;
                     SalesController.renderInvoice();
-                    App.listenToFirebase(); // إعادة قراءة البيانات بعد الحفظ
+                    App.listenToDataChanges();
                 } catch (error) {
                     console.error("Save Invoice Error:", error);
                     Helpers.showNotification("حدث خطأ أثناء حفظ الفاتورة. راجع الـ console.", 5000);
@@ -754,7 +755,7 @@
                         key = date.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
                     } else if (groupType === 'week') {
                         const startOfWeek = new Date(date);
-                        startOfWeek.setDate(date.getDate() - (date.getDay() + 6) % 7); // Start of week (Monday)
+                        startOfWeek.setDate(date.getDate() - (date.getDay() + 6) % 7);
                         const endOfWeek = new Date(startOfWeek);
                         endOfWeek.setDate(startOfWeek.getDate() + 6);
                         key = `الأسبوع من ${startOfWeek.toLocaleDateString('ar-EG', { month: 'long', day: 'numeric' })} إلى ${endOfWeek.toLocaleDateString('ar-EG', { month: 'long', day: 'numeric' })}`;
@@ -801,7 +802,7 @@
                     Helpers.showNotification("تم إضافة المستخدم بنجاح.");
                     DOM.newUsernameInput.value = '';
                     DOM.newUserPasswordInput.value = '';
-                    App.listenToFirebase();
+                    App.listenToDataChanges();
                 } catch (error) { Helpers.showNotification("حدث خطأ."); }
             },
             delete: async (id) => {
@@ -809,7 +810,7 @@
                     try {
                         await window.deleteDocument("users", id);
                         Helpers.showNotification("تم حذف المستخدم بنجاح.");
-                        App.listenToFirebase();
+                        App.listenToDataChanges();
                     } catch (error) { Helpers.showNotification("حدث خطأ."); }
                 }
             },
@@ -825,8 +826,10 @@
                     return;
                 }
                 try {
-                    await window.updateDocument("config", "admin", { pin: newPin });
-                    appState.adminPIN = newPin; // تحديث الـ state مباشرة
+                    const config = JSON.parse(localStorage.getItem('config')) || { admin: {} };
+                    config.admin.pin = newPin;
+                    localStorage.setItem('config', JSON.stringify(config));
+                    appState.adminPIN = newPin;
                     Helpers.showNotification("تم تغيير كلمة المرور بنجاح.");
                     DOM.oldPinInput.value = '';
                     DOM.newPinInput.value = '';
@@ -841,17 +844,30 @@
         const App = {
             init: async () => {
                 App.bindEvents();
-                App.listenToFirebase();
+                App.listenToDataChanges();
                 const savedUser = localStorage.getItem('currentUser');
                 if (savedUser) { appState.currentUser = JSON.parse(savedUser); Auth.showApp(appState.currentUser.role); }
             },
-            listenToFirebase: () => {
-                window.readCollection("items", data => { appState.items = data; appState.allCategories = [...new Set(data.map(item => item.category).filter(Boolean))].sort(); if(document.getElementById('items').classList.contains('active')) ItemsController.render(); });
-                window.readCollection("customers", data => { appState.customers = data; if(document.getElementById('customers').classList.contains('active')) CustomersController.render(); });
-                window.readCollection("invoices", data => { appState.invoices = data; if(document.getElementById('invoices').classList.contains('active')) App.renderInvoicesList(); if(document.getElementById('summary').classList.contains('active')) ReportsController.render(); });
-                window.readCollection("users", data => { appState.users = data; if(document.getElementById('users').classList.contains('active')) UsersController.render(); });
+            listenToDataChanges: () => {
+                window.readCollection("items", data => {
+                    appState.items = data;
+                    appState.allCategories = [...new Set(data.map(item => item.category).filter(Boolean))].sort();
+                    if(document.getElementById('items').classList.contains('active')) ItemsController.render();
+                }, "name", "asc");
+                window.readCollection("customers", data => {
+                    appState.customers = data;
+                    if(document.getElementById('customers').classList.contains('active')) CustomersController.render();
+                }, "name", "asc");
+                window.readCollection("invoices", data => {
+                    appState.invoices = data;
+                    if(document.getElementById('invoices').classList.contains('active')) App.renderInvoicesList();
+                    if(document.getElementById('summary').classList.contains('active')) ReportsController.render();
+                }, "createdAt", "desc");
+                window.readCollection("users", data => {
+                    appState.users = data;
+                    if(document.getElementById('users').classList.contains('active')) UsersController.render();
+                }, "username", "asc");
                 
-                // بما أننا لا نستخدم Firestore، سنقوم بتحميل الـ PIN من localStorage أو نستخدم قيمة افتراضية
                 const config = JSON.parse(localStorage.getItem('config')) || { admin: { pin: "790707071" } };
                 appState.adminPIN = config.admin.pin;
             },
@@ -908,7 +924,7 @@
                             else { Helpers.showNotification(`صنف غير موجود: ${decodedText}`); }
                         });
                     };
-                    appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 150, height: 150} }, onScanSuccess, () => {})
+                    appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, onScanSuccess, () => {})
                     .catch(() => Helpers.showNotification("خطأ في تشغيل الكاميرا"));
                 });
                 DOM.closeScannerBtn.addEventListener('click', () => { if (appState.html5QrCode?.isScanning) { appState.html5QrCode.stop(); } DOM.barcodeScannerContainer.style.display = 'none'; });
@@ -951,6 +967,32 @@
                 });
                 DOM.changePinBtn.addEventListener("click", UsersController.changeAdminPin);
                 DOM.summaryGroupSelect.addEventListener("change", ReportsController.render);
+                DOM.printInvoiceBtn.addEventListener("click", () => {
+                    const invoiceData = {
+                        items: appState.currentInvoice,
+                        total: parseFloat(DOM.invoiceTotalSpan.textContent),
+                        deliveryFee: appState.deliveryFee,
+                        customerName: DOM.customerNameInput.value.trim(),
+                        paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
+                        amountPaid: parseFloat(DOM.amountPaidInput.value) || 0,
+                        changeOrBalance: (parseFloat(DOM.amountPaidInput.value) || 0) - parseFloat(DOM.invoiceTotalSpan.textContent)
+                    };
+                    const content = Helpers.generatePrintContent(invoiceData);
+                    Helpers.printContent(content);
+                });
+                DOM.sendWhatsappBtn.addEventListener("click", () => {
+                    const customerPhone = Helpers.convertToArabicAndEnglishDigits(DOM.customerPhoneInput.value.trim());
+                    if (!customerPhone) { Helpers.showNotification("يرجى إدخال رقم هاتف العميل."); return; }
+                    let message = `مرحباً ${DOM.customerNameInput.value.trim() || 'عميلنا العزيز'}،\n\n`;
+                    message += `هذه تفاصيل فاتورتك:\n\n`;
+                    appState.currentInvoice.forEach(item => {
+                        message += `${item.name}: ${item.qty} × ${item.price.toFixed(2)} ج.م = ${(item.qty * item.price).toFixed(2)} ج.م\n`;
+                    });
+                    if (appState.deliveryFee > 0) { message += `\nخدمة التوصيل: ${appState.deliveryFee.toFixed(2)} ج.م\n`; }
+                    message += `\nالإجمالي الكلي: ${parseFloat(DOM.invoiceTotalSpan.textContent).toFixed(2)} ج.م\n`;
+                    const encodedMessage = encodeURIComponent(message);
+                    window.open(`https://wa.me/${customerPhone}?text=${encodedMessage}`, '_blank');
+                });
             }
         };
         App.init();
