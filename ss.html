@@ -124,73 +124,7 @@
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
   };
   window.updateDocument = async (collectionName, docId, data) => await updateDoc(doc(db, collectionName, docId), data);
-  window.deleteDocument = async (collectionName, docId) => await deleteDoc(doc(db, collectionName, docId));// --- دالة مؤقتة لاستيراد الأصناف من ملف JSON ---
-async function importItemsFromJSON() {
-    if (!confirm("هل أنت متأكد أنك تريد استيراد الأصناف من ملف p.json؟ هذه العملية لا يمكن التراجع عنها.")) {
-        console.log("تم إلغاء عملية الاستيراد.");
-        return;
-    }
-
-    try {
-        console.log("بدء عملية الاستيراد...");
-        const response = await fetch('p.json');
-        if (!response.ok) throw new Error('لا يمكن تحميل ملف p.json. تأكد من وجوده في نفس المجلد.');
-        
-        const itemsData = await response.json();
-        
-        // تحويل بيانات JSON إلى الصيغة المطلوبة في Firestore
-        const categoryKey = "category ";
-        const itemsToImport = itemsData
-            .filter(item => item.status === true)
-            .map(item => ({
-                code: item.sku,
-                name: item.name,
-                price: parseFloat(item.price) || 0,
-                category: item[categoryKey]?.trim() || "غير مصنف",
-                unit: "قطعة",
-                stock: 999 
-            }));
-
-        if (itemsToImport.length === 0) {
-            alert("لم يتم العثور على أصناف صالحة للاستيراد في ملف p.json.");
-            return;
-        }
-
-        console.log(`تم العثور على ${itemsToImport.length} صنف سيتم استيرادها.`);
-
-        // استخدام "Batch Write" لرفع البيانات بكفاءة عالية
-        const { writeBatch, doc, collection } = await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js");
-        
-        let batch = writeBatch(db);
-        const itemsRef = collection(db, "items");
-        let counter = 0;
-
-        for (const item of itemsToImport) {
-            const docRef = doc(itemsRef); // إنشاء مستند جديد بمعرف تلقائي
-            batch.set(docRef, item);
-            counter++;
-            // Firestore تسمح بـ 500 عملية في الدفعة الواحدة، لذلك نقسمها
-            if (counter % 499 === 0) {
-               await batch.commit();
-               batch = writeBatch(db); // بدء دفعة جديدة
-               console.log(`تم حفظ ${counter} صنف...`);
-            }
-        }
-        await batch.commit(); // حفظ ما تبقى في الدفعة الأخيرة
-
-        alert(`✅ اكتمل الاستيراد بنجاح! تم إضافة ${itemsToImport.length} صنف إلى قاعدة البيانات.`);
-        console.log(`اكتمل الاستيراد بنجاح!`);
-        location.reload(); // إعادة تحميل الصفحة لرؤية البيانات الجديدة
-
-    } catch (error) {
-        console.error("فشل الاستيراد:", error);
-        alert("فشلت عملية الاستيراد. تحقق من الـ Console لمزيد من التفاصيل.");
-    }
-}
-// --- نهاية الدالة المؤقتة ---
-
-// اجعل الدالة متاحة للاستدعاء من الـ Console
-window.importItemsFromJSON = importItemsFromJSON;
+  window.deleteDocument = async (collectionName, docId) => await deleteDoc(doc(db, collectionName, docId));
 </script>
 
 <div id="login-container">
@@ -454,6 +388,36 @@ document.addEventListener("DOMContentLoaded", () => {
         convertToArabicAndEnglishDigits: (text) => {
             if (!text) return "";
             return text.toString().replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+        },
+        calculateChange: () => {
+            const total = parseFloat(DOM.invoiceTotalSpan.textContent) || 0;
+            const paid = parseFloat(DOM.amountPaidInput.value) || 0;
+            const change = paid - total;
+            DOM.changeTextSpan.textContent = change >= 0 ? "الباقي للعميل:" : "المطلوب منه:";
+            DOM.changeAmountSpan.textContent = Math.abs(change).toFixed(2);
+        },
+        generatePrintContent: (invoice) => {
+            const itemsHtml = invoice.items.map(item => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.price * item.qty).toFixed(2)}</td></tr>`).join("");
+            const subtotal = invoice.items.reduce((sum, item) => sum + item.qty * item.price, 0);
+            const deliveryHtml = invoice.deliveryFee > 0 ? `<p><strong>خدمة التوصيل:</strong> ${invoice.deliveryFee.toFixed(2)} ج.م</p>` : '';
+            const customerInfo = invoice.customerName ? `<span>العميل: ${invoice.customerName}</span>` : `<span>عميل نقدي</span>`;
+            const paymentMethodText = invoice.paymentMethod === 'cash' ? 'نقداً' : invoice.paymentMethod === 'visa' ? 'فيزا' : 'محفظة';
+            const dateObject = invoice.createdAt?.toDate ? invoice.createdAt.toDate() : new Date();
+            const formattedDate = dateObject.toLocaleString('ar-EG', { dateStyle: 'long', timeStyle: 'short' });
+            const changeText = invoice.changeOrBalance >= 0 ? 'الباقي للعميل' : 'المطلوب منه';
+
+            return `<div style="direction:rtl; font-family: 'Segoe UI', sans-serif;" id="print-area">
+                  <h2 class="print-header">فاتورة مبيعات</h2>
+                  <div class="print-details"><p>رقم الفاتورة: <span>${invoice.id ? invoice.id.substring(0, 8) : 'مسودة'}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div>
+                  <div class="print-table"><table><thead><tr style="background-color:#eee;"><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
+                  <div class="print-summary"><p><strong>إجمالي الأصناف:</strong> ${subtotal.toFixed(2)} ج.م</p>${deliveryHtml}<p><strong>إجمالي الفاتورة:</strong> ${invoice.total.toFixed(2)} ج.م</p><p><strong>طريقة الدفع:</strong> ${paymentMethodText}</p><p><strong>المبلغ المدفوع:</strong> ${invoice.amountPaid.toFixed(2)} ج.م</p><p><strong>${changeText}:</strong> ${Math.abs(invoice.changeOrBalance).toFixed(2)} ج.م</p></div></div>`;
+        },
+        printContent: (content) => {
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write(`<html><head><title>طباعة</title><style>@media print{body{-webkit-print-color-adjust:exact}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:8px;text-align:right}th{background-color:#f2f2f2}}</style></head><body>${content}</body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
         }
     };
     // #endregion
@@ -494,9 +458,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 `<tr>
                     <td>${item.code || ''}</td>
                     <td>${item.name}</td>
-                    <td>${item.price.toFixed(2)}</td>
-                    <td>${item.stock}</td>
-                    <td>${item.category}</td>
+                    <td>${(item.price || 0).toFixed(2)}</td>
+                    <td>${item.stock || 0}</td>
+                    <td>${item.category || ''}</td>
                     <td><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button></td>
                     <td><button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td>
                 </tr>`
@@ -543,12 +507,12 @@ document.addEventListener("DOMContentLoaded", () => {
         edit: (id) => {
             const item = appState.items.find(i => i.id === id);
             if (!item) return;
-            DOM.itemCodeInput.value = item.code;
-            DOM.itemNameInput.value = item.name;
-            DOM.itemCategoryInput.value = item.category;
-            DOM.itemPriceInput.value = item.price;
-            DOM.itemStockInput.value = item.stock;
-            DOM.itemUnitInput.value = item.unit;
+            DOM.itemCodeInput.value = item.code || '';
+            DOM.itemNameInput.value = item.name || '';
+            DOM.itemCategoryInput.value = item.category || '';
+            DOM.itemPriceInput.value = item.price || 0;
+            DOM.itemStockInput.value = item.stock || 0;
+            DOM.itemUnitInput.value = item.unit || '';
             appState.editingItemId = id;
             DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف';
         },
@@ -561,6 +525,46 @@ document.addEventListener("DOMContentLoaded", () => {
                     console.error("Error deleting item:", error);
                     Helpers.showNotification("حدث خطأ أثناء حذف الصنف.");
                 }
+            }
+        }
+    };
+
+    const CustomersController = {
+        render: () => {
+            DOM.customersList.innerHTML = appState.customers.map(cust => `<div class="customer-card"><div><b>${cust.name}</b><br/><small>رقم: ${cust.customerId} | هاتف: ${cust.phone || 'غير مسجل'}</small></div><div class="flex-container"><button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button></div></div>`).join("");
+        },
+        clearForm: () => {
+            DOM.newCustomerIdInput.value = "";
+            DOM.newCustomerNameInput.value = "";
+            DOM.newCustomerPhoneInput.value = "";
+            appState.editingCustomerId = null;
+            DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العميل';
+        },
+        save: async () => {
+            const customerData = {
+                customerId: Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerIdInput.value.trim()),
+                name: DOM.newCustomerNameInput.value.trim(),
+                phone: Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerPhoneInput.value.trim())
+            };
+            if (!customerData.customerId || !customerData.name) { Helpers.showNotification("يرجى إدخال رقم واسم العميل."); return; }
+            try {
+                if (appState.editingCustomerId) { await window.updateDocument("customers", appState.editingCustomerId, customerData); Helpers.showNotification("تم تعديل العميل."); } 
+                else { await window.addDocument("customers", customerData); Helpers.showNotification("تم حفظ العميل."); }
+                CustomersController.clearForm();
+            } catch (error) { Helpers.showNotification("حدث خطأ."); }
+        },
+        edit: (id) => {
+            const customer = appState.customers.find(c => c.id === id); if (!customer) return;
+            DOM.newCustomerIdInput.value = customer.customerId;
+            DOM.newCustomerNameInput.value = customer.name;
+            DOM.newCustomerPhoneInput.value = customer.phone || "";
+            appState.editingCustomerId = id;
+            DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل';
+        },
+        delete: async (id) => {
+            if (confirm("هل أنت متأكد من حذف هذا العميل؟")) {
+                try { await window.deleteDocument("customers", id); Helpers.showNotification("تم حذف العميل."); } 
+                catch (error) { Helpers.showNotification("حدث خطأ."); }
             }
         }
     };
@@ -598,7 +602,7 @@ document.addEventListener("DOMContentLoaded", () => {
             DOM.itemGrid.style.display = 'grid';
             DOM.hideCategoriesBtn.style.display = 'inline-flex';
             const itemsToRender = appState.items.filter(item => item.category === category && (item.stock > 0 || isNaN(item.stock) ));
-            DOM.itemGrid.innerHTML = itemsToRender.map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name}</h5><p>${item.price.toFixed(2)} ج.م</p></div>`).join("");
+            DOM.itemGrid.innerHTML = itemsToRender.map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name}</h5><p>${(item.price || 0).toFixed(2)} ج.م</p></div>`).join("");
             DOM.itemGrid.querySelectorAll('.item-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const itemToAdd = appState.items.find(item => item.id === card.dataset.id);
@@ -616,7 +620,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         renderInvoice: () => {
             DOM.invoiceTable.innerHTML = appState.currentInvoice.map((item, index) =>
-                `<tr><td>${item.name}</td><td><div class="flex-container" style="justify-content:center;flex-wrap:nowrap;"><button class="btn-small btn-warning decrease-invoice-qty-btn" data-index="${index}">-</button><span style="padding:0 10px;font-weight:bold;">${item.qty}</span><button class="btn-small btn-success increase-invoice-qty-btn" data-index="${index}">+</button></div></td><td>${item.price.toFixed(2)}</td><td>${(item.price * item.qty).toFixed(2)}</td><td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td></tr>`
+                `<tr><td>${item.name}</td><td><div class="flex-container" style="justify-content:center;flex-wrap:nowrap;"><button class="btn-small btn-warning decrease-invoice-qty-btn" data-index="${index}">-</button><span style="padding:0 10px;font-weight:bold;">${item.qty}</span><button class="btn-small btn-success increase-invoice-qty-btn" data-index="${index}">+</button></div></td><td>${(item.price || 0).toFixed(2)}</td><td>${((item.price || 0) * item.qty).toFixed(2)}</td><td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td></tr>`
             ).join("");
             SalesController.updateTotal();
         },
@@ -657,8 +661,11 @@ document.addEventListener("DOMContentLoaded", () => {
         },
     };
 
-    // Other controllers would be here...
+    const ReportsController = {/* Placeholder for brevity */};
+    const UsersController = {/* Placeholder for brevity */};
+    // #endregion
 
+    // #region App Logic & Event Listeners
     const App = {
         init: async () => {
             App.bindEvents();
@@ -667,10 +674,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (savedUser) { appState.currentUser = JSON.parse(savedUser); Auth.showApp(appState.currentUser.role); }
         },
         listenToFirebase: () => {
-            window.readCollection("items", data => { appState.items = data; appState.allCategories = [...new Set(data.map(item => item.category).filter(Boolean))].sort(); ItemsController.render(); }, "name", "asc");
-            window.readCollection("customers", data => appState.customers = data, "name", "asc");
-            window.readCollection("invoices", data => appState.invoices = data, "createdAt", "desc");
-            window.readCollection("users", data => appState.users = data, "username", "asc");
+            window.readCollection("items", data => { appState.items = data; appState.allCategories = [...new Set(data.map(item => item.category).filter(Boolean))].sort(); if(document.getElementById('items').classList.contains('active')) ItemsController.render(); }, "name", "asc");
+            window.readCollection("customers", data => { appState.customers = data; if(document.getElementById('customers').classList.contains('active')) CustomersController.render(); }, "name", "asc");
+            window.readCollection("invoices", data => { appState.invoices = data; /* Update UI if needed */}, "createdAt", "desc");
+            window.readCollection("users", data => { appState.users = data; if(document.getElementById('users').classList.contains('active')) UsersController.render(); }, "username", "asc");
             window.getDocument("config", "admin").then(doc => { appState.adminPIN = doc?.pin || "790707071"; });
         },
         bindEvents: () => {
@@ -682,6 +689,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.currentTarget.classList.add("active");
                 DOM.sections.forEach(s => s.classList.toggle("active", s.id === tabId));
                 if (tabId === 'sales') SalesController.initSalesPage();
+                if (tabId === 'items') ItemsController.render();
             }));
             // Sales Page Events
             DOM.showCategoriesBtn.addEventListener('click', () => {
@@ -708,7 +716,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         else { Helpers.showNotification(`صنف غير موجود: ${codeToSearch}`); }
                     });
                 };
-                appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess, () => {})
+                appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, onScanSuccess, () => {})
                 .catch(() => Helpers.showNotification("خطأ في تشغيل الكاميرا"));
             });
             DOM.closeScannerBtn.addEventListener('click', () => { if (appState.html5QrCode?.isScanning) { appState.html5QrCode.stop(); } DOM.barcodeScannerContainer.style.display = 'none'; });
@@ -734,6 +742,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 const id = target.dataset.id;
                 if (target.classList.contains("edit-item-btn")) { ItemsController.edit(id); }
                 else if (target.classList.contains("delete-item-btn")) { ItemsController.delete(id); }
+            });
+            // Customers Page Events
+            DOM.saveCustomerBtn.addEventListener("click", CustomersController.save);
+            DOM.customersList.addEventListener("click", e => {
+                const target = e.target.closest("button");
+                if (!target) return;
+                const id = target.dataset.id;
+                if (target.classList.contains("edit-customer-btn")) { CustomersController.edit(id); }
+                else if (target.classList.contains("delete-customer-btn")) { CustomersController.delete(id); }
             });
         }
     };
