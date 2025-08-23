@@ -302,6 +302,9 @@
                 <input type="text" id="itemUnit" placeholder="الوحدة (قطعة، كجم)" />
                 <button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button>
             </div>
+            <div class="form-group">
+                <button id="importItemsBtn" class="btn-warning" onclick="importItemsFromJSON()"><i class="fas fa-file-import"></i> استيراد الأصناف من p.json</button>
+            </div>
             <table>
                 <thead><tr><th>باركود</th><th>اسم</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th><th>حذف</th></tr></thead>
                 <tbody id="itemsTable"></tbody>
@@ -483,7 +486,7 @@
                 const changeText = invoice.changeOrBalance >= 0 ? 'الباقي للعميل' : 'المطلوب منه';
                 return `<div style="direction:rtl; font-family: 'Segoe UI', sans-serif;" id="print-area">
                         <h2 class="print-header">فاتورة مبيعات</h2>
-                        <div class="print-details"><p>رقم الفاتورة: <span>${invoice.id ? inv.id.substring(0, 8) : 'مسودة'}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div>
+                        <div class="print-details"><p>رقم الفاتورة: <span>${invoice.id ? invoice.id.substring(0, 8) : 'مسودة'}</span></p><p>التاريخ: <span>${formattedDate}</span></p><p>${customerInfo}</p></div>
                         <div class="print-table"><table><thead><tr style="background-color:#eee;"><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
                         <div class="print-summary"><p><strong>إجمالي الأصناف:</strong> ${subtotal.toFixed(2)} ج.م</p>${deliveryHtml}<p><strong>إجمالي الفاتورة:</strong> ${invoice.total.toFixed(2)} ج.م</p><p><strong>طريقة الدفع:</strong> ${paymentMethodText}</p><p><strong>المبلغ المدفوع:</strong> ${invoice.amountPaid.toFixed(2)} ج.م</p><p><strong>${changeText}:</strong> ${Math.abs(invoice.changeOrBalance).toFixed(2)} ج.م</p></div></div>`;
             },
@@ -920,9 +923,14 @@
                     const onScanSuccess = (decodedText) => {
                         appState.html5QrCode.stop().then(() => {
                             DOM.barcodeScannerContainer.style.display = 'none';
+                            // ✅ البحث باستخدام الباركود وليس SKU
                             const foundItem = appState.items.find(item => item.code === decodedText.trim());
-                            if (foundItem) { SalesController.addToInvoice(foundItem); }
-                            else { Helpers.showNotification(`صنف غير موجود: ${decodedText}`); }
+                            if (foundItem) { 
+                                SalesController.addToInvoice(foundItem); 
+                            }
+                            else { 
+                                Helpers.showNotification(`صنف غير موجود: ${decodedText}`); 
+                            }
                         });
                     };
                     appState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, onScanSuccess, () => {})
