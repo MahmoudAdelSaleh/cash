@@ -23,8 +23,8 @@
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg-light); color: var(--text-dark); direction: rtl; }
   #app-container { display: none; }
   header { background: var(--primary-color); color: var(--white); padding: 15px; text-align: center; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
-  nav { display: flex; background: var(--secondary-color); }
-  nav button { flex: 1; padding: 12px 0; border: none; background: var(--secondary-color); color: var(--white); font-size: 16px; cursor: pointer; transition: background 0.3s; }
+  nav { display: flex; background: var(--secondary-color); overflow-x: auto; }
+  nav button { flex: 1 0 auto; padding: 12px 8px; border: none; background: var(--secondary-color); color: var(--white); font-size: 16px; cursor: pointer; transition: background 0.3s; white-space: nowrap; }
   nav button.active, nav button:hover { background: #0056b3; }
   nav button.hidden { display: none; }
   main { padding: 15px; max-width: 900px; margin: auto; }
@@ -78,6 +78,24 @@
   .input-group-btn { border-radius: 0; padding: 5px 12px; font-size: 18px; line-height: 1; height: 38px; flex-shrink: 0; }
   #decreaseDeliveryBtn { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
   #increaseDeliveryBtn { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+
+  @media (max-width: 768px) {
+    header { font-size: 20px; }
+    main { padding: 10px; }
+    table, .form-group { font-size: 14px; }
+    th, td { padding: 8px 4px; }
+    #login-form { width: 90%; }
+  }
+  @media print {
+    body > :not(#print-area) { display: none !important; }
+    #print-area { display: block; width: 100%; margin: 0; padding: 0; box-shadow: none; font-size: 12px; }
+    .print-header { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+    .print-details { font-size: 10px; margin-bottom: 10px; }
+    .print-details span { font-weight: bold; }
+    .print-table table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: right; font-size: 10px; }
+    .print-summary { margin-top: 15px; font-size: 10px; }
+  }
 </style>
 </head>
 <body>
@@ -97,7 +115,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   window.addDocument = async (collectionName, data) => await addDoc(collection(db, collectionName), { ...data, createdAt: serverTimestamp() });
-  window.readCollection = (collectionName, callback, orderByField = "createdAt", orderDirection = "desc") => {
+  window.readCollection = (collectionName, callback, orderByField = "name", orderDirection = "asc") => {
     const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection));
     return onSnapshot(q, snapshot => callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
   };
@@ -121,9 +139,9 @@
 <div id="app-container">
   <header><span>كاشير متكامل</span><button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button></header>
   <nav>
+    <button data-tab="sales" class="active"><i class="fas fa-cash-register"></i> المبيعات</button>
     <button data-tab="items"><i class="fas fa-box"></i> الأصناف</button>
     <button data-tab="customers"><i class="fas fa-users"></i> العملاء</button>
-    <button class="active" data-tab="sales"><i class="fas fa-cash-register"></i> المبيعات</button>
     <button data-tab="invoices"><i class="fas fa-file-invoice"></i> الفواتير</button>
     <button data-tab="summary"><i class="fas fa-chart-bar"></i> التقارير</button>
     <button data-tab="users" class="hidden"><i class="fas fa-user-shield"></i> المستخدمون</button>
@@ -192,7 +210,80 @@
         <button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ</button>
       </div>
     </section>
-    </main>
+
+    <section id="items">
+      <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
+      <div class="form-group flex-container">
+        <input type="text" id="itemCode" placeholder="كود الصنف (SKU)" />
+        <input type="text" id="itemName" placeholder="اسم الصنف" required />
+        <input type="text" id="itemCategory" placeholder="الفئة" />
+      </div>
+      <div class="form-group flex-container">
+        <input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" required/>
+        <input type="number" id="itemStock" placeholder="المخزون" min="0" />
+        <input type="text" id="itemUnit" placeholder="الوحدة (قطعة، كجم)" />
+        <button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button>
+      </div>
+      <table>
+        <thead><tr><th>كود</th><th>اسم</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th><th>حذف</th></tr></thead>
+        <tbody id="itemsTable"></tbody>
+      </table>
+    </section>
+
+    <section id="customers">
+      <h2><i class="fas fa-users"></i> إدارة العملاء</h2>
+      <div class="form-group flex-container">
+        <input type="text" id="newCustomerId" placeholder="رقم العميل" />
+        <input type="text" id="newCustomerName" placeholder="اسم العميل" />
+        <input type="tel" id="newCustomerPhone" placeholder="هاتف العميل" />
+        <button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ العميل</button>
+      </div>
+      <div id="customersList"></div>
+    </section>
+
+    <section id="invoices">
+      <h2><i class="fas fa-file-invoice-dollar"></i> الفواتير</h2>
+      <div id="invoicesList"></div>
+    </section>
+
+    <section id="summary">
+      <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
+      <div class="form-group flex-container">
+          <label for="summaryGroupSelect">تجميع حسب:</label>
+          <select id="summaryGroupSelect">
+              <option value="day">اليوم</option><option value="week">الأسبوع</option><option value="month">الشهر</option>
+          </select>
+      </div>
+      <div class="summary-box">
+        <i class="fas fa-coins"></i> <strong>المجموع الكلي للمبيعات:</strong> <span id="totalSalesAmount">0.00</span> ج.م
+      </div>
+      <table>
+        <thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead>
+        <tbody id="salesSummaryTable"></tbody>
+      </table>
+      <div style="margin-top: 30px;">
+        <h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3>
+        <div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div>
+      </div>
+    </section>
+
+    <section id="users">
+      <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
+      <div class="form-group flex-container">
+        <input type="text" id="newUsernameInput" placeholder="اسم المستخدم" />
+        <input type="password" id="newUserPasswordInput" placeholder="كلمة المرور" />
+        <button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة مستخدم</button>
+      </div>
+      <div id="usersList"></div>
+      <div id="changePinSection">
+          <h4><i class="fas fa-key"></i> تغيير كلمة مرور المدير العام</h4>
+          <div class="form-group flex-container">
+              <input type="password" id="oldPinInput" placeholder="الكلمة القديمة" /><input type="password" id="newPinInput" placeholder="الكلمة الجديدة" />
+              <button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button>
+          </div>
+      </div>
+    </section>
+  </main>
 </div>
 
 <div id="barcode-scanner-container" style="display:none;">
@@ -203,6 +294,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    // #region Global Variables and DOM Elements
     const DOM = {
         appContainer: document.getElementById("app-container"),
         loginContainer: document.getElementById("login-container"),
@@ -212,6 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
         logoutBtn: document.getElementById("logoutBtn"),
         navButtons: document.querySelectorAll("nav button"),
         sections: document.querySelectorAll("main section"),
+        // Sales Page Elements
         customerNameInput: document.getElementById("customerName"),
         customerPhoneInput: document.getElementById("customerPhone"),
         customerSuggestionsDiv: document.getElementById("customerSuggestions"),
@@ -238,40 +331,71 @@ document.addEventListener("DOMContentLoaded", () => {
         decreaseDeliveryBtn: document.getElementById("decreaseDeliveryBtn"),
         sendWhatsappBtn: document.getElementById("sendWhatsappBtn"),
         hideCategoriesBtn: document.getElementById("hideCategoriesBtn"),
-        notificationContainer: document.getElementById("notification-container")
+        notificationContainer: document.getElementById("notification-container"),
+        // Items Page Elements
+        itemCodeInput: document.getElementById("itemCode"),
+        itemNameInput: document.getElementById("itemName"),
+        itemCategoryInput: document.getElementById("itemCategory"),
+        itemPriceInput: document.getElementById("itemPrice"),
+        itemStockInput: document.getElementById("itemStock"),
+        itemUnitInput: document.getElementById("itemUnit"),
+        saveItemBtn: document.getElementById("saveItemBtn"),
+        itemsTable: document.getElementById("itemsTable"),
+        // Customers Page Elements
+        newCustomerIdInput: document.getElementById("newCustomerId"),
+        newCustomerNameInput: document.getElementById("newCustomerName"),
+        newCustomerPhoneInput: document.getElementById("newCustomerPhone"),
+        saveCustomerBtn: document.getElementById("saveCustomerBtn"),
+        customersList: document.getElementById("customersList"),
+        // Invoices Page
+        invoicesList: document.getElementById("invoicesList"),
+        // Summary Page
+        salesSummaryTable: document.getElementById("salesSummaryTable"),
+        totalSalesAmount: document.getElementById("totalSalesAmount"),
+        summaryGroupSelect: document.getElementById("summaryGroupSelect"),
+        bestSellingItemsDiv: document.getElementById("bestSellingItems"),
+        // Users Page
+        newUsernameInput: document.getElementById("newUsernameInput"),
+        newUserPasswordInput: document.getElementById("newUserPasswordInput"),
+        saveUserBtn: document.getElementById("saveUserBtn"),
+        usersList: document.getElementById("usersList"),
+        changePinBtn: document.getElementById("changePinBtn"),
+        oldPinInput: document.getElementById("oldPinInput"),
+        newPinInput: document.getElementById("newPinInput"),
     };
 
     let appState = {
         items: [], invoices: [], customers: [], users: [], adminPIN: null, currentUser: null,
-        currentInvoice: [], deliveryFee: 30, editingCustomerId: null,
-        selectedCustomer: null, allCategories: [], categoryCurrentPage: 1, 
-        categoriesPerPage: 20, html5QrCode: null
+        currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null,
+        editingUserId: null, selectedCustomer: null, allCategories: [], 
+        categoryCurrentPage: 1, categoriesPerPage: 20, html5QrCode: null
     };
+    // #endregion
 
+    // #region Utility Functions
     const Helpers = {
         showNotification: (message, duration = 3000) => {
-            const notification = document.createElement("div");
-            notification.className = "notification";
-            notification.textContent = message;
-            DOM.notificationContainer.appendChild(notification);
-            setTimeout(() => notification.classList.add("show"), 10);
+            const el = document.createElement("div");
+            el.className = "notification";
+            el.textContent = message;
+            DOM.notificationContainer.appendChild(el);
+            setTimeout(() => el.classList.add("show"), 10);
             setTimeout(() => {
-                notification.classList.remove("show");
-                setTimeout(() => notification.remove(), 500);
+                el.classList.remove("show");
+                setTimeout(() => el.remove(), 500);
             }, duration);
         },
-        calculateChange: () => {
-            const total = parseFloat(DOM.invoiceTotalSpan.textContent) || 0;
-            const paid = parseFloat(DOM.amountPaidInput.value) || 0;
-            const change = paid - total;
-            DOM.changeTextSpan.textContent = change >= 0 ? "الباقي:" : "المطلوب:";
-            DOM.changeAmountSpan.textContent = Math.abs(change).toFixed(2);
+        convertToArabicAndEnglishDigits: (text) => {
+            if (!text) return "";
+            return text.toString().replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
         }
     };
-
+    // #endregion
+    
+    // #region Controllers
     const Auth = {
         login: (username, password) => {
-            const pin = password.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+            const pin = Helpers.convertToArabicAndEnglishDigits(password);
             if (pin === appState.adminPIN) {
                 appState.currentUser = { username: "المدير", role: "admin" };
                 localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
@@ -288,8 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
         logout: () => {
             appState.currentUser = null;
             localStorage.removeItem('currentUser');
-            DOM.appContainer.style.display = "none";
-            DOM.loginContainer.style.display = "flex";
+            location.reload();
         },
         showApp: (role) => {
             DOM.loginContainer.style.display = "none";
@@ -298,7 +421,84 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector('[data-tab="sales"]').click();
         }
     };
-    
+
+    const ItemsController = {
+        render: () => {
+            DOM.itemsTable.innerHTML = appState.items.map(item => 
+                `<tr>
+                    <td>${item.code || ''}</td>
+                    <td>${item.name}</td>
+                    <td>${item.price.toFixed(2)}</td>
+                    <td>${item.stock}</td>
+                    <td>${item.category}</td>
+                    <td><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button></td>
+                    <td><button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>`
+            ).join("");
+        },
+        clearForm: () => {
+            DOM.itemCodeInput.value = "";
+            DOM.itemNameInput.value = "";
+            DOM.itemCategoryInput.value = "";
+            DOM.itemPriceInput.value = "";
+            DOM.itemStockInput.value = "";
+            DOM.itemUnitInput.value = "";
+            appState.editingItemId = null;
+            DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف';
+            DOM.itemNameInput.focus();
+        },
+        save: async () => {
+            const itemData = {
+                code: DOM.itemCodeInput.value.trim(),
+                name: DOM.itemNameInput.value.trim(),
+                category: DOM.itemCategoryInput.value.trim(),
+                price: parseFloat(DOM.itemPriceInput.value) || 0,
+                stock: parseInt(DOM.itemStockInput.value) || 0,
+                unit: DOM.itemUnitInput.value.trim()
+            };
+            if (!itemData.name || !itemData.price) {
+                Helpers.showNotification("يجب إدخال اسم وسعر الصنف.");
+                return;
+            }
+            try {
+                if (appState.editingItemId) {
+                    await window.updateDocument("items", appState.editingItemId, itemData);
+                    Helpers.showNotification("تم تعديل الصنف بنجاح.");
+                } else {
+                    await window.addDocument("items", itemData);
+                    Helpers.showNotification("تم حفظ الصنف بنجاح.");
+                }
+                ItemsController.clearForm();
+            } catch (error) {
+                console.error("Error saving item:", error);
+                Helpers.showNotification("حدث خطأ أثناء حفظ الصنف.");
+            }
+        },
+        edit: (id) => {
+            const item = appState.items.find(i => i.id === id);
+            if (!item) return;
+            DOM.itemCodeInput.value = item.code;
+            DOM.itemNameInput.value = item.name;
+            DOM.itemCategoryInput.value = item.category;
+            DOM.itemPriceInput.value = item.price;
+            DOM.itemStockInput.value = item.stock;
+            DOM.itemUnitInput.value = item.unit;
+            appState.editingItemId = id;
+            DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف';
+        },
+        delete: async (id) => {
+            if (confirm("هل أنت متأكد من حذف هذا الصنف نهائيًا؟")) {
+                try {
+                    await window.deleteDocument("items", id);
+                    Helpers.showNotification("تم حذف الصنف بنجاح.");
+                } catch (error) {
+                    console.error("Error deleting item:", error);
+                    Helpers.showNotification("حدث خطأ أثناء حذف الصنف.");
+                }
+            }
+        }
+    };
+
     const SalesController = {
         initSalesPage: () => {
             DOM.showCategoriesBtn.style.display = 'block';
@@ -331,7 +531,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderItemsGrid: (category) => {
             DOM.itemGrid.style.display = 'grid';
             DOM.hideCategoriesBtn.style.display = 'inline-flex';
-            const itemsToRender = appState.items.filter(item => item.category === category && item.stock > 0);
+            const itemsToRender = appState.items.filter(item => item.category === category && (item.stock > 0 || isNaN(item.stock) ));
             DOM.itemGrid.innerHTML = itemsToRender.map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name}</h5><p>${item.price.toFixed(2)} ج.م</p></div>`).join("");
             DOM.itemGrid.querySelectorAll('.item-card').forEach(card => {
                 card.addEventListener('click', () => {
@@ -382,7 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 DOM.customerPhoneInput.value = "";
                 DOM.amountPaidInput.value = "";
                 appState.selectedCustomer = null;
-                DOM.deliveryFeeInput.value = 30; // Correctly reset to 30
+                DOM.deliveryFeeInput.value = 30;
                 SalesController.renderInvoice();
             } catch (error) {
                 console.error("Save Invoice Error:", error);
@@ -391,25 +591,19 @@ document.addEventListener("DOMContentLoaded", () => {
         },
     };
 
+    // Other controllers would be here...
+
     const App = {
         init: async () => {
             App.bindEvents();
             App.listenToFirebase();
-            try {
-                const response = await fetch('p.json');
-                const itemsData = await response.json();
-                const categoryKey = "category ";
-                appState.items = itemsData.filter(item => item.status === true)
-                    .map(item => ({ id: item.sku, code: item.sku, name: item.name, price: parseFloat(item.price) || 0, category: item[categoryKey]?.trim() || "غير مصنف", unit: "قطعة", stock: 999 }));
-                appState.allCategories = [...new Set(appState.items.map(item => item.category).filter(Boolean))].sort();
-                SalesController.initSalesPage();
-            } catch (error) { Helpers.showNotification("فشل تحميل ملف الأصناف", 5000); }
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) { appState.currentUser = JSON.parse(savedUser); Auth.showApp(appState.currentUser.role); }
         },
         listenToFirebase: () => {
+            window.readCollection("items", data => { appState.items = data; appState.allCategories = [...new Set(data.map(item => item.category).filter(Boolean))].sort(); ItemsController.render(); }, "name", "asc");
             window.readCollection("customers", data => appState.customers = data, "name", "asc");
-            window.readCollection("invoices", data => appState.invoices = data);
+            window.readCollection("invoices", data => appState.invoices = data, "createdAt", "desc");
             window.readCollection("users", data => appState.users = data, "username", "asc");
             window.getDocument("config", "admin").then(doc => { appState.adminPIN = doc?.pin || "790707071"; });
         },
@@ -417,11 +611,13 @@ document.addEventListener("DOMContentLoaded", () => {
             DOM.loginForm.addEventListener("submit", e => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
             DOM.logoutBtn.addEventListener("click", Auth.logout);
             DOM.navButtons.forEach(btn => btn.addEventListener("click", e => {
+                const tabId = e.currentTarget.dataset.tab;
                 DOM.navButtons.forEach(b => b.classList.remove("active"));
                 e.currentTarget.classList.add("active");
-                DOM.sections.forEach(s => s.classList.remove("active"));
-                document.getElementById(e.currentTarget.dataset.tab).classList.add("active");
+                DOM.sections.forEach(s => s.classList.toggle("active", s.id === tabId));
+                if (tabId === 'sales') SalesController.initSalesPage();
             }));
+            // Sales Page Events
             DOM.showCategoriesBtn.addEventListener('click', () => {
                 DOM.showCategoriesBtn.style.display = 'none';
                 DOM.salesCategoryFilters.style.display = 'flex';
@@ -464,6 +660,15 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
             DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
+            // Items Page Events
+            DOM.saveItemBtn.addEventListener("click", ItemsController.save);
+            DOM.itemsTable.addEventListener("click", e => {
+                const target = e.target.closest("button");
+                if (!target) return;
+                const id = target.dataset.id;
+                if (target.classList.contains("edit-item-btn")) { ItemsController.edit(id); }
+                else if (target.classList.contains("delete-item-btn")) { ItemsController.delete(id); }
+            });
         }
     };
     App.init();
@@ -471,6 +676,3 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
-بعد إذنك أنا اختصرت الكود شوية عشان حجمه كان كبير ومش كل مرة هبعتهولك كامل 
-لأني حذفت الأقسام اللي مش بنعدل فيها زي العملاء والتقارير والمستخدمين واحتفظت بس بقسم المبيعات اللي بنشتغل عليه 
-لكن الكود عندي كامل زي ما بتبعتهولي
