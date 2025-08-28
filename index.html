@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>كاشير متكامل - Firebase</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <style>
   :root {
     --primary-color: #007bff;
@@ -97,10 +98,65 @@
       color: var(--success-color);
       font-weight: bold;
   }
+  #salesCategoryFilters {
+      display: none; /* مخفي بشكل افتراضي */
+  }
   #salesCategoryFilters button.active {
       background-color: var(--success-color);
       color: white;
   }
+  #itemGrid {
+      display: none; /* مخفي بشكل افتراضي */
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
+      gap: 10px; 
+      margin-bottom: 20px;
+  }
+
+  /* --- BEGIN BARCODE SCANNER STYLES --- */
+  #scanner-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40vh; /* ارتفاع مناسب للمسح */
+    background-color: #000;
+    z-index: 10001; /* فوق كل شيء */
+    display: none; /* يتم التحكم به بالجافاسكريبت */
+  }
+  #reader {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  #reader video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+  }
+  #scanner-container #closeScannerBtn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: 1px solid white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    padding: 0;
+    line-height: 40px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 10002;
+  }
+  /* إطار المسح الافتراضي للمكتبة */
+  #reader__scan_region {
+    border: 3px solid #28a745 !important;
+    box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.5); /* تعتيم ما حول الإطار */
+  }
+  /* --- END BARCODE SCANNER STYLES --- */
+
 
   @media (max-width: 768px) {
     nav button { font-size: 14px; padding: 10px 5px; }
@@ -202,6 +258,7 @@
   }
 
 </script>
+
 <div id="login-container">
     <form id="login-form">
         <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
@@ -214,6 +271,12 @@
         <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
     </form>
 </div>
+
+<div id="scanner-container">
+    <div id="reader"></div>
+    <button id="closeScannerBtn"><i class="fas fa-times"></i></button>
+</div>
+
 
 <div id="app-container">
   <header>
@@ -286,22 +349,33 @@
 
     <section id="sales" class="active" style="position: relative;">
       <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
-      <div id="salesCategoryFilters" class="flex-container" style="justify-content: flex-start; margin-bottom: 15px;">
-        </div>
-      <div id="itemGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;">
-        </div>
+      
       <div class="form-group" style="position: relative;">
         <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
         <div id="customerSuggestions"></div>
       </div>
+      
       <div class="form-group" style="position: relative;">
-        <input type="text" id="searchItem" placeholder="بحث بالكود أو اسم الصنف" autocomplete="off" />
-        <div id="searchResults"></div>
+          <div class="flex-container">
+             <input type="text" id="searchItem" placeholder="بحث بالكود أو اسم الصنف أو المسح بالباركود" autocomplete="off" style="flex-grow: 1;" />
+             <button id="startScannerBtn" style="flex: 0 0 auto; width: 50px;" title="فتح ماسح الباركود"><i class="fas fa-barcode"></i></button>
+          </div>
+          <div id="searchResults"></div>
       </div>
+
       <div class="form-group flex-container">
         <label for="quantitySelect">الكمية:</label>
         <select id="quantitySelect"></select>
         <button id="addToInvoiceBtn"><i class="fas fa-plus-circle"></i> إضافة للفاتورة</button>
+      </div>
+      
+      <button id="toggleItemsGridBtn" class="btn-warning" style="width: 100%; margin-bottom: 15px;">
+        <i class="fas fa-th-large"></i> عرض الأصناف حسب الفئة
+      </button>
+
+      <div id="salesCategoryFilters" class="flex-container" style="justify-content: flex-start; margin-bottom: 15px;">
+      </div>
+      <div id="itemGrid">
       </div>
 
       <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
@@ -463,15 +537,22 @@ document.addEventListener("DOMContentLoaded", () => {
         newUsernameInput: document.getElementById("newUsernameInput"),
         newUserPasswordInput: document.getElementById("newUserPasswordInput"),
         saveUserBtn: document.getElementById("saveUserBtn"),
-        usersList: document.getElementById("usersList")
+        usersList: document.getElementById("usersList"),
+        // --- NEW DOM ELEMENTS ---
+        toggleItemsGridBtn: document.getElementById("toggleItemsGridBtn"),
+        salesCategoryFilters: document.getElementById("salesCategoryFilters"),
+        itemGrid: document.getElementById("itemGrid"),
+        startScannerBtn: document.getElementById("startScannerBtn"),
+        closeScannerBtn: document.getElementById("closeScannerBtn"),
+        scannerContainer: document.getElementById("scanner-container")
     };
 
     let appState = {
-        items: [],       // سيتم ملؤها من ملف p.json
-        invoices: [],    // سيتم ملؤها من Firebase
-        customers: [],   // سيتم ملؤها من Firebase
-        users: [],       // سيتم ملؤها من Firebase
-        adminPIN: null,  // سيتم ملؤه من Firebase
+        items: [],        // سيتم ملؤها من ملف p.json
+        invoices: [],     // سيتم ملؤها من Firebase
+        customers: [],    // سيتم ملؤها من Firebase
+        users: [],        // سيتم ملؤها من Firebase
+        adminPIN: null,   // سيتم ملؤه من Firebase
         currentUser: null,
         currentInvoice: [],
         editingItemId: null,      
@@ -479,7 +560,8 @@ document.addEventListener("DOMContentLoaded", () => {
         editingUserId: null,
         selectedItem: null,
         selectedCustomer: null,
-        unsubscribe: {} 
+        unsubscribe: {},
+        html5QrCode: null // سيحتوي على كائن الماسح الضوئي
     };
     // #endregion
 
@@ -864,7 +946,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // #region Sales Controller
     const SalesController = {
     renderCategoryFilters: () => {
-        const categoryFiltersDiv = document.getElementById('salesCategoryFilters');
+        const categoryFiltersDiv = DOM.salesCategoryFilters;
         const categories = ['all', ...new Set(appState.items.map(item => item.category))];
         
         categoryFiltersDiv.innerHTML = categories.map(category => {
@@ -884,7 +966,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
 
     renderItemsGrid: (category) => {
-        const itemGridDiv = document.getElementById('itemGrid');
+        const itemGridDiv = DOM.itemGrid;
         const itemsToRender = category === 'all' 
             ? appState.items 
             : appState.items.filter(item => item.category === category);
@@ -1227,6 +1309,62 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     // #endregion
 
+    // #region Barcode Scanner Controller
+    const ScannerController = {
+        onScanSuccess: (decodedText, decodedResult) => {
+            // أوقف الاهتزاز إذا كان الجهاز يدعمه
+            if (window.navigator.vibrate) { window.navigator.vibrate(200); }
+            
+            Helpers.showNotification(`تم المسح: ${decodedText}`);
+            DOM.searchItemInput.value = decodedText;
+            
+            // تفعيل حدث الإدخال ليبدأ البحث تلقائياً
+            const event = new Event('input', { bubbles: true, cancelable: true });
+            DOM.searchItemInput.dispatchEvent(event);
+
+            // أغلق الماسح بعد نجاح العملية
+            ScannerController.stopScanner();
+        },
+        onScanFailure: (error) => {
+            // تجاهل الأخطاء الشائعة مثل (عدم العثور على كود)
+            // console.warn(`Code scan error = ${error}`);
+        },
+        startScanner: () => {
+            if (!appState.html5QrCode) {
+                 appState.html5QrCode = new Html5Qrcode("reader");
+            }
+            DOM.scannerContainer.style.display = 'block';
+
+            // إعدادات الكاميرا والماسح
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const cameraConfig = { facingMode: "environment" }; // استخدام الكاميرا الخلفية في الموبايل
+
+            appState.html5QrCode.start(
+                cameraConfig, 
+                config,
+                ScannerController.onScanSuccess,
+                ScannerController.onScanFailure
+            ).catch(err => {
+                 console.error("Unable to start scanning.", err);
+                 Helpers.showNotification("لا يمكن تشغيل الكاميرا.", 5000);
+                 DOM.scannerContainer.style.display = 'none';
+            });
+        },
+        stopScanner: () => {
+            if (appState.html5QrCode && appState.html5QrCode.isScanning) {
+                appState.html5QrCode.stop().then(() => {
+                    DOM.scannerContainer.style.display = 'none';
+                }).catch(err => {
+                    console.error("Failed to stop scanning.", err);
+                    DOM.scannerContainer.style.display = 'none'; // إخفاء الواجهة حتى لو فشل الإيقاف
+                });
+            } else {
+                 DOM.scannerContainer.style.display = 'none';
+            }
+        }
+    };
+    // #endregion
+
     // #region App Logic & Event Listeners
     const App = {
     init: async () => {
@@ -1244,13 +1382,13 @@ document.addEventListener("DOMContentLoaded", () => {
             appState.items = itemsData
                 .filter(item => item.status === true) // 1. تصفية المنتجات الفعالة فقط
                 .map(item => ({
-                    id: item.sku,                           // 2. استخدام SKU كمعرف فريد
-                    code: item.sku,                         // 3. استخدام SKU ككود
+                    id: item.sku,                     // 2. استخدام SKU كمعرف فريد
+                    code: item.sku,                   // 3. استخدام SKU ككود
                     name: item.name,
                     price: parseFloat(item.price) || 0,
                     category: item[categoryKeyWithSpace] ? item[categoryKeyWithSpace].trim() : "غير مصنف", // 4. قراءة الفئة مع معالجة المسافة
-                    unit: "قطعة",                           // 5. قيمة افتراضية للوحدة
-                    stock: 999                              // 6. قيمة افتراضية للمخزون
+                    unit: "قطعة",                     // 5. قيمة افتراضية للوحدة
+                    stock: 999                        // 6. قيمة افتراضية للمخزون
                 }));
 
             SalesController.renderCategoryFilters();
@@ -1286,7 +1424,7 @@ document.addEventListener("DOMContentLoaded", () => {
             appState.customers = customers;
              if(document.getElementById('customers').classList.contains('active')) {
                 CustomersController.render();
-            }
+             }
         }, "name", "asc");
 
         appState.unsubscribe.invoices = window.readCollection("invoices", (invoices) => {
@@ -1412,6 +1550,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (target && target.classList.contains("remove-from-invoice-btn")) SalesController.removeFromInvoice(target.getAttribute("data-index"));
         });
 
+        // --- NEW EVENT LISTENERS ---
+        DOM.toggleItemsGridBtn.addEventListener("click", () => {
+            const isHidden = DOM.itemGrid.style.display === 'none';
+            DOM.salesCategoryFilters.style.display = isHidden ? 'flex' : 'none';
+            DOM.itemGrid.style.display = isHidden ? 'grid' : 'none';
+            DOM.toggleItemsGridBtn.innerHTML = isHidden 
+                ? '<i class="fas fa-eye-slash"></i> إخفاء الأصناف' 
+                : '<i class="fas fa-th-large"></i> عرض الأصناف حسب الفئة';
+        });
+
+        DOM.startScannerBtn.addEventListener("click", ScannerController.startScanner);
+        DOM.closeScannerBtn.addEventListener("click", ScannerController.stopScanner);
+        // --- END NEW EVENT LISTENERS ---
+
         // Reports Events
         DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
         DOM.summaryGroupSelect.addEventListener("change", ReportsController.renderSummary);
@@ -1458,23 +1610,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         DOM.printInvoiceBtn.addEventListener("click", () => {
-                if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا توجد فاتورة للطباعة.", 5000); return; }
-                const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
-                const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0;
-                const changeOrBalance = amountPaid - invoiceTotal;
-                const dummyInvoice = {
-                    id: 'مسودة',
-                    date: new Date().toISOString(),
-                    createdAt: new Date(),
-                    customerName: appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim(),
-                    paymentMethod: DOM.paymentMethodSelect.value,
-                    amountPaid: amountPaid,
-                    changeOrBalance: changeOrBalance,
-                    items: [...appState.currentInvoice],
-                    total: invoiceTotal
-                };
-                const printContent = Helpers.generatePrintContent(dummyInvoice);
-                Helpers.printContent(printContent);
+              if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا توجد فاتورة للطباعة.", 5000); return; }
+              const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent);
+              const amountPaid = parseFloat(DOM.amountPaidInput.value) || 0;
+              const changeOrBalance = amountPaid - invoiceTotal;
+              const dummyInvoice = {
+                  id: 'مسودة',
+                  date: new Date().toISOString(),
+                  createdAt: new Date(),
+                  customerName: appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim(),
+                  paymentMethod: DOM.paymentMethodSelect.value,
+                  amountPaid: amountPaid,
+                  changeOrBalance: changeOrBalance,
+                  items: [...appState.currentInvoice],
+                  total: invoiceTotal
+              };
+              const printContent = Helpers.generatePrintContent(dummyInvoice);
+              Helpers.printContent(printContent);
             });
     },
     };
