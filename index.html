@@ -441,6 +441,9 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    // --- الرابط الأساسي للملفات الخام على GitHub ---
+    const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/MahmoudAdelSaleh/cash/main';
+
     // #region Global Variables and DOM Elements
     const DOM = {
         appContainer: document.getElementById("app-container"),
@@ -1000,7 +1003,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const fileNames = ['p1.json', 'p2.json', 'p3.json', 'p4.json'];
-                const promises = fileNames.map(file => fetch(file).then(res => res.ok ? res.json() : Promise.reject(res.statusText)));
+                const fileURLs = fileNames.map(file => `${GITHUB_BASE_URL}/${file}`);
+                
+                const promises = fileURLs.map(url => 
+                    fetch(url).then(res => {
+                        if (!res.ok) { throw new Error(`Failed to load ${url}: ${res.statusText}`); }
+                        return res.json();
+                    })
+                );
+
                 const results = await Promise.all(promises);
                 const itemsData = results.flat();
                 const categoryKeyWithSpace = "category ";
@@ -1015,7 +1026,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 Helpers.showNotification("تم تحميل الأصناف بنجاح.", 2000);
             } catch (error) {
                 console.error("Could not load item files:", error);
-                Helpers.showNotification("فشل تحميل ملفات الأصناف.", 5000);
+                Helpers.showNotification("فشل تحميل ملفات الأصناف من GitHub. تأكد من صحة الرابط في الكود.", 6000);
             }
 
             const savedUser = localStorage.getItem('currentUser');
