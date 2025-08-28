@@ -118,42 +118,18 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 40vh; /* ارتفاع مناسب للمسح */
-    background-color: #000;
+    height: 100%; /* تعديل ليغطي الشاشة بالكامل للسماح بالإغلاق */
+    background-color: rgba(0,0,0,0.7);
     z-index: 10001; /* فوق كل شيء */
     display: none; /* يتم التحكم به بالجافاسكريبت */
+    justify-content: center;
+    align-items: center;
   }
   #reader {
-    width: 100%;
-    height: 100%;
-    border: none;
-  }
-  #reader video {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover;
-  }
-  #scanner-container #closeScannerBtn {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    background: rgba(0,0,0,0.6);
-    color: white;
-    border: 1px solid white;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-    padding: 0;
-    line-height: 40px;
-    text-align: center;
-    cursor: pointer;
-    z-index: 10002;
-  }
-  /* إطار المسح الافتراضي للمكتبة */
-  #reader__scan_region {
-    border: 3px solid #28a745 !important;
-    box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.5); /* تعتيم ما حول الإطار */
+    width: 90%;
+    max-width: 500px;
+    background: white;
+    border: 1px solid #ccc;
   }
   /* --- END BARCODE SCANNER STYLES --- */
 
@@ -169,6 +145,7 @@
     .form-group.flex-container select {
       flex: 1 1 100%;
     }
+     #reader { width: 95%; }
   }
   @media print {
     body > :not(#print-area) { display: none !important; }
@@ -274,7 +251,6 @@
 
 <div id="scanner-container">
     <div id="reader"></div>
-    <button id="closeScannerBtn"><i class="fas fa-times"></i></button>
 </div>
 
 
@@ -538,21 +514,20 @@ document.addEventListener("DOMContentLoaded", () => {
         newUserPasswordInput: document.getElementById("newUserPasswordInput"),
         saveUserBtn: document.getElementById("saveUserBtn"),
         usersList: document.getElementById("usersList"),
-        // --- NEW DOM ELEMENTS ---
         toggleItemsGridBtn: document.getElementById("toggleItemsGridBtn"),
         salesCategoryFilters: document.getElementById("salesCategoryFilters"),
         itemGrid: document.getElementById("itemGrid"),
         startScannerBtn: document.getElementById("startScannerBtn"),
-        closeScannerBtn: document.getElementById("closeScannerBtn"),
-        scannerContainer: document.getElementById("scanner-container")
+        scannerContainer: document.getElementById("scanner-container"),
+        readerDiv: document.getElementById("reader") // تعريف العنصر هنا
     };
 
     let appState = {
-        items: [],        // سيتم ملؤها من ملف p.json
-        invoices: [],     // سيتم ملؤها من Firebase
-        customers: [],    // سيتم ملؤها من Firebase
-        users: [],        // سيتم ملؤها من Firebase
-        adminPIN: null,   // سيتم ملؤه من Firebase
+        items: [],
+        invoices: [],
+        customers: [],
+        users: [],
+        adminPIN: null,
         currentUser: null,
         currentInvoice: [],
         editingItemId: null,      
@@ -561,7 +536,7 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedItem: null,
         selectedCustomer: null,
         unsubscribe: {},
-        html5QrCode: null // سيحتوي على كائن الماسح الضوئي
+        html5QrCode: null 
     };
     // #endregion
 
@@ -600,7 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
             DOM.itemCategorySelect.value = "";
             appState.editingItemId = null;
             DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف';
-            DOM.saveItemBtn.disabled = true; // تعطيل الزر لأن البيانات من ملف
+            DOM.saveItemBtn.disabled = true;
         },
         clearCustomerForm: () => {
             DOM.newCustomerIdInput.value = "";
@@ -772,7 +747,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><button disabled class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td>
                 </tr>
             `).join("");
-             // ملء قائمة الفئات للتصفية
             const categories = [...new Set(appState.items.map(item => item.category))];
             DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>';
             categories.forEach(category => {
@@ -947,11 +921,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const SalesController = {
     renderCategoryFilters: () => {
         const categoryFiltersDiv = DOM.salesCategoryFilters;
-        const categories = ['all', ...new Set(appState.items.map(item => item.category))];
+        // --- MODIFICATION: REMOVED 'all' ---
+        const categories = [...new Set(appState.items.map(item => item.category))];
         
         categoryFiltersDiv.innerHTML = categories.map(category => {
-            const displayName = category === 'all' ? 'الكل' : category;
-            return `<button class="btn-small ${category === 'all' ? 'active' : ''}" data-category="${category}">${displayName}</button>`;
+            // --- MODIFICATION: REMOVED active class logic ---
+            return `<button class="btn-small" data-category="${category}">${category}</button>`;
         }).join("");
 
         categoryFiltersDiv.querySelectorAll('button').forEach(btn => {
@@ -967,9 +942,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderItemsGrid: (category) => {
         const itemGridDiv = DOM.itemGrid;
-        const itemsToRender = category === 'all' 
-            ? appState.items 
-            : appState.items.filter(item => item.category === category);
+        // --- MODIFICATION: Handle null category to show nothing ---
+        if (!category) {
+            itemGridDiv.innerHTML = "";
+            return;
+        }
+        
+        const itemsToRender = appState.items.filter(item => item.category === category);
 
         itemGridDiv.innerHTML = itemsToRender.filter(item => item.stock > 0).map(item => `
             <div class="item-card" data-id="${item.id}">
@@ -1309,54 +1288,42 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     // #endregion
 
-    // #region Barcode Scanner Controller
+    // #region Barcode Scanner Controller (NEW SIMPLIFIED LOGIC)
     const ScannerController = {
-        onScanSuccess: (decodedText, decodedResult) => {
-            // أوقف الاهتزاز إذا كان الجهاز يدعمه
-            if (window.navigator.vibrate) { window.navigator.vibrate(200); }
-            
-            Helpers.showNotification(`تم المسح: ${decodedText}`);
-            DOM.searchItemInput.value = decodedText;
-            
-            // تفعيل حدث الإدخال ليبدأ البحث تلقائياً
-            const event = new Event('input', { bubbles: true, cancelable: true });
-            DOM.searchItemInput.dispatchEvent(event);
-
-            // أغلق الماسح بعد نجاح العملية
-            ScannerController.stopScanner();
-        },
-        onScanFailure: (error) => {
-            // تجاهل الأخطاء الشائعة مثل (عدم العثور على كود)
-            // console.warn(`Code scan error = ${error}`);
-        },
         startScanner: () => {
-            if (!appState.html5QrCode) {
-                 appState.html5QrCode = new Html5Qrcode("reader");
-            }
-            DOM.scannerContainer.style.display = 'block';
+            DOM.scannerContainer.style.display = 'flex';
+            const qrScanner = new Html5Qrcode("reader");
+            appState.html5QrCode = qrScanner;
 
-            // إعدادات الكاميرا والماسح
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            const cameraConfig = { facingMode: "environment" }; // استخدام الكاميرا الخلفية في الموبايل
+            qrScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (decodedText, decodedResult) => {
+                    if (window.navigator.vibrate) { window.navigator.vibrate(100); }
+                    Helpers.showNotification(`تم المسح: ${decodedText}`);
+                    DOM.searchItemInput.value = decodedText;
+                    
+                    const event = new Event('input', { bubbles: true, cancelable: true });
+                    DOM.searchItemInput.dispatchEvent(event);
 
-            appState.html5QrCode.start(
-                cameraConfig, 
-                config,
-                ScannerController.onScanSuccess,
-                ScannerController.onScanFailure
-            ).catch(err => {
-                 console.error("Unable to start scanning.", err);
-                 Helpers.showNotification("لا يمكن تشغيل الكاميرا.", 5000);
-                 DOM.scannerContainer.style.display = 'none';
+                    ScannerController.stopScanner();
+                },
+                (errorMessage) => {
+                    // console.log("QR Code scan failed:", errorMessage);
+                }
+            ).catch((err) => {
+                Helpers.showNotification("خطأ في تشغيل الكاميرا.", 4000);
+                console.error("Camera start error:", err);
+                ScannerController.stopScanner(); // Close if it fails to start
             });
         },
         stopScanner: () => {
-            if (appState.html5QrCode && appState.html5QrCode.isScanning) {
+            if (appState.html5QrCode) {
                 appState.html5QrCode.stop().then(() => {
                     DOM.scannerContainer.style.display = 'none';
                 }).catch(err => {
-                    console.error("Failed to stop scanning.", err);
-                    DOM.scannerContainer.style.display = 'none'; // إخفاء الواجهة حتى لو فشل الإيقاف
+                     console.log("Scanner already stopped or failed to stop.");
+                     DOM.scannerContainer.style.display = 'none';
                 });
             } else {
                  DOM.scannerContainer.style.display = 'none';
@@ -1377,22 +1344,22 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const itemsData = await response.json();
             
-            // ** التعديل الرئيسي هنا للتوافق مع هيكل البيانات الجديد **
-            const categoryKeyWithSpace = "category "; // اسم الحقل كما هو في الملف
+            const categoryKeyWithSpace = "category ";
             appState.items = itemsData
-                .filter(item => item.status === true) // 1. تصفية المنتجات الفعالة فقط
+                .filter(item => item.status === true)
                 .map(item => ({
-                    id: item.sku,                     // 2. استخدام SKU كمعرف فريد
-                    code: item.sku,                   // 3. استخدام SKU ككود
+                    id: item.sku,
+                    code: item.sku,
                     name: item.name,
                     price: parseFloat(item.price) || 0,
-                    category: item[categoryKeyWithSpace] ? item[categoryKeyWithSpace].trim() : "غير مصنف", // 4. قراءة الفئة مع معالجة المسافة
-                    unit: "قطعة",                     // 5. قيمة افتراضية للوحدة
-                    stock: 999                        // 6. قيمة افتراضية للمخزون
+                    category: item[categoryKeyWithSpace] ? item[categoryKeyWithSpace].trim() : "غير مصنف",
+                    unit: "قطعة",
+                    stock: 999
                 }));
 
             SalesController.renderCategoryFilters();
-            SalesController.renderItemsGrid('all'); 
+            // --- MODIFICATION: Show empty grid initially ---
+            SalesController.renderItemsGrid(null); 
             ItemsController.render();
 
             Helpers.showNotification("تم تحميل الأصناف بنجاح.", 2000);
@@ -1550,7 +1517,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (target && target.classList.contains("remove-from-invoice-btn")) SalesController.removeFromInvoice(target.getAttribute("data-index"));
         });
 
-        // --- NEW EVENT LISTENERS ---
         DOM.toggleItemsGridBtn.addEventListener("click", () => {
             const isHidden = DOM.itemGrid.style.display === 'none';
             DOM.salesCategoryFilters.style.display = isHidden ? 'flex' : 'none';
@@ -1559,10 +1525,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? '<i class="fas fa-eye-slash"></i> إخفاء الأصناف' 
                 : '<i class="fas fa-th-large"></i> عرض الأصناف حسب الفئة';
         });
-
+        
+        // --- Barcode Scanner Events ---
         DOM.startScannerBtn.addEventListener("click", ScannerController.startScanner);
-        DOM.closeScannerBtn.addEventListener("click", ScannerController.stopScanner);
-        // --- END NEW EVENT LISTENERS ---
+        // إغلاق الماسح عند الضغط على الخلفية المعتمة
+        DOM.scannerContainer.addEventListener('click', (e) => {
+            if (e.target === DOM.scannerContainer) {
+                ScannerController.stopScanner();
+            }
+        });
 
         // Reports Events
         DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
