@@ -182,13 +182,11 @@
 
   // --- دوال Firestore العامة ---
 
-  // دالة لإضافة مستند جديد
   window.addDocument = async function(collectionName, data) {
     const dataWithTimestamp = { ...data, createdAt: serverTimestamp() };
     return await addDoc(collection(db, collectionName), dataWithTimestamp);
   }
 
-  // دالة لقراءة مجموعة من المستندات بشكل لحظي
   window.readCollection = function(collectionName, callback, orderByField = "createdAt", orderDirection = "desc") {
     const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection));
     return onSnapshot(q, snapshot => {
@@ -198,7 +196,6 @@
     });
   }
 
-  // دالة لجلب مستند واحد
   window.getDocument = async function(collectionName, docId) {
       const docRef = doc(db, collectionName, docId);
       const docSnap = await getDoc(docRef);
@@ -210,19 +207,16 @@
       }
   }
 
-  // دالة لتحديث مستند
   window.updateDocument = async function(collectionName, docId, data) {
     const docRef = doc(db, collectionName, docId);
     return await updateDoc(docRef, data);
   }
 
-  // دالة لحذف مستند
   window.deleteDocument = async function(collectionName, docId) {
     const docRef = doc(db, collectionName, docId);
     return await deleteDoc(docRef);
   }
 
-  // دالة لتنفيذ عمليات متعددة دفعة واحدة (مفيدة لتحديث المخزون)
   window.writeBatchDocuments = async function(operations) {
       const batch = writeBatch(db);
       operations.forEach(op => {
@@ -519,7 +513,7 @@ document.addEventListener("DOMContentLoaded", () => {
         itemGrid: document.getElementById("itemGrid"),
         startScannerBtn: document.getElementById("startScannerBtn"),
         scannerContainer: document.getElementById("scanner-container"),
-        readerDiv: document.getElementById("reader") // تعريف العنصر هنا
+        readerDiv: document.getElementById("reader")
     };
 
     let appState = {
@@ -921,11 +915,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const SalesController = {
     renderCategoryFilters: () => {
         const categoryFiltersDiv = DOM.salesCategoryFilters;
-        // --- MODIFICATION: REMOVED 'all' ---
         const categories = [...new Set(appState.items.map(item => item.category))];
         
         categoryFiltersDiv.innerHTML = categories.map(category => {
-            // --- MODIFICATION: REMOVED active class logic ---
             return `<button class="btn-small" data-category="${category}">${category}</button>`;
         }).join("");
 
@@ -942,7 +934,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderItemsGrid: (category) => {
         const itemGridDiv = DOM.itemGrid;
-        // --- MODIFICATION: Handle null category to show nothing ---
         if (!category) {
             itemGridDiv.innerHTML = "";
             return;
@@ -1288,7 +1279,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     // #endregion
 
-    // #region Barcode Scanner Controller (NEW SIMPLIFIED LOGIC)
+    // #region Barcode Scanner Controller
     const ScannerController = {
         startScanner: () => {
             DOM.scannerContainer.style.display = 'flex';
@@ -1309,16 +1300,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     ScannerController.stopScanner();
                 },
                 (errorMessage) => {
-                    // console.log("QR Code scan failed:", errorMessage);
+                    // تجاهل أخطاء الفشل
                 }
             ).catch((err) => {
                 Helpers.showNotification("خطأ في تشغيل الكاميرا.", 4000);
                 console.error("Camera start error:", err);
-                ScannerController.stopScanner(); // Close if it fails to start
+                ScannerController.stopScanner();
             });
         },
         stopScanner: () => {
-            if (appState.html5QrCode) {
+            if (appState.html5QrCode && appState.html5QrCode.isScanning) {
                 appState.html5QrCode.stop().then(() => {
                     DOM.scannerContainer.style.display = 'none';
                 }).catch(err => {
@@ -1338,12 +1329,21 @@ document.addEventListener("DOMContentLoaded", () => {
         App.bindEvents();
         App.listenToFirebase();
 
+        // --- MODIFICATION: Load from four JSON files ---
         try {
-            const response = await fetch('p.json');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
-            const itemsData = await response.json();
-            
+            const fileNames = ['p1.json', 'p2.json', 'p3.json', 'p4.json'];
+            const promises = fileNames.map(file => 
+                fetch(file).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status} for file ${file}`);
+                    }
+                    return response.json();
+                })
+            );
+
+            const results = await Promise.all(promises);
+            const itemsData = results.flat(); // دمج البيانات من كل الملفات في مصفوفة واحدة
+
             const categoryKeyWithSpace = "category ";
             appState.items = itemsData
                 .filter(item => item.status === true)
@@ -1358,15 +1358,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 }));
 
             SalesController.renderCategoryFilters();
-            // --- MODIFICATION: Show empty grid initially ---
             SalesController.renderItemsGrid(null); 
             ItemsController.render();
 
             Helpers.showNotification("تم تحميل الأصناف بنجاح.", 2000);
 
         } catch (error) {
-            console.error("Could not load items from p.json:", error);
-            Helpers.showNotification("فشل تحميل ملف الأصناف p.json", 5000);
+            console.error("Could not load item files:", error);
+            Helpers.showNotification("فشل تحميل واحد أو أكثر من ملفات الأصناف.", 5000);
         }
 
         const savedUser = localStorage.getItem('currentUser');
@@ -1526,9 +1525,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 : '<i class="fas fa-th-large"></i> عرض الأصناف حسب الفئة';
         });
         
-        // --- Barcode Scanner Events ---
         DOM.startScannerBtn.addEventListener("click", ScannerController.startScanner);
-        // إغلاق الماسح عند الضغط على الخلفية المعتمة
         DOM.scannerContainer.addEventListener('click', (e) => {
             if (e.target === DOM.scannerContainer) {
                 ScannerController.stopScanner();
