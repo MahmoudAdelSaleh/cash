@@ -999,18 +999,32 @@ document.addEventListener("DOMContentLoaded", () => {
             App.listenToFirebase();
 
             try {
-                // *** التصحيح هنا - تم تغيير حالة الأحرف لأسماء الملفات ***
+                // *** MODIFICATION: Load available files and ignore failures ***
                 const fileNames = ['P1.json', 'P2.json', 'P3.json', 'P4.json'];
                 
                 const promises = fileNames.map(file => 
                     fetch(file).then(res => {
-                        if (!res.ok) { throw new Error(`Failed to load ${file}: ${res.status} ${res.statusText}`); }
+                        if (!res.ok) { 
+                            // This will cause the promise to reject, which is handled by allSettled
+                            return Promise.reject(`File not found or error: ${file}`);
+                        }
                         return res.json();
                     })
                 );
 
-                const results = await Promise.all(promises);
-                const itemsData = results.flat();
+                const results = await Promise.allSettled(promises);
+
+                const itemsData = results
+                    .filter(result => result.status === 'fulfilled') // Get only successful requests
+                    .map(result => result.value) // Get the data from each successful request
+                    .flat(); // Combine all arrays of products into one big array
+
+                if (itemsData.length === 0) {
+                     Helpers.showNotification("تحذير: لم يتم تحميل أي من ملفات الأصناف بنجاح.", 5000);
+                } else {
+                     Helpers.showNotification("تم تحميل الأصناف المتاحة.", 2000);
+                }
+                
                 const categoryKeyWithSpace = "category ";
                 appState.items = itemsData.filter(item => item.status === true).map(item => ({
                         id: item.sku, code: item.sku, name: item.name, price: parseFloat(item.price) || 0,
@@ -1020,10 +1034,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 SalesController.renderCategoryFilters();
                 SalesController.renderItemsGrid(null); 
                 ItemsController.render();
-                Helpers.showNotification("تم تحميل الأصناف بنجاح.", 2000);
             } catch (error) {
-                console.error("Could not load item files:", error);
-                Helpers.showNotification("فشل تحميل ملفات الأصناف. تأكد من وجودها بجانب ملف index.", 6000);
+                console.error("A critical error occurred during item loading:", error);
+                Helpers.showNotification("حدث خطأ حرج أثناء تهيئة التطبيق.", 6000);
             }
 
             const savedUser = localStorage.getItem('currentUser');
