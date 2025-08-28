@@ -999,10 +999,12 @@ document.addEventListener("DOMContentLoaded", () => {
             App.listenToFirebase();
 
             try {
-                const fileNames = ['p1.json', 'p2.json', 'p3.json', 'p4.json'];
+                // *** التصحيح هنا - تم تغيير حالة الأحرف لأسماء الملفات ***
+                const fileNames = ['P1.json', 'P2.json', 'P3.json', 'P4.json'];
+                
                 const promises = fileNames.map(file => 
                     fetch(file).then(res => {
-                        if (!res.ok) { throw new Error(`Failed to load ${file}: ${res.statusText}`); }
+                        if (!res.ok) { throw new Error(`Failed to load ${file}: ${res.status} ${res.statusText}`); }
                         return res.json();
                     })
                 );
