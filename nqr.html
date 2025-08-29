@@ -62,10 +62,13 @@
   .item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-color: var(--primary-color); }
   .item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
   .item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
+  
+  /* --- MODIFIED Category Scroller --- */
   #categoryScrollerContainer { display: none; margin-bottom: 15px; width: 100%; }
   #salesCategoryFilters { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); gap: 8px; overflow-x: auto; padding: 10px; background: #e9ecef; border-radius: 6px; }
   #salesCategoryFilters button { width: auto; padding: 5px 10px; white-space: nowrap; background-color: var(--primary-color); }
   #salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
+
   #itemGrid { display: none; grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; background: #e9ecef; }
   #scanner-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 10001; display: none; justify-content: center; align-items: flex-start; padding-top: 10vh; }
   #reader { width: 300px; height: 300px; max-width: 80vw; max-height: 80vw; background: #000; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow: hidden; position: relative; }
@@ -77,17 +80,22 @@
   .summary-row { display: flex; justify-content: space-between; align-items: center; text-align: left; margin-top: 10px; }
   .summary-row h3 { margin: 0; font-size: 18px; }
   .delivery-controls button { width: 45px; }
+
+  /* --- MODIFIED Sales Header & Footer Layout --- */
   #sales-header { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 5px; }
   #sales-header .form-group { margin-bottom: 0; flex-grow: 1; min-width: 200px; position: relative; }
   #sales-header .search-group { display: flex; align-items: center; }
   #sales-header .search-group input { border-radius: 0 4px 4px 0; }
   #sales-header .search-group button { border-radius: 4px 0 0 4px; flex-shrink: 0; width: 50px; }
+  
   .payment-options { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
   .payment-options label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
   .payment-options input[type="radio"] { width: auto; margin: 0; }
+
   #sales-footer { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   #sales-footer .form-group { margin-bottom: 0; flex: 1 1 150px; }
   #sales-footer .btn-group { display: flex; gap: 10px; flex: 2 1 300px; justify-content: flex-end;}
+
   @media (max-width: 768px) {
     #sales-header, #sales-footer { flex-direction: column; gap: 5px; align-items: stretch; }
     #sales-header .form-group, #sales-footer .form-group { min-width: 100%; margin-bottom: 10px; }
@@ -368,11 +376,15 @@ const ReportsController = {
             Helpers.showNotification("تم الحذف بنجاح.");
         } catch (error) { console.error("Reset error: ", error); Helpers.showNotification("حدث خطأ أثناء الحذف."); }
     },
-    seedItems: async (itemsData) => {
-        if (!itemsData) return;
-        if (!confirm("سيتم حذف جميع الأصناف الحالية واستبدالها بالقائمة من الملف. هل أنت متأكد؟")) return;
+    seedItems: async () => {
+        const JSON_FILE_URL = 'https://www.dropbox.com/scl/fi/8yto7ys05ntyu4acq7zvf/p0.json?rlkey=553llrjyznt8j6sax1c5hnlva&st=zy6obo65&dl=1'; // Correct Dropbox URL
+        if (!confirm("سيتم حذف جميع الأصناف الحالية واستبدالها بالقائمة الأساسية من الرابط. هل أنت متأكد؟")) return;
         Helpers.showNotification("جاري تحميل الأصناف...");
         try {
+            const response = await fetch(JSON_FILE_URL);
+            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+            const itemsData = await response.json();
+            
             const itemsSnapshot = await getDocs(collection(db, 'items'));
             const deleteBatch = writeBatch(db);
             itemsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
@@ -393,7 +405,7 @@ const ReportsController = {
             Helpers.showNotification("تم تحميل وتحديث قائمة الأصناف بنجاح!");
         } catch (error) {
             console.error("Error seeding items:", error);
-            Helpers.showNotification("حدث خطأ أثناء رفع ومعالجة الملف.");
+            Helpers.showNotification("فشل تحميل الملف. تأكد من صحة الرابط واتصال الإنترنت.");
         }
     }
 };
@@ -475,27 +487,7 @@ const App = {
     
         // Summary Tab
         DOM.fullResetBtn.addEventListener("click", () => ReportsController.resetData('full'));
-        DOM.seedItemsBtn.addEventListener("click", () => DOM.jsonUploadInput.click());
-        DOM.jsonUploadInput.addEventListener("change", (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    let content = event.target.result;
-                    if (content.charCodeAt(0) === 0xFEFF) {
-                        content = content.slice(1);
-                    }
-                    const itemsData = JSON.parse(content);
-                    ReportsController.seedItems(itemsData);
-                } catch (err) {
-                    console.error("File Parse Error:", err);
-                    Helpers.showNotification("خطأ: الملف الذي تم رفعه ليس ملف JSON صالح.");
-                }
-            };
-            reader.readAsText(file);
-            e.target.value = null;
-        });
+        DOM.seedItemsBtn.addEventListener("click", ReportsController.seedItems);
     }
 };
 // #endregion
