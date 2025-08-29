@@ -445,14 +445,36 @@ const App = {
     },
     listenToFirebase: () => {
         Object.values(appState.unsubscribe).forEach(unsub => unsub());
-        // Load items from Firestore now
-        appState.unsubscribe.items = window.readCollection("items", (data) => { 
-            appState.items = data; 
-            const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean);
-            DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
-            DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
-            if (document.getElementById('items').classList.contains('active')) ItemsController.render();
-        }, "name", "asc");
+        
+        // <<< START OF MODIFICATION >>>
+        // Load items from p.json instead of Firestore
+        fetch('p.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Assign a unique ID to each item, using its code, for compatibility with the rest of the app logic
+                appState.items = data.map(item => ({ ...item, id: item.code }));
+                
+                // Populate category filters using data from the JSON file
+                const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean);
+                DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
+                DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
+                
+                // Re-render the items table if it's the active tab
+                if (document.getElementById('items').classList.contains('active')) {
+                    ItemsController.render();
+                }
+                Helpers.showNotification("تم تحميل الأصناف من الملف المحلي بنجاح.");
+            })
+            .catch(error => {
+                console.error('Error fetching or parsing p.json:', error);
+                Helpers.showNotification("فشل تحميل ملف الأصناف. تأكد من وجوده.", 5000);
+            });
+        // <<< END OF MODIFICATION >>>
 
         appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); }, "name", "asc");
         appState.unsubscribe.invoices = window.readCollection("invoices", (data) => { appState.invoices = data; App.onTabSwitch(document.querySelector('nav button.active').dataset.tab); });
@@ -492,7 +514,7 @@ const App = {
         // Customers Tab
         DOM.saveCustomerBtn.addEventListener("click", CustomersController.saveCustomer);
         DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if(!btn) return; if(btn.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); if(btn.classList.contains("delete-customer-btn")) CustomersController.deleteCustomer(btn.dataset.id); });
-   
+    
         // Users Tab
         DOM.saveUserBtn.addEventListener("click", UsersController.saveUser);
         DOM.usersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn) { const id = btn.dataset.id; if (btn.classList.contains("delete-user-btn")) UsersController.delete(id); if (btn.classList.contains("edit-user-btn")) UsersController.edit(id); }});
