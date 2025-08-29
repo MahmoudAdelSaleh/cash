@@ -381,7 +381,7 @@ const ReportsController = {
         if (!confirm("سيتم حذف جميع الأصناف الحالية واستبدالها بالقائمة الأساسية من الملف. هل أنت متأكد؟")) return;
         Helpers.showNotification("جاري تحميل الأصناف...");
         try {
-            const GITHUB_URL = 'https://raw.githubusercontent.com/MahmoudAdelSaleh/cash/main/p.json'; // ⚠️ Replace this URL
+            const GITHUB_URL = 'https://raw.githubusercontent.com/MahmoudAdelSaleh/cash/main/p1.json'; // تحميل الأصناف
             const response = await fetch(GITHUB_URL);
             if (!response.ok) throw new Error('Network response was not ok');
             const itemsData = await response.json();
