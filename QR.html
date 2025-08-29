@@ -209,18 +209,13 @@
 <script type="module">
 // #region Firebase Initialization and Offline Persistence
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, where, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, where, increment, initializeFirestore, persistentLocalCache } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 const firebaseConfig = { apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc", authDomain: "cash-84acc.firebaseapp.com", projectId: "cash-84acc", storageBucket: "cash-84acc.appspot.com", messagingSenderId: "774737678098", appId: "1:774737678098:web:8b918375b4e51692b7edcb", measurementId: "G-GRKNPJ45N1" };
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
-// Enable Offline Persistence
-enableIndexedDbPersistence(db).catch(err => {
-    if (err.code == 'failed-precondition') {
-        console.warn("Firebase persistence failed, possibly due to multiple open tabs.");
-    } else if (err.code == 'unimplemented') {
-        console.warn("The current browser does not support all of the features required for offline persistence.");
-    }
+// <<< تم تحديث طريقة تفعيل وضع الأوفلاين للطريقة الأحدث >>>
+const db = initializeFirestore(app, {
+  cache: persistentLocalCache({})
 });
 
 window.db = db; window.doc = doc; window.collection = collection; window.writeBatch = writeBatch; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs; window.query = query; window.where = where; window.increment = increment;
@@ -246,7 +241,8 @@ const DOM = {
     notificationContainer: document.getElementById("notification-container"),
 };
 
-let appState = { items: [], invoices: [], customers: [], users: [], adminPIN: "790707071", currentUser: null, currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, editingUserId: null, html5QrCode: null, localItemsLoaded: false };
+// <<< تم إصلاح الخطأ بإعادة إضافة متغير unsubscribe هنا >>>
+let appState = { items: [], invoices: [], customers: [], users: [], adminPIN: "790707071", currentUser: null, currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, editingUserId: null, html5QrCode: null, localItemsLoaded: false, unsubscribe: {} };
 // #endregion
 
 // #region Helper & Utility Functions
@@ -478,11 +474,9 @@ const ReportsController = {
             try {
                 const data = JSON.parse(e.target.result);
                 const batch = writeBatch(db);
-                // Restore customers, using their phone number as ID
                 data.customers?.forEach(customer => {
                     batch.set(doc(db, "customers", customer.id), { name: customer.name }, { merge: true });
                 });
-                // Restore invoices with auto-generated IDs
                 data.invoices?.forEach(invoice => {
                     batch.set(doc(collection(db, "invoices")), invoice);
                 });
@@ -545,7 +539,6 @@ const App = {
         DOM.logoutBtn.addEventListener("click", Auth.logout);
         DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
         
-        // Sales Tab
         DOM.searchItem.addEventListener("input", () => {
             const q = DOM.searchItem.value.trim().toLowerCase();
             DOM.searchResults.style.display = "none";
@@ -607,5 +600,8 @@ const App = {
 
 App.init();
 </script>
+
+</body>
+</html>
 </body>
 </html>
