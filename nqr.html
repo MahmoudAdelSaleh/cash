@@ -364,9 +364,38 @@ const UsersController = {
 
 // #region Scanner Controller
 const ScannerController = {
-    onScanSuccess: (decodedText) => { ScannerController.stopScanner(); if (window.navigator.vibrate) { window.navigator.vibrate(100); } const product = appState.items.find(p => p.code === decodedText); if (product) { SalesController.addToInvoice(product); } else { Helpers.showNotification("الصنف غير موجود."); } },
-    startScanner: () => { DOM.scannerContainer.style.display = 'flex'; appState.html5QrCode = new Html5Qrcode("reader"); const config = { fps: 10, qrbox: { width: 250, height: 250 } }; appState.html5QrCode.start({ facingMode: "environment" }, config, ScannerController.onScanSuccess, (err) => {}) .catch((err) => { Helpers.showNotification("خطأ في تشغيل الكاميرا."); ScannerController.stopScanner(); }); },
-    stopScanner: () => { if (appState.html5QrCode && appState.html5QrCode.isScanning) { appState.html5QrCode.stop().catch(err => console.error("Scanner stop failed", err)).finally(() => { DOM.scannerContainer.style.display = 'none'; }); } else { DOM.scannerContainer.style.display = 'none'; } }
+    onScanSuccess: (decodedText) => {
+        ScannerController.stopScanner();
+        if (window.navigator.vibrate) { window.navigator.vibrate(100); }
+
+        // --- هذا هو السطر الذي تم تعديله ---
+        const product = appState.items.find(p => String(p.code).trim() === String(decodedText).trim());
+
+        if (product) {
+            SalesController.addToInvoice(product);
+        } else {
+            Helpers.showNotification("الصنف غير موجود.");
+        }
+    },
+    startScanner: () => {
+        DOM.scannerContainer.style.display = 'flex';
+        appState.html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        appState.html5QrCode.start({ facingMode: "environment" }, config, ScannerController.onScanSuccess, (err) => {})
+        .catch((err) => {
+            Helpers.showNotification("خطأ في تشغيل الكاميرا.");
+            ScannerController.stopScanner();
+        });
+    },
+    stopScanner: () => {
+        if (appState.html5QrCode && appState.html5QrCode.isScanning) {
+            appState.html5QrCode.stop().catch(err => console.error("Scanner stop failed", err)).finally(() => {
+                DOM.scannerContainer.style.display = 'none';
+            });
+        } else {
+            DOM.scannerContainer.style.display = 'none';
+        }
+    }
 };
 // #endregion
 
