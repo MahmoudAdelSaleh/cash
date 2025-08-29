@@ -190,8 +190,7 @@
       <table><thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead><tbody id="salesSummaryTable"></tbody></table>
       <div style="margin-top: 30px;"><h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3><div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div></div>
       <div class="flex-container flex-end" style="margin-top: 20px;">
-        <input type="file" id="jsonUploadInput" accept=".json" style="display: none;" />
-        <button id="seedItemsBtn" class="btn-success"><i class="fas fa-upload"></i> تحميل الأصناف من ملف</button>
+        <button id="seedItemsBtn" class="btn-success"><i class="fas fa-upload"></i> تحميل الأصناف الأساسية</button>
         <button id="fullResetBtn" class="btn-danger"><i class="fas fa-trash-alt"></i> إعادة ضبط كاملة</button>
       </div>
     </section>
@@ -212,7 +211,7 @@ const DOM = {
     itemCode: document.getElementById("itemCode"), itemName: document.getElementById("itemName"), itemUnit: document.getElementById("itemUnit"), itemPrice: document.getElementById("itemPrice"), itemStock: document.getElementById("itemStock"), saveItemBtn: document.getElementById("saveItemBtn"), itemsTable: document.getElementById("itemsTable"), filterCategorySelect: document.getElementById("filterCategorySelect"), itemCategorySelect: document.getElementById("itemCategorySelect"),
     newCustomerId: document.getElementById("newCustomerId"), newCustomerName: document.getElementById("newCustomerName"), saveCustomerBtn: document.getElementById("saveCustomerBtn"), customersList: document.getElementById("customersList"),
     customerNameInput: document.getElementById("customerName"), customerPhoneInput: document.getElementById("customerPhone"), customerSuggestionsDiv: document.getElementById("customerSuggestions"), searchItemInput: document.getElementById("searchItem"), searchResultsDiv: document.getElementById("searchResults"), invoiceTable: document.getElementById("invoiceTable"), invoiceTotalSpan: document.getElementById("invoiceTotal"), saveInvoiceBtn: document.getElementById("saveInvoiceBtn"), printInvoiceBtn: document.getElementById("printInvoiceBtn"), sendWhatsAppBtn: document.getElementById("sendWhatsAppBtn"), amountPaidInput: document.getElementById("amountPaidInput"), changeTextSpan: document.getElementById("changeText"), changeAmountSpan: document.getElementById("changeAmount"),
-    invoicesList: document.getElementById("invoicesList"), salesSummaryTable: document.getElementById("salesSummaryTable"), totalSalesAmount: document.getElementById("totalSalesAmount"), summaryGroupSelect: document.getElementById("summaryGroupSelect"), fullResetBtn: document.getElementById("fullResetBtn"), seedItemsBtn: document.getElementById("seedItemsBtn"), jsonUploadInput: document.getElementById("jsonUploadInput"), // Added
+    invoicesList: document.getElementById("invoicesList"), salesSummaryTable: document.getElementById("salesSummaryTable"), totalSalesAmount: document.getElementById("totalSalesAmount"), summaryGroupSelect: document.getElementById("summaryGroupSelect"), fullResetBtn: document.getElementById("fullResetBtn"), seedItemsBtn: document.getElementById("seedItemsBtn"),
     bestSellingItems: document.getElementById("bestSellingItems"),
     newUsernameInput: document.getElementById("newUsernameInput"), newUserPasswordInput: document.getElementById("newUserPasswordInput"), saveUserBtn: document.getElementById("saveUserBtn"), usersList: document.getElementById("usersList"), changePinBtn: document.getElementById("changePinBtn"), oldPinInput: document.getElementById("oldPinInput"), newPinInput: document.getElementById("newPinInput"),
     toggleItemsGridBtn: document.getElementById("toggleItemsGridBtn"), salesCategoryFilters: document.getElementById("salesCategoryFilters"), itemGrid: document.getElementById("itemGrid"), startScannerBtn: document.getElementById("startScannerBtn"), scannerContainer: document.getElementById("scanner-container"), readerDiv: document.getElementById("reader"), categoryScrollerContainer: document.getElementById("categoryScrollerContainer"),
@@ -394,7 +393,7 @@ const ReportsController = {
             Helpers.showNotification("تم تحميل وتحديث قائمة الأصناف بنجاح!");
         } catch (error) {
             console.error("Error seeding items:", error);
-            Helpers.showNotification("فشل تحميل الملف. تأكد من صحة الرابط واتصال الإنترنت.");
+            Helpers.showNotification("حدث خطأ أثناء رفع ومعالجة الملف.");
         }
     }
 };
@@ -483,14 +482,19 @@ const App = {
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
-                    const itemsData = JSON.parse(event.target.result);
+                    let content = event.target.result;
+                    if (content.charCodeAt(0) === 0xFEFF) {
+                        content = content.slice(1);
+                    }
+                    const itemsData = JSON.parse(content);
                     ReportsController.seedItems(itemsData);
                 } catch (err) {
+                    console.error("File Parse Error:", err);
                     Helpers.showNotification("خطأ: الملف الذي تم رفعه ليس ملف JSON صالح.");
                 }
             };
             reader.readAsText(file);
-            e.target.value = null; // Reset input to allow re-uploading the same file
+            e.target.value = null;
         });
     }
 };
