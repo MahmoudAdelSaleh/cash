@@ -449,117 +449,91 @@ const ReportsController = {
 // #endregion
 
 // #region App Logic & Event Listeners
-const App = {
-    init: () => {
-        App.listenToFirebase();
-        const savedUser = localStorage.getItem('currentUser'); 
-        if (savedUser) { 
-            appState.currentUser = JSON.parse(savedUser); 
-            Auth.showApp(appState.currentUser.role); 
+bindEvents: () => {
+    // --- Login/Logout ---
+    DOM.loginForm.addEventListener("submit", (e) => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
+    DOM.logoutBtn.addEventListener("click", Auth.logout);
+    DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
+
+    // --- Sales Tab (Search and Grids) ---
+    DOM.searchItem.addEventListener("input", () => {
+        const q = DOM.searchItem.value.trim();
+        DOM.searchResults.style.display = "none";
+        if (q.length < 1) return;
+        const matched = appState.items.filter(i => (i.name || '').toLowerCase().includes(q.toLowerCase()) || (i.barcode1 || '').includes(q)).slice(0, 5);
+        if (matched.length > 0) {
+            DOM.searchResults.innerHTML = matched.map(i => `<div data-id="${i.id}">${i.barcode1} - ${i.name}</div>`).join('');
+            DOM.searchResults.style.display = "block";
         }
-        App.bindEvents();
-    },
-    listenToFirebase: () => {
-        Object.values(appState.unsubscribe).forEach(unsub => unsub());
-        
-        appState.unsubscribe.items = window.readCollection("items", (fbItems) => { 
-            appState.items = fbItems; 
-            const categories = [...new Set(appState.items.map(i => i.category))].filter(Boolean);
-            DOM.salesCategoryFilters.innerHTML = categories.map(c => `<button class="btn-small" data-category="${c}">${c}</button>`).join('');
-            DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
-            
-            if (document.getElementById('items').classList.contains('active')) ItemsController.render();
-        });
-
-        appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); });
-        appState.unsubscribe.invoices = window.readCollection("invoices", (data) => { appState.invoices = data; if (document.querySelector('nav button.active')?.dataset.tab === 'invoices') ReportsController.renderInvoices(); }, "createdAt", "desc");
-        appState.unsubscribe.users = window.readCollection("users", (data) => { appState.users = data; if (document.getElementById('users').classList.contains('active')) UsersController.render(); }, "username", "asc");
-        window.getDocument("config", "admin").then(doc => { if (doc?.pin) appState.adminPIN = doc.pin; });
-    },
-    onTabSwitch: (tabId) => {
-        switch (tabId) {
-            case 'items': ItemsController.render(); break;
-            case 'customers': CustomersController.render(); break;
-            case 'invoices': ReportsController.renderInvoices(); break;
-            case 'users': if (appState.currentUser?.role === 'admin') UsersController.render(); break;
+    });
+    DOM.searchResults.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { SalesController.addToInvoice(appState.items.find(i => i.id === div.dataset.id)); DOM.searchItem.value = ""; DOM.searchResults.style.display = "none"; }});
+    
+    DOM.toggleItemsGridBtn.addEventListener("click", () => {
+        const isHidden = DOM.categoryScrollerContainer.style.display === 'none';
+        DOM.categoryScrollerContainer.style.display = isHidden ? 'block' : 'none';
+        DOM.itemGrid.style.display = isHidden ? 'grid' : 'none';
+        DOM.toggleItemsGridBtn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i> إخفاء الأصناف' : '<i class="fas fa-th-large"></i> عرض الأصناف';
+        if(isHidden){
+            DOM.salesCategoryFilters.querySelector('button')?.click();
         }
-    },
-    renderItemsGrid: (category) => {
-        const itemsToShow = category ? appState.items.filter(item => item.category === category && item.qunt > 0) : [];
-        DOM.itemGrid.innerHTML = itemsToShow.map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name || 'غير متوفر'}</h5><p>${(item.price || 0).toFixed(2)} ج.م</p></div>`).join("");
-    },
-    bindEvents: () => {
-        DOM.loginForm.addEventListener("submit", (e) => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
-        DOM.logoutBtn.addEventListener("click", Auth.logout);
-        DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
-        
-        DOM.searchItem.addEventListener("input", () => {
-            const q = DOM.searchItem.value.trim();
-            DOM.searchResults.style.display = "none";
-            if (q.length < 1) return;
-            const matched = appState.items.filter(i => (i.name || '').toLowerCase().includes(q.toLowerCase()) || (i.barcode1 || '').includes(q)).slice(0, 5);
-            if (matched.length > 0) {
-                DOM.searchResults.innerHTML = matched.map(i => `<div data-id="${i.id}">${i.barcode1} - ${i.name}</div>`).join('');
-                DOM.searchResults.style.display = "block";
-            }
-        });
-        
-        DOM.toggleItemsGridBtn.addEventListener("click", () => {
-            const isHidden = DOM.categoryScrollerContainer.style.display === 'none';
-            DOM.categoryScrollerContainer.style.display = isHidden ? 'block' : 'none';
-            DOM.itemGrid.style.display = isHidden ? 'grid' : 'none';
-            DOM.toggleItemsGridBtn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i> إخفاء الأصناف' : '<i class="fas fa-th-large"></i> عرض الأصناف';
-            if(isHidden){
-                const firstCategoryButton = DOM.salesCategoryFilters.querySelector('button');
-                if (firstCategoryButton) {
-                   firstCategoryButton.click();
-                } else {
-                   App.renderItemsGrid(null);
-                }
-            }
-        });
+    });
+    DOM.salesCategoryFilters.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-category]");
+        if(btn){
+            DOM.salesCategoryFilters.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            App.renderItemsGrid(btn.dataset.category);
+        }
+    });
+    DOM.itemGrid.addEventListener("click", (e) => {
+        const card = e.target.closest(".item-card[data-id]");
+        if (card) {
+            const item = appState.items.find(i => i.id === card.dataset.id);
+            if (item) SalesController.addToInvoice(item);
+        }
+    });
 
-        DOM.salesCategoryFilters.addEventListener("click", (e) => {
-            const btn = e.target.closest("button[data-category]");
-            if(btn){
-                DOM.salesCategoryFilters.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                App.renderItemsGrid(btn.dataset.category);
-            }
-        });
+    // --- Invoice Table Buttons (Quantity +/-/delete) ---
+    DOM.invoiceTable.addEventListener("click", (e) => { 
+        const btn = e.target.closest("button"); 
+        if (!btn) return; 
+        const idx = parseInt(btn.dataset.index); 
+        if (btn.classList.contains("qty-increase")) SalesController.updateItemQty(idx, 1); 
+        if (btn.classList.contains("qty-decrease")) SalesController.updateItemQty(idx, -1); 
+        if (btn.classList.contains("remove-from-invoice-btn")) { 
+            appState.currentInvoice.splice(idx, 1); 
+            SalesController.renderInvoice();
+        }
+    });
 
-        DOM.itemGrid.addEventListener("click", (e) => {
-            const card = e.target.closest(".item-card[data-id]");
-            if (card) {
-                const item = appState.items.find(i => i.id === card.dataset.id);
-                if (item) SalesController.addToInvoice(item);
-            }
-        });
-        
-        DOM.searchResults.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { SalesController.addToInvoice(appState.items.find(i => i.id === div.dataset.id)); DOM.searchItem.value = ""; DOM.searchResults.style.display = "none"; }});
-        DOM.saveItemBtn.addEventListener("click", ItemsController.save);
-        DOM.itemsTable.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-item-btn")) ItemsController.edit(btn.dataset.id); if (btn.classList.contains("delete-item-btn")) ItemsController.delete(btn.dataset.id); }});
-        DOM.saveCustomerBtn.addEventListener("click", CustomersController.save);
-        DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn?.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); if (btn?.classList.contains("delete-customer-btn")) CustomersController.delete(btn.dataset.id); });
-        DOM.saveUserBtn.addEventListener("click", UsersController.save);
-        DOM.usersList.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-user-btn")) UsersController.edit(btn.dataset.id); if (btn.classList.contains("delete-user-btn")) UsersController.delete(btn.dataset.id); }});
-        DOM.changePinBtn.addEventListener("click", UsersController.changeAdminPin);
-        DOM.fullResetBtn.addEventListener("click", ReportsController.fullReset);
-        DOM.resetInvoicesBtn.addEventListener("click", ReportsController.resetInvoices);
-        DOM.backupBtn.addEventListener("click", ReportsController.backup);
-        DOM.restoreBtn.addEventListener("click", () => DOM.restoreInput.click());
-        DOM.restoreInput.addEventListener("change", (e) => ReportsController.restore(e.target.files[0]));
-        DOM.startScannerBtn.addEventListener("click", ScannerController.start);
-        DOM.scannerContainer.addEventListener("click", (e) => { if(e.target === DOM.scannerContainer) ScannerController.stop(); });
-        DOM.saveInvoiceBtn.addEventListener("click", SalesController.save);
-        DOM.printInvoiceBtn.addEventListener("click", SalesController.print);
-        DOM.sendWhatsAppBtn.addEventListener("click", SalesController.sendWhatsApp);
-        DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
-        DOM.increaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee += 5; SalesController.updateTotals(); });
-        DOM.decreaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee = Math.max(0, appState.deliveryFee - 5); SalesController.updateTotals(); });
-    }
-};
+    // --- Sales Footer Buttons (Save, Print, etc.) ---
+    DOM.saveInvoiceBtn.addEventListener("click", SalesController.save);
+    DOM.printInvoiceBtn.addEventListener("click", SalesController.print);
+    DOM.sendWhatsAppBtn.addEventListener("click", SalesController.sendWhatsApp);
+    DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
+    DOM.increaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee += 5; SalesController.updateTotals(); });
+    DOM.decreaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee = Math.max(0, appState.deliveryFee - 5); SalesController.updateTotals(); });
 
+    // --- Other Tabs Bindings ---
+    DOM.saveItemBtn.addEventListener("click", ItemsController.save);
+    DOM.itemsTable.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-item-btn")) ItemsController.edit(btn.dataset.id); if (btn.classList.contains("delete-item-btn")) ItemsController.delete(btn.dataset.id); }});
+    
+    DOM.saveCustomerBtn.addEventListener("click", CustomersController.save);
+    DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn?.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); if (btn?.classList.contains("delete-customer-btn")) CustomersController.delete(btn.dataset.id); });
+    
+    DOM.saveUserBtn.addEventListener("click", UsersController.save);
+    DOM.usersList.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-user-btn")) UsersController.edit(btn.dataset.id); if (btn.classList.contains("delete-user-btn")) UsersController.delete(btn.dataset.id); }});
+    DOM.changePinBtn.addEventListener("click", UsersController.changeAdminPin);
+    
+    DOM.fullResetBtn.addEventListener("click", ReportsController.fullReset);
+    DOM.resetInvoicesBtn.addEventListener("click", ReportsController.resetInvoices);
+    DOM.backupBtn.addEventListener("click", ReportsController.backup);
+    DOM.restoreBtn.addEventListener("click", () => DOM.restoreInput.click());
+    DOM.restoreInput.addEventListener("change", (e) => ReportsController.restore(e.target.files[0]));
+    
+    DOM.startScannerBtn.addEventListener("click", ScannerController.start);
+    DOM.scannerContainer.addEventListener("click", (e) => { if(e.target === DOM.scannerContainer) ScannerController.stop(); });
+  
 App.init();
 </script>
 </body>
