@@ -62,12 +62,10 @@
   .item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-color: var(--primary-color); }
   .item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
   .item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
-  
   #categoryScrollerContainer { display: none; margin-bottom: 15px; width: 100%; }
   #salesCategoryFilters { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); gap: 8px; overflow-x: auto; padding: 10px; background: #e9ecef; border-radius: 6px; }
   #salesCategoryFilters button { width: auto; padding: 5px 10px; white-space: nowrap; background-color: var(--primary-color); }
   #salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
-
   #itemGrid { display: none; grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; background: #e9ecef; }
   #scanner-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 10001; display: none; justify-content: center; align-items: flex-start; padding-top: 10vh; }
   #reader { width: 300px; height: 300px; max-width: 80vw; max-height: 80vw; background: #000; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow: hidden; position: relative; }
@@ -79,21 +77,17 @@
   .summary-row { display: flex; justify-content: space-between; align-items: center; text-align: left; margin-top: 10px; }
   .summary-row h3 { margin: 0; font-size: 18px; }
   .delivery-controls button { width: 45px; }
-
   #sales-header { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 5px; }
   #sales-header .form-group { margin-bottom: 0; flex-grow: 1; min-width: 200px; position: relative; }
   #sales-header .search-group { display: flex; align-items: center; }
   #sales-header .search-group input { border-radius: 0 4px 4px 0; }
   #sales-header .search-group button { border-radius: 4px 0 0 4px; flex-shrink: 0; width: 50px; }
-  
   .payment-options { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
   .payment-options label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
   .payment-options input[type="radio"] { width: auto; margin: 0; }
-
   #sales-footer { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   #sales-footer .form-group { margin-bottom: 0; flex: 1 1 150px; }
   #sales-footer .btn-group { display: flex; gap: 10px; flex: 2 1 300px; justify-content: flex-end;}
-
   @media (max-width: 768px) {
     #sales-header, #sales-footer { flex-direction: column; gap: 5px; align-items: stretch; }
     #sales-header .form-group, #sales-footer .form-group { min-width: 100%; margin-bottom: 10px; }
@@ -196,7 +190,8 @@
       <table><thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead><tbody id="salesSummaryTable"></tbody></table>
       <div style="margin-top: 30px;"><h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3><div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div></div>
       <div class="flex-container flex-end" style="margin-top: 20px;">
-        <button id="seedItemsBtn" class="btn-success"><i class="fas fa-upload"></i> تحميل الأصناف الأساسية</button>
+        <input type="file" id="jsonUploadInput" accept=".json" style="display: none;" />
+        <button id="seedItemsBtn" class="btn-success"><i class="fas fa-upload"></i> تحميل الأصناف من ملف</button>
         <button id="fullResetBtn" class="btn-danger"><i class="fas fa-trash-alt"></i> إعادة ضبط كاملة</button>
       </div>
     </section>
@@ -217,7 +212,7 @@ const DOM = {
     itemCode: document.getElementById("itemCode"), itemName: document.getElementById("itemName"), itemUnit: document.getElementById("itemUnit"), itemPrice: document.getElementById("itemPrice"), itemStock: document.getElementById("itemStock"), saveItemBtn: document.getElementById("saveItemBtn"), itemsTable: document.getElementById("itemsTable"), filterCategorySelect: document.getElementById("filterCategorySelect"), itemCategorySelect: document.getElementById("itemCategorySelect"),
     newCustomerId: document.getElementById("newCustomerId"), newCustomerName: document.getElementById("newCustomerName"), saveCustomerBtn: document.getElementById("saveCustomerBtn"), customersList: document.getElementById("customersList"),
     customerNameInput: document.getElementById("customerName"), customerPhoneInput: document.getElementById("customerPhone"), customerSuggestionsDiv: document.getElementById("customerSuggestions"), searchItemInput: document.getElementById("searchItem"), searchResultsDiv: document.getElementById("searchResults"), invoiceTable: document.getElementById("invoiceTable"), invoiceTotalSpan: document.getElementById("invoiceTotal"), saveInvoiceBtn: document.getElementById("saveInvoiceBtn"), printInvoiceBtn: document.getElementById("printInvoiceBtn"), sendWhatsAppBtn: document.getElementById("sendWhatsAppBtn"), amountPaidInput: document.getElementById("amountPaidInput"), changeTextSpan: document.getElementById("changeText"), changeAmountSpan: document.getElementById("changeAmount"),
-    invoicesList: document.getElementById("invoicesList"), salesSummaryTable: document.getElementById("salesSummaryTable"), totalSalesAmount: document.getElementById("totalSalesAmount"), summaryGroupSelect: document.getElementById("summaryGroupSelect"), fullResetBtn: document.getElementById("fullResetBtn"), seedItemsBtn: document.getElementById("seedItemsBtn"),
+    invoicesList: document.getElementById("invoicesList"), salesSummaryTable: document.getElementById("salesSummaryTable"), totalSalesAmount: document.getElementById("totalSalesAmount"), summaryGroupSelect: document.getElementById("summaryGroupSelect"), fullResetBtn: document.getElementById("fullResetBtn"), seedItemsBtn: document.getElementById("seedItemsBtn"), jsonUploadInput: document.getElementById("jsonUploadInput"), // Added
     bestSellingItems: document.getElementById("bestSellingItems"),
     newUsernameInput: document.getElementById("newUsernameInput"), newUserPasswordInput: document.getElementById("newUserPasswordInput"), saveUserBtn: document.getElementById("saveUserBtn"), usersList: document.getElementById("usersList"), changePinBtn: document.getElementById("changePinBtn"), oldPinInput: document.getElementById("oldPinInput"), newPinInput: document.getElementById("newPinInput"),
     toggleItemsGridBtn: document.getElementById("toggleItemsGridBtn"), salesCategoryFilters: document.getElementById("salesCategoryFilters"), itemGrid: document.getElementById("itemGrid"), startScannerBtn: document.getElementById("startScannerBtn"), scannerContainer: document.getElementById("scanner-container"), readerDiv: document.getElementById("reader"), categoryScrollerContainer: document.getElementById("categoryScrollerContainer"),
@@ -237,7 +232,7 @@ const Helpers = {
     showNotification: (message, duration = 3000) => { const n = document.createElement("div"); n.className = "notification"; n.textContent = message; DOM.notificationContainer.appendChild(n); setTimeout(() => n.classList.add("show"), 10); setTimeout(() => { n.classList.remove("show"); setTimeout(() => n.remove(), 500); }, duration); },
     switchTab: (tabId) => { DOM.sections.forEach(s => s.classList.remove("active")); document.getElementById(tabId).classList.add("active"); if (document.getElementById(tabId).classList.contains('active')) App.onTabSwitch(tabId); },
     updateNavButtons: (activeButton) => { DOM.navButtons.forEach(btn => btn.classList.remove("active")); activeButton.classList.add("active"); },
-    clearItemForm: () => { appState.editingItemId = null; DOM.itemCode.value = ''; DOM.itemName.value = ''; DOM.itemUnit.value = ''; DOM.itemPrice.value = ''; DOM.itemStock.value = ''; DOM.itemCategorySelect.value = ''; DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف'; },
+    clearItemForm: () => { appState.editingItemId = null; DOM.itemCode.value = ''; DOM.itemName.value = ''; DOM.itemUnit.value = ''; DOM.itemPrice.value = ''; DOM.itemStock.value = ''; DOM.itemCategorySelect.value = ''; DOM.itemCode.disabled = false; DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف'; },
     clearCustomerForm: () => { DOM.newCustomerId.value = ""; DOM.newCustomerName.value = ""; appState.editingCustomerId = null; DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العميل'; DOM.newCustomerId.disabled = false; },
     clearUserForm: () => { DOM.newUsernameInput.value = ""; DOM.newUserPasswordInput.value = ""; appState.editingUserId = null; DOM.saveUserBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إضافة مستخدم'; },
     calculateChange: () => { const total = parseFloat(DOM.invoiceTotalSpan.textContent) || 0; const paid = parseFloat(DOM.amountPaidInput.value) || 0; const change = paid - total; if (change >= 0) { DOM.changeTextSpan.textContent = "الباقي للعميل:"; DOM.changeAmountSpan.textContent = change.toFixed(2); } else { DOM.changeTextSpan.textContent = "المطلوب منه:"; DOM.changeAmountSpan.textContent = Math.abs(change).toFixed(2); } },
@@ -280,14 +275,14 @@ const ItemsController = {
         };
         if (!itemData.code || !itemData.name || isNaN(itemData.price) || isNaN(itemData.stock)) { Helpers.showNotification("الرجاء ملء جميع حقول الصنف بشكل صحيح."); return; }
         try {
-            if (appState.editingItemId) {
-                await window.updateDocument("items", appState.editingItemId, itemData);
-                Helpers.showNotification("تم تحديث الصنف بنجاح.");
-            } else {
-                const docRef = window.doc(db, "items", itemData.code);
-                await window.setDoc(docRef, itemData);
-                Helpers.showNotification("تم إضافة الصنف بنجاح.");
+            const docRef = window.doc(db, "items", itemData.code); // Use code as ID
+            if (appState.editingItemId && appState.editingItemId !== itemData.code) {
+                Helpers.showNotification("لا يمكن تغيير كود الصنف بعد إنشائه.");
+                DOM.itemCode.value = appState.editingItemId; // Revert code
+                return;
             }
+            await window.setDoc(docRef, itemData);
+            Helpers.showNotification(appState.editingItemId ? "تم تحديث الصنف بنجاح." : "تم إضافة الصنف بنجاح.");
             Helpers.clearItemForm();
         } catch (error) { console.error("Error saving item: ", error); Helpers.showNotification("حدث خطأ أثناء حفظ الصنف."); }
     },
@@ -305,13 +300,8 @@ const CustomersController = {
         const customerData = { name: name }; 
         try { 
             const docRef = window.doc(db, "customers", customerId);
-            if (appState.editingCustomerId && appState.editingCustomerId !== customerId) {
-                Helpers.showNotification("لا يمكن تغيير رقم هاتف العميل.", 5000); return;
-            }
-            if (!appState.editingCustomerId) {
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) { Helpers.showNotification("هذا الرقم مسجل لعميل آخر.", 5000); return; }
-            }
+            if (appState.editingCustomerId && appState.editingCustomerId !== customerId) { Helpers.showNotification("لا يمكن تغيير رقم هاتف العميل.", 5000); DOM.newCustomerId.value = appState.editingCustomerId; return; }
+            if (!appState.editingCustomerId) { const docSnap = await getDoc(docRef); if (docSnap.exists()) { Helpers.showNotification("هذا الرقم مسجل لعميل آخر.", 5000); return; } }
             await window.setDoc(docRef, customerData);
             Helpers.showNotification(appState.editingCustomerId ? "تم تعديل العميل بنجاح." : "تم حفظ العميل بنجاح."); 
             Helpers.clearCustomerForm(); 
@@ -370,29 +360,25 @@ const ReportsController = {
         try {
             for (const collectionName of collectionsToDelete) {
                 const snapshot = await getDocs(collection(db, collectionName));
-                const batch = writeBatch(db);
-                snapshot.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
+                if (snapshot.docs.length > 0) {
+                    const batch = writeBatch(db);
+                    snapshot.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                }
             }
             Helpers.showNotification("تم الحذف بنجاح.");
         } catch (error) { console.error("Reset error: ", error); Helpers.showNotification("حدث خطأ أثناء الحذف."); }
     },
-    seedItems: async () => {
-        if (!confirm("سيتم حذف جميع الأصناف الحالية واستبدالها بالقائمة الأساسية من الملف. هل أنت متأكد؟")) return;
+    seedItems: async (itemsData) => {
+        if (!itemsData) return;
+        if (!confirm("سيتم حذف جميع الأصناف الحالية واستبدالها بالقائمة من الملف. هل أنت متأكد؟")) return;
         Helpers.showNotification("جاري تحميل الأصناف...");
         try {
-            const GITHUB_URL = 'https://raw.githubusercontent.com/MahmoudAdelSaleh/cash/main/p1.json'; // تحميل الأصناف
-            const response = await fetch(GITHUB_URL);
-            if (!response.ok) throw new Error('Network response was not ok');
-            const itemsData = await response.json();
-            
-            // 1. Delete all existing items
             const itemsSnapshot = await getDocs(collection(db, 'items'));
             const deleteBatch = writeBatch(db);
             itemsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
             await deleteBatch.commit();
             
-            // 2. Add new items from JSON
             const addBatch = writeBatch(db);
             const categoryKeyWithSpace = "category ";
             itemsData.filter(item => item.status === true).forEach(item => {
@@ -401,11 +387,10 @@ const ReportsController = {
                     category: item[categoryKeyWithSpace] ? item[categoryKeyWithSpace].trim() : "غير مصنف",
                     unit: "قطعة", stock: 999
                 };
-                const docRef = doc(db, "items", item.sku); // Use SKU as document ID
+                const docRef = doc(db, "items", item.sku);
                 addBatch.set(docRef, itemDoc);
             });
             await addBatch.commit();
-
             Helpers.showNotification("تم تحميل وتحديث قائمة الأصناف بنجاح!");
         } catch (error) {
             console.error("Error seeding items:", error);
@@ -441,7 +426,7 @@ const App = {
             appState.items = data; 
             const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean).sort();
             const catHtml = categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
-            DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
+            DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button data-category="${cat}">${cat}</button>`).join("");
             DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + catHtml;
             DOM.itemCategorySelect.innerHTML = '<option value="">اختر الفئة</option>' + catHtml;
             if (document.getElementById('items').classList.contains('active')) ItemsController.render();
@@ -491,7 +476,22 @@ const App = {
     
         // Summary Tab
         DOM.fullResetBtn.addEventListener("click", () => ReportsController.resetData('full'));
-        DOM.seedItemsBtn.addEventListener("click", ReportsController.seedItems);
+        DOM.seedItemsBtn.addEventListener("click", () => DOM.jsonUploadInput.click());
+        DOM.jsonUploadInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const itemsData = JSON.parse(event.target.result);
+                    ReportsController.seedItems(itemsData);
+                } catch (err) {
+                    Helpers.showNotification("خطأ: الملف الذي تم رفعه ليس ملف JSON صالح.");
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = null; // Reset input to allow re-uploading the same file
+        });
     }
 };
 // #endregion
