@@ -446,7 +446,7 @@ const App = {
             };
         };
 
-        fetch('https://raw.githubusercontent.com/MahmoudAdelSaleh/cash/main/p.json')
+        fetch('https://raw.githubusercontent.com/MahmoudAdelSaleh/cash/master/p.json')
             .then(res => res.ok ? res.json() : Promise.reject('File not found'))
             .then(data => {
                 data.forEach(item => { const mapped = mapItem(item); if (mapped) combinedItems.set(mapped.id, mapped); });
