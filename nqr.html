@@ -7,95 +7,121 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <style>
-:root {
+  :root {
     --primary-color: #007bff; --secondary-color: #343a40; --success-color: #28a745;
     --danger-color: #dc3545; --warning-color: #ffc107; --text-dark: #222;
     --bg-light: #f8f9fa; --white: #fff; --border-color: #dee2e6;
     --shadow-light: 0 0 6px rgba(0, 0, 0, 0.1); --whatsapp-color: #25D366;
-}
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg-light); color: var(--text-dark); direction: rtl; }
-#app-container { display: none; }
-header { background: var(--primary-color); color: var(--white); padding: 15px; text-align: center; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
-nav { display: flex; background: var(--secondary-color); overflow-x: auto; }
-nav button { flex-shrink: 0; padding: 12px 10px; border: none; background: var(--secondary-color); color: var(--white); font-size: 16px; cursor: pointer; transition: background 0.3s; }
-nav button.active, nav button:hover { background: #0056b3; }
-nav button.hidden { display: none; }
-main { padding: 15px; max-width: 900px; margin: auto; }
-section { display: none; }
-section.active { display: block; }
-input, select, button, table { font-size: 16px; }
-input, select { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-input:disabled { background-color: #e9ecef; }
-input[type="number"] { -moz-appearance: textfield; }
-input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-button { background: var(--primary-color); color: var(--white); border: none; padding: 10px; border-radius: 4px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-button:hover { background: #0056b3; }
-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-th, td { border: 1px solid var(--border-color); padding: 10px; text-align: center; vertical-align: middle; }
-th { background: #e9ecef; }
-.btn-small { padding: 5px 10px; font-size: 14px; margin: 0 2px; border-radius: 3px; }
-.btn-danger { background: var(--danger-color); }
-.btn-danger:hover { background: #a71d2a; }
-.btn-success { background: var(--success-color); }
-.btn-success:hover { background: #1e7e34; }
-.btn-whatsapp { background: var(--whatsapp-color); }
-.btn-whatsapp:hover { background: #128C7E; }
-.btn-warning { background: var(--warning-color); color: var(--text-dark); }
-.btn-warning:hover { background: #d39e00; }
-.summary-box, .customer-card { background: var(--white); padding: 15px; margin: 15px 0; border-radius: 6px; box-shadow: var(--shadow-light); }
-#searchResults, #customerSuggestions { background: var(--white); max-height: 180px; overflow-y: auto; border: 1px solid #ccc; border-top: none; display: none; position: absolute; z-index: 1000; width: 100%; box-sizing: border-box; }
-#searchResults div, #customerSuggestions div { padding: 8px; cursor: pointer; border-bottom: 1px solid #ddd; }
-#searchResults div:hover, #customerSuggestions div:hover { background: var(--primary-color); color: var(--white); }
-.customer-card { margin-bottom: 10px; }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-.flex-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.flex-end { justify-content: flex-end; }
-#notification-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 90%; }
-.notification { background-color: rgba(0, 0, 0, 0.8); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 16px; opacity: 0; transition: opacity 0.5s ease-in-out; }
-.notification.show { opacity: 1; }
-#login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #e9ecef; }
-#login-form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-#logoutBtn { background: var(--danger-color); }
-.item-card { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--white); box-shadow: var(--shadow-light); }
-.item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-color: var(--primary-color); }
-.item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
-.item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
-#categoryScrollerContainer { display: none; align-items: center; justify-content: center; margin-bottom: 15px; width: 100%; }
-#scrollLeftBtn, #scrollRightBtn { flex-shrink: 0; width: 40px; height: 120px; padding: 0; font-size: 24px; background-color: var(--secondary-color); border-radius: 4px; user-select: none; }
-#scrollLeftBtn:hover, #scrollRightBtn:hover { background-color: var(--primary-color); }
-#salesCategoryFiltersWrapper { flex-grow: 1; overflow-x: hidden; scroll-behavior: smooth; width: calc(100% - 88px); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px; background: var(--white); }
-#salesCategoryFilters { display: grid; grid-template-rows: repeat(4, auto); grid-auto-flow: column; gap: 8px; }
-#salesCategoryFilters button { width: 120px; white-space: normal; }
-#salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
-#itemGrid { display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-#scanner-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 10001; display: none; justify-content: center; align-items: flex-start; padding-top: 10vh; }
-#reader { width: 300px; height: 300px; max-width: 80vw; max-height: 80vw; background: #000; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow: hidden; position: relative; }
-#reader::after { content: ''; position: absolute; top: 0; left: 5%; right: 5%; height: 2px; background: #ff4747; box-shadow: 0 0 5px #ff4747, 0 0 10px #ff4747; animation: laser-beam 2.5s infinite linear; border-radius: 2px; }
-@keyframes laser-beam { 0% { transform: translateY(10px); } 50% { transform: translateY(calc(300px - 10px)); } 100% { transform: translateY(10px); } }
-.qty-controls { display: flex; align-items: center; justify-content: space-evenly; }
-.qty-controls span { font-weight: bold; margin: 0 8px; min-width: 20px; text-align: center; }
-.qty-controls button { width: 40px; height: 30px; padding: 0; font-size: 16px; }
-.summary-row { display: flex; justify-content: space-between; align-items: center; text-align: left; margin-top: 10px; }
-.summary-row h3 { margin: 0; font-size: 18px; }
-.delivery-controls button { width: 45px; }
-@media (max-width: 768px) {
+  }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg-light); color: var(--text-dark); direction: rtl; }
+  #app-container { display: none; }
+  header { background: var(--primary-color); color: var(--white); padding: 15px; text-align: center; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
+  nav { display: flex; background: var(--secondary-color); overflow-x: auto; }
+  nav button { flex-shrink: 0; padding: 12px 10px; border: none; background: var(--secondary-color); color: var(--white); font-size: 16px; cursor: pointer; transition: background 0.3s; }
+  nav button.active, nav button:hover { background: #0056b3; }
+  nav button.hidden { display: none; }
+  main { padding: 15px; max-width: 900px; margin: auto; }
+  section { display: none; }
+  section.active { display: block; }
+  input, select, button, table { font-size: 16px; }
+  input, select { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+  input:disabled { background-color: #e9ecef; cursor: not-allowed; }
+  input[type="number"] { -moz-appearance: textfield; }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  button { background: var(--primary-color); color: var(--white); border: none; padding: 10px; border-radius: 4px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  button:disabled { background: #6c757d; cursor: not-allowed; }
+  button:hover:not(:disabled) { background: #0056b3; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+  th, td { border: 1px solid var(--border-color); padding: 10px; text-align: center; vertical-align: middle; }
+  th { background: #e9ecef; }
+  .btn-small { padding: 5px 10px; font-size: 14px; margin: 0 2px; border-radius: 3px; }
+  .btn-danger { background: var(--danger-color); }
+  .btn-danger:hover:not(:disabled) { background: #a71d2a; }
+  .btn-success { background: var(--success-color); }
+  .btn-success:hover:not(:disabled) { background: #1e7e34; }
+  .btn-whatsapp { background: var(--whatsapp-color); }
+  .btn-whatsapp:hover:not(:disabled) { background: #128C7E; }
+  .btn-warning { background: var(--warning-color); color: var(--text-dark); }
+  .btn-warning:hover:not(:disabled) { background: #d39e00; }
+  .summary-box, .customer-card { background: var(--white); padding: 15px; margin: 15px 0; border-radius: 6px; box-shadow: var(--shadow-light); }
+  #searchResults, #customerSuggestions { background: var(--white); max-height: 180px; overflow-y: auto; border: 1px solid #ccc; border-top: none; display: none; position: absolute; z-index: 1000; width: 100%; box-sizing: border-box; }
+  #searchResults div, #customerSuggestions div { padding: 8px; cursor: pointer; border-bottom: 1px solid #ddd; }
+  #searchResults div:hover, #customerSuggestions div:hover { background: var(--primary-color); color: var(--white); }
+  .customer-card { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+  .flex-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .flex-end { justify-content: flex-end; }
+  #notification-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 90%; }
+  .notification { background-color: rgba(0, 0, 0, 0.8); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 16px; opacity: 0; transition: opacity 0.5s ease-in-out; }
+  .notification.show { opacity: 1; }
+  #login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #e9ecef; }
+  #login-form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+  #logoutBtn { background: var(--danger-color); }
+  .item-card { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--white); box-shadow: var(--shadow-light); }
+  .item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-color: var(--primary-color); }
+  .item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
+  .item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
+  #categoryScrollerContainer { display: none; align-items: center; justify-content: center; margin-bottom: 15px; width: 100%; }
+  #scrollLeftBtn, #scrollRightBtn { flex-shrink: 0; width: 40px; height: 120px; padding: 0; font-size: 24px; background-color: var(--secondary-color); border-radius: 4px; user-select: none; }
+  #scrollLeftBtn:hover, #scrollRightBtn:hover { background-color: var(--primary-color); }
+  #salesCategoryFiltersWrapper { flex-grow: 1; overflow-x: hidden; scroll-behavior: smooth; width: calc(100% - 88px); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px; background: var(--white); }
+  #salesCategoryFilters { display: grid; grid-template-rows: repeat(4, auto); grid-auto-flow: column; gap: 8px; }
+  #salesCategoryFilters button { width: 120px; white-space: normal; }
+  #salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
+  #itemGrid { display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  #scanner-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 10001; display: none; justify-content: center; align-items: flex-start; padding-top: 10vh; }
+  #reader { width: 300px; height: 300px; max-width: 80vw; max-height: 80vw; background: #000; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow: hidden; position: relative; }
+  #reader::after { content: ''; position: absolute; top: 0; left: 5%; right: 5%; height: 2px; background: #ff4747; box-shadow: 0 0 5px #ff4747, 0 0 10px #ff4747; animation: laser-beam 2.5s infinite linear; border-radius: 2px; }
+  @keyframes laser-beam { 0% { transform: translateY(10px); } 50% { transform: translateY(calc(300px - 10px)); } 100% { transform: translateY(10px); } }
+  .qty-controls { display: flex; align-items: center; justify-content: space-evenly; }
+  .qty-controls span { font-weight: bold; margin: 0 8px; min-width: 20px; text-align: center; }
+  .qty-controls button { width: 40px; height: 30px; padding: 0; font-size: 16px; }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; text-align: left; margin-top: 10px; }
+  .summary-row h3 { margin: 0; font-size: 18px; }
+  .delivery-controls button { width: 45px; }
+  @media (max-width: 768px) {
     nav button { font-size: 14px; padding: 10px 5px; }
     #login-form { width: 90%; }
     @keyframes laser-beam { 0% { transform: translateY(10px); } 50% { transform: translateY(calc(80vw - 10px)); } 100% { transform: translateY(10px); } }
-}
+  }
 </style>
 </head>
 <body>
 
 <script type="module">
-////////////////////////////////
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc",
+    authDomain: "cash-84acc.firebaseapp.com",
+    projectId: "cash-84acc",
+    storageBucket: "cash-84acc.appspot.com",
+    messagingSenderId: "774737678098",
+    appId: "1:774737678098:web:8b918375b4e51692b7edcb",
+    measurementId: "G-GRKNPJ45N1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  window.db = db;
+  window.doc = doc;
+  window.collection = collection;
+  window.writeBatch = writeBatch;
+  window.serverTimestamp = serverTimestamp;
+
+  window.addDocument = async function(collectionName, data) { const dataWithTimestamp = { ...data, createdAt: serverTimestamp() }; return await addDoc(collection(db, collectionName), dataWithTimestamp); }
+  window.readCollection = function(collectionName, callback, orderByField = "createdAt", orderDirection = "desc") { const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection)); return onSnapshot(q, snapshot => { const docs = []; snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() })); callback(docs); }); }
+  window.getDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { return { id: docSnap.id, ...docSnap.data() }; } else { return null; } }
+  window.updateDocument = async function(collectionName, docId, data) { const docRef = doc(db, collectionName, docId); return await updateDoc(docRef, data); }
+  window.deleteDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); return await deleteDoc(docRef); }
 </script>
 
 <div id="login-container">
     <form id="login-form">
         <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
-        <div class="form-group"><input type="text" id="usernameInput" placeholder="اسم المستخدم" required /></div>
+        <div class="form-group"><input type="text" id="usernameInput" placeholder="اسم المستخدم" required value="admin" /></div>
         <div class="form-group"><input type="password" id="passwordInput" placeholder="كلمة المرور" required /></div>
         <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
     </form>
@@ -126,6 +152,12 @@ th { background: #e9ecef; }
         <input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" disabled/>
         <input type="number" id="itemStock" placeholder="المخزون" min="0" />
         <button id="updateStockBtn" class="btn-warning"><i class="fas fa-save"></i> تحديث المخزون</button>
+      </div>
+       <div class="form-group flex-container" style="margin-top: 20px;">
+        <label for="filterCategorySelect" style="flex-grow: 0; margin-right: 10px;">تصفية حسب الفئة:</label>
+        <select id="filterCategorySelect">
+            <option value="all">جميع الفئات</option>
+        </select>
       </div>
       <table>
         <thead><tr><th>كود</th><th>اسم</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th></tr></thead>
@@ -201,29 +233,22 @@ th { background: #e9ecef; }
 <div id="notification-container"></div>
 
 <script type="module">
-  // --- Start of JavaScript code ---
-
 // #region Global Variables and DOM Elements
 const DOM = {
     appContainer: document.getElementById("app-container"), loginContainer: document.getElementById("login-container"), loginForm: document.getElementById("login-form"), usernameInput: document.getElementById("usernameInput"), passwordInput: document.getElementById("passwordInput"), loginBtn: document.getElementById("loginBtn"), logoutBtn: document.getElementById("logoutBtn"), navButtons: document.querySelectorAll("nav button"), sections: document.querySelectorAll("main section"),
-    // Items Tab
-    itemsTable: document.getElementById("itemsTable"), itemCode: document.getElementById("itemCode"), itemName: document.getElementById("itemName"), itemPrice: document.getElementById("itemPrice"), itemStock: document.getElementById("itemStock"), updateStockBtn: document.getElementById("updateStockBtn"),
-    // Customers Tab
+    itemsTable: document.getElementById("itemsTable"), itemCode: document.getElementById("itemCode"), itemName: document.getElementById("itemName"), itemPrice: document.getElementById("itemPrice"), itemStock: document.getElementById("itemStock"), updateStockBtn: document.getElementById("updateStockBtn"), filterCategorySelect: document.getElementById("filterCategorySelect"),
     newCustomerId: document.getElementById("newCustomerId"), newCustomerName: document.getElementById("newCustomerName"), saveCustomerBtn: document.getElementById("saveCustomerBtn"), customersList: document.getElementById("customersList"),
-    // Sales Tab
     searchItemInput: document.getElementById("searchItem"), searchResultsDiv: document.getElementById("searchResults"), invoiceTable: document.getElementById("invoiceTable"), invoiceTotalSpan: document.getElementById("invoiceTotal"), saveInvoiceBtn: document.getElementById("saveInvoiceBtn"), printInvoiceBtn: document.getElementById("printInvoiceBtn"), sendWhatsAppBtn: document.getElementById("sendWhatsAppBtn"), paymentMethodSelect: document.getElementById("paymentMethodSelect"), amountPaidInput: document.getElementById("amountPaidInput"), changeTextSpan: document.getElementById("changeText"), changeAmountSpan: document.getElementById("changeAmount"), customerNameInput: document.getElementById("customerName"), customerPhoneInput: document.getElementById("customerPhone"), customerSuggestionsDiv: document.getElementById("customerSuggestions"),
     toggleItemsGridBtn: document.getElementById("toggleItemsGridBtn"), salesCategoryFilters: document.getElementById("salesCategoryFilters"), itemGrid: document.getElementById("itemGrid"), startScannerBtn: document.getElementById("startScannerBtn"), scannerContainer: document.getElementById("scanner-container"), readerDiv: document.getElementById("reader"), categoryScrollerContainer: document.getElementById("categoryScrollerContainer"), salesCategoryFiltersWrapper: document.getElementById("salesCategoryFiltersWrapper"), scrollLeftBtn: document.getElementById("scrollLeftBtn"), scrollRightBtn: document.getElementById("scrollRightBtn"),
     deliveryFeeValue: document.getElementById("deliveryFeeValue"), increaseDeliveryBtn: document.getElementById("increaseDeliveryBtn"), decreaseDeliveryBtn: document.getElementById("decreaseDeliveryBtn"),
-    // Invoices Tab
     invoicesList: document.getElementById("invoicesList"),
-    // Users Tab
     usersList: document.getElementById("usersList"), newUsernameInput: document.getElementById("newUsernameInput"), newUserPasswordInput: document.getElementById("newUserPasswordInput"), saveUserBtn: document.getElementById("saveUserBtn"),
-    // General
+    totalSalesSummary: document.getElementById("totalSalesSummary"), bestSellingItems: document.getElementById("bestSellingItems"),
     notificationContainer: document.getElementById("notification-container"),
 };
 
 let appState = {
-    items: [], invoices: [], customers: [], users: [], adminPIN: "1234", // Default PIN
+    items: [], invoices: [], customers: [], users: [], adminPIN: "1234",
     currentUser: null, currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, editingUserId: null,
     selectedItem: null, selectedCustomer: null, unsubscribe: {}, html5QrCode: null 
 };
@@ -267,7 +292,12 @@ const Auth = {
 // #region Items Controller
 const ItemsController = {
     render: () => {
-        DOM.itemsTable.innerHTML = appState.items.map(item => `
+        const filterCategory = DOM.filterCategorySelect.value;
+        const filteredItems = filterCategory === "all" 
+            ? appState.items 
+            : appState.items.filter(item => item.category === filterCategory);
+
+        DOM.itemsTable.innerHTML = filteredItems.map(item => `
             <tr>
                 <td>${item.code}</td><td>${item.name}</td><td>${item.price.toFixed(2)}</td><td>${item.stock}</td><td>${item.category}</td>
                 <td><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button></td>
@@ -301,18 +331,58 @@ const ItemsController = {
 
 // #region Customers Controller
 const CustomersController = {
-    render: () => { DOM.customersList.innerHTML = appState.customers.map(cust => `<div class="customer-card"><div><b>${cust.name}</b><br/><small>رقم: ${cust.id}</small></div><div class="flex-container"><button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button></div></div>`).join(""); },
-    save: async () => {
-        const id = DOM.newCustomerId.value.trim(); const name = DOM.newCustomerName.value.trim(); if (!id || !name) { Helpers.showNotification("يرجى إدخال رقم واسم العميل."); return; }
-        const data = { id, name };
-        try { if (appState.editingCustomerId) { await window.updateDocument("customers", appState.editingCustomerId, data); Helpers.showNotification("تم تعديل العميل."); } else { await window.addDocument("customers", data); Helpers.showNotification("تم حفظ العميل."); } Helpers.clearCustomerForm(); } catch (e) { Helpers.showNotification("حدث خطأ."); }
+    render: () => { 
+        DOM.customersList.innerHTML = appState.customers.map(cust => `
+            <div class="customer-card">
+                <div><b>${cust.name}</b><br/><small>رقم: ${cust.id}</small></div>
+                <div class="flex-container">
+                    <button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button>
+                    <button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>`).join(""); 
     },
-    edit: (id) => { const cust = appState.customers.find(c => c.id === id); if (cust) { DOM.newCustomerId.value = cust.id; DOM.newCustomerName.value = cust.name; appState.editingCustomerId = id; DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل'; } },
-    delete: async (id) => { if (confirm("هل أنت متأكد؟")) { try { await window.deleteDocument("customers", id); Helpers.showNotification("تم الحذف."); } catch (e) { Helpers.showNotification("خطأ في الحذف."); } } },
+    save: async () => {
+        const id = DOM.newCustomerId.value.trim(); 
+        const name = DOM.newCustomerName.value.trim(); 
+        if (!id || !name) { Helpers.showNotification("يرجى إدخال رقم واسم العميل."); return; }
+        const data = { id, name };
+        try { 
+            if (appState.editingCustomerId) { 
+                await window.updateDocument("customers", appState.editingCustomerId, data); 
+                Helpers.showNotification("تم تعديل العميل."); 
+            } else { 
+                await window.addDocument("customers", data); 
+                Helpers.showNotification("تم حفظ العميل."); 
+            } 
+            Helpers.clearCustomerForm(); 
+        } catch (e) { 
+            console.error("Customer save error:", e);
+            Helpers.showNotification("حدث خطأ. قد يكون الرقم مسجل مسبقاً."); 
+        }
+    },
+    edit: (id) => { 
+        const cust = appState.customers.find(c => c.id === id); 
+        if (cust) { 
+            DOM.newCustomerId.value = cust.id; 
+            DOM.newCustomerName.value = cust.name; 
+            appState.editingCustomerId = id; 
+            DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل'; 
+        } 
+    },
+    delete: async (id) => { 
+        if (confirm("هل أنت متأكد من حذف هذا العميل؟")) { 
+            try { 
+                await window.deleteDocument("customers", id); 
+                Helpers.showNotification("تم حذف العميل بنجاح."); 
+            } catch (e) { 
+                Helpers.showNotification("خطأ في الحذف."); 
+            } 
+        } 
+    },
 };
 // #endregion
 
-// #region Sales Controller (Fully Updated)
+// #region Sales Controller
 const SalesController = {
     updateTotals: () => {
         const itemsTotal = appState.currentInvoice.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -337,7 +407,10 @@ const SalesController = {
         if (!itemInStock || itemInStock.stock <= 0) { Helpers.showNotification("المخزون غير متوفر لهذا الصنف."); return; }
         if (existingItem) {
             if (itemInStock.stock > existingItem.qty) { existingItem.qty++; } else { Helpers.showNotification(`أقصى كمية متاحة: ${itemInStock.stock}`); return; }
-        } else { appState.currentInvoice.push({ ...item, qty: 1 }); }
+        } else { 
+            // Add a clean copy to avoid reactivity issues
+            appState.currentInvoice.push({ id: item.id, code: item.code, name: item.name, price: item.price, qty: 1 }); 
+        }
         SalesController.renderInvoice();
     },
     updateItemQty: (index, change) => {
@@ -355,20 +428,37 @@ const SalesController = {
             customerName: DOM.customerNameInput.value.trim() || "عميل نقدي",
             paymentMethod: DOM.paymentMethodSelect.value,
             amountPaid: parseFloat(DOM.amountPaidInput.value) || 0,
-            items: appState.currentInvoice.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
-            deliveryFee: appState.deliveryFee, total: invoiceTotal, createdAt: window.serverTimestamp()
+            items: appState.currentInvoice.map(i => ({ name: i.name, qty: i.qty, price: i.price, code: i.code })),
+            deliveryFee: appState.deliveryFee, 
+            total: invoiceTotal, 
+            createdAt: window.serverTimestamp()
         };
         try {
             const batch = window.writeBatch(window.db);
             const newInvoiceRef = window.doc(window.collection(window.db, "invoices"));
             batch.set(newInvoiceRef, newInvoiceData);
-            appState.currentInvoice.forEach(ci => { const itemInState = appState.items.find(i => i.id === ci.id); if (itemInState) itemInState.stock -= ci.qty; });
+            
+            appState.currentInvoice.forEach(ci => { 
+                const itemInState = appState.items.find(i => i.id === ci.id); 
+                if (itemInState) itemInState.stock -= ci.qty; 
+            });
+            
             await batch.commit();
             Helpers.showNotification("تم حفظ الفاتورة بنجاح!");
-            ItemsController.render(); // Re-render items table to show new stock
-            appState.currentInvoice = []; appState.deliveryFee = 30; DOM.customerNameInput.value = ""; DOM.customerPhoneInput.value = ""; DOM.amountPaidInput.value = ""; SalesController.renderInvoice();
-        } catch (error) { console.error("Save Invoice Error: ", error); Helpers.showNotification("فشل الحفظ. تحقق من اتصال الإنترنت وقواعد الأمان في Firebase.", 5000); } 
-        finally { DOM.saveInvoiceBtn.disabled = false; }
+            ItemsController.render();
+            
+            appState.currentInvoice = []; 
+            appState.deliveryFee = 30; 
+            DOM.customerNameInput.value = ""; 
+            DOM.customerPhoneInput.value = ""; 
+            DOM.amountPaidInput.value = ""; 
+            SalesController.renderInvoice();
+        } catch (error) { 
+            console.error("Save Invoice Error: ", error); 
+            Helpers.showNotification("فشل الحفظ. تحقق من اتصال الإنترنت وقواعد الأمان في Firebase.", 5000); 
+        } finally { 
+            DOM.saveInvoiceBtn.disabled = false; 
+        }
     },
 };
 // #endregion
@@ -379,7 +469,7 @@ const ReportsController = {
         if (appState.invoices.length === 0) { DOM.invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>"; return; }
         DOM.invoicesList.innerHTML = appState.invoices.map(inv => {
             if (!inv.createdAt || typeof inv.createdAt.toDate !== 'function') return '';
-            const date = inv.createdAt.toDate().toLocaleString('ar-EG');
+            const date = inv.createdAt.toDate().toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
             return `<div class="summary-box">
                 <p><b>رقم الفاتورة:</b> ${inv.id.substring(0,8)} | <b>التاريخ:</b> ${date}</p>
                 <p><b>العميل:</b> ${inv.customerName}</p>
@@ -388,9 +478,32 @@ const ReportsController = {
                  <tbody>${inv.items.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price.toFixed(2)}</td></tr>`).join('')}</tbody>
                 </table>
                 <p><b>خدمة التوصيل:</b> ${(inv.deliveryFee || 0).toFixed(2)} ج.م</p>
-                <p><b>الإجمالي: ${inv.total.toFixed(2)} ج.م</b> | <b>المدفوع:</b> ${inv.amountPaid.toFixed(2)} ج.م</p>
+                <p style="font-weight:bold;">الإجمالي: ${inv.total.toFixed(2)} ج.م | المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</p>
             </div>`;
         }).join('');
+    },
+    renderSummary: () => {
+        let totalSales = 0;
+        const itemSales = {};
+        appState.invoices.forEach(inv => {
+            totalSales += inv.total;
+            inv.items.forEach(item => {
+                if (!itemSales[item.code]) {
+                    itemSales[item.code] = { name: item.name, totalQty: 0 };
+                }
+                itemSales[item.code].totalQty += item.qty;
+            });
+        });
+        DOM.totalSalesSummary.innerHTML = `<strong>إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م</strong>`;
+        const sortedItems = Object.values(itemSales).sort((a, b) => b.totalQty - a.totalQty).slice(0, 10);
+        if (sortedItems.length > 0) {
+            DOM.bestSellingItems.innerHTML = `<h3>الأصناف الأكثر مبيعًا</h3><table>
+                <thead><tr><th>الصنف</th><th>الكمية المباعة</th></tr></thead>
+                <tbody>${sortedItems.map(item => `<tr><td>${item.name}</td><td>${item.totalQty}</td></tr>`).join('')}</tbody>
+            </table>`;
+        } else {
+            DOM.bestSellingItems.innerHTML = '<h3>الأصناف الأكثر مبيعًا</h3><p>لا توجد بيانات مبيعات كافية.</p>';
+        }
     }
 };
 
@@ -404,29 +517,57 @@ const UsersController = {
 };
 // #endregion
 
+// #region Scanner Controller
+const ScannerController = {
+    onScanSuccess: (decodedText) => {
+        ScannerController.stopScanner();
+        if (window.navigator.vibrate) { window.navigator.vibrate(100); }
+        const product = appState.items.find(p => p.code === decodedText);
+        if (product) { SalesController.addToInvoice(product); } else { Helpers.showNotification("الصنف غير موجود."); }
+    },
+    startScanner: () => {
+        DOM.scannerContainer.style.display = 'flex';
+        appState.html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        appState.html5QrCode.start({ facingMode: "environment" }, config, ScannerController.onScanSuccess, (err) => {})
+        .catch((err) => { Helpers.showNotification("خطأ في تشغيل الكاميرا."); ScannerController.stopScanner(); });
+    },
+    stopScanner: () => {
+        if (appState.html5QrCode && appState.html5QrCode.isScanning) {
+            appState.html5QrCode.stop().catch(err => console.error("Scanner stop failed", err)).finally(() => { DOM.scannerContainer.style.display = 'none'; });
+        } else { DOM.scannerContainer.style.display = 'none'; }
+    }
+};
+// #endregion
+
 // #region Main App Logic
 const App = {
     init: async () => {
         try {
             const response = await fetch('p.json');
+            if (!response.ok) throw new Error('Network response was not ok');
             const itemsData = await response.json();
             appState.items = itemsData.filter(item => item.status === true).map(item => ({ id: item.sku, code: item.sku, name: item.name, price: parseFloat(item.price) || 0, category: item["category "]?.trim() || "غير مصنف", stock: 999 }));
             ItemsController.render();
-            const categories = [...new Set(appState.items.map(item => item.category))]; 
+            const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean); 
             DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
-        } catch (error) { console.error("Could not load item file:", error); }
+            DOM.filterCategorySelect.innerHTML += categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
+        } catch (error) { console.error("Could not load item file:", error); Helpers.showNotification("فشل تحميل ملف الأصناف.", 5000); }
         
         App.listenToFirebase();
         const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) { Auth.showApp(JSON.parse(savedUser).role); }
+        if (savedUser) { appState.currentUser = JSON.parse(savedUser); Auth.showApp(appState.currentUser.role); }
         
         App.bindEvents();
         SalesController.updateTotals();
     },
     listenToFirebase: () => {
-        window.readCollection("customers", (data) => { appState.customers = data; CustomersController.render(); }, "name", "asc");
-        window.readCollection("invoices", (data) => { appState.invoices = data; ReportsController.renderInvoices(); });
-        window.readCollection("users", (data) => { appState.users = data; UsersController.render(); });
+        Object.values(appState.unsubscribe).forEach(unsub => unsub());
+        appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); }, "name", "asc");
+        appState.unsubscribe.invoices = window.readCollection("invoices", (data) => { appState.invoices = data; if (document.getElementById('invoices').classList.contains('active')) ReportsController.renderInvoices(); if (document.getElementById('summary').classList.contains('active')) ReportsController.renderSummary(); });
+        appState.unsubscribe.users = window.readCollection("users", (data) => { appState.users = data; if (document.getElementById('users').classList.contains('active')) UsersController.render(); });
+        // Fetch admin PIN once
+        window.getDocument("config", "admin").then(doc => { if (doc && doc.pin) appState.adminPIN = doc.pin; });
     },
     renderItemsGrid: (category) => { DOM.itemGrid.innerHTML = appState.items.filter(item => item.category === category && item.stock > 0).map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name}</h5><p>${item.price.toFixed(2)} ج.م</p></div>`).join(""); },
     bindEvents: () => {
@@ -434,7 +575,7 @@ const App = {
         DOM.logoutBtn.addEventListener("click", Auth.logout);
         DOM.navButtons.forEach(btn => btn.addEventListener("click", (e) => { DOM.navButtons.forEach(b => b.classList.remove("active")); e.currentTarget.classList.add("active"); document.querySelectorAll("main section").forEach(s => s.classList.remove("active")); document.getElementById(e.currentTarget.dataset.tab).classList.add("active"); }));
         
-        // Sales Tab Events
+        // Sales Tab
         DOM.searchResultsDiv.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { const item = appState.items.find(i => i.id === div.dataset.id); if (item) SalesController.addToInvoice(item); DOM.searchItemInput.value = ""; DOM.searchResultsDiv.style.display = "none"; } });
         DOM.itemGrid.addEventListener("click", (e) => { const card = e.target.closest(".item-card[data-id]"); if (card) { const item = appState.items.find(i => i.id === card.dataset.id); if (item) SalesController.addToInvoice(item); } });
         DOM.invoiceTable.addEventListener("click", (e) => { const btn = e.target.closest("button"); if (!btn) return; const index = parseInt(btn.dataset.index); if (btn.classList.contains("qty-increase")) SalesController.updateItemQty(index, 1); if (btn.classList.contains("qty-decrease")) SalesController.updateItemQty(index, -1); if (btn.classList.contains("remove-from-invoice-btn")) { appState.currentInvoice.splice(index, 1); SalesController.renderInvoice(); } });
@@ -450,16 +591,18 @@ const App = {
         DOM.scrollLeftBtn.addEventListener("mousedown", () => startScrolling(1)); DOM.scrollRightBtn.addEventListener("mousedown", () => startScrolling(-1));
         DOM.scrollLeftBtn.addEventListener("touchstart", (e)=>{e.preventDefault(); startScrolling(1)}); DOM.scrollRightBtn.addEventListener("touchstart", (e)=>{e.preventDefault(); startScrolling(-1)});
         ['mouseup', 'mouseleave', 'touchend'].forEach(evt => document.addEventListener(evt, stopScrolling));
-        
-        // Items Tab Events
+        DOM.startScannerBtn.addEventListener("click", ScannerController.startScanner);
+
+        // Items Tab
         DOM.itemsTable.addEventListener("click", e => { const btn = e.target.closest(".edit-item-btn"); if(btn) ItemsController.edit(btn.dataset.id); });
         DOM.updateStockBtn.addEventListener("click", ItemsController.updateStock);
-        
-        // Customers Tab Events
+        DOM.filterCategorySelect.addEventListener("change", ItemsController.render);
+
+        // Customers Tab
         DOM.saveCustomerBtn.addEventListener("click", CustomersController.save);
         DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if(!btn) return; if(btn.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); if(btn.classList.contains("delete-customer-btn")) CustomersController.delete(btn.dataset.id); });
    
-        // Users Tab Events
+        // Users Tab
         DOM.saveUserBtn.addEventListener("click", UsersController.save);
         DOM.usersList.addEventListener("click", e => { const btn = e.target.closest(".delete-user-btn"); if (btn) UsersController.delete(btn.dataset.id); });
     }
@@ -468,8 +611,6 @@ const App = {
 
 App.init();
 
-// --- End of JavaScript code ---
 </script>
-
 </body>
 </html>
