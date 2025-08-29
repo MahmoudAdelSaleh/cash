@@ -1,216 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>كاشير متكامل - Firebase</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-<style>
-  :root {
-    --primary-color: #007bff; --secondary-color: #343a40; --success-color: #28a745;
-    --danger-color: #dc3545; --warning-color: #ffc107; --text-dark: #222;
-    --bg-light: #f8f9fa; --white: #fff; --border-color: #dee2e6;
-    --shadow-light: 0 0 6px rgba(0, 0, 0, 0.1); --whatsapp-color: #25D366;
-  }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg-light); color: var(--text-dark); direction: rtl; }
-  #app-container { display: none; }
-  header { background: var(--primary-color); color: var(--white); padding: 15px; text-align: center; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
-  nav { display: flex; background: var(--secondary-color); overflow-x: auto; }
-  nav button { flex: 1; flex-shrink: 0; padding: 12px 10px; border: none; background: var(--secondary-color); color: var(--white); font-size: 16px; cursor: pointer; transition: background 0.3s; }
-  nav button.active, nav button:hover { background: #0056b3; }
-  nav button.hidden { display: none; }
-  main { padding: 15px; max-width: 900px; margin: auto; }
-  section { display: none; }
-  section.active { display: block; }
-  input, select, button, table { font-size: 16px; }
-  input, select { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-  input:disabled { background-color: #e9ecef; cursor: not-allowed; }
-  input[type="number"] { -moz-appearance: textfield; }
-  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  button { background: var(--primary-color); color: var(--white); border: none; padding: 10px; border-radius: 4px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  button:disabled { background: #6c757d; cursor: not-allowed; }
-  button:hover:not(:disabled) { background: #0056b3; }
-  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-  th, td { border: 1px solid var(--border-color); padding: 10px; text-align: center; vertical-align: middle; }
-  th { background: #e9ecef; }
-  .btn-small { padding: 5px 10px; font-size: 14px; margin: 0 2px; border-radius: 3px; }
-  .btn-danger { background: var(--danger-color); }
-  .btn-danger:hover:not(:disabled) { background: #a71d2a; }
-  .btn-success { background: var(--success-color); }
-  .btn-success:hover:not(:disabled) { background: #1e7e34; }
-  .btn-whatsapp { background: var(--whatsapp-color); }
-  .btn-whatsapp:hover:not(:disabled) { background: #128C7E; }
-  .btn-warning { background: var(--warning-color); color: var(--text-dark); }
-  .btn-warning:hover:not(:disabled) { background: #d39e00; }
-  .summary-box, .customer-card { background: var(--white); padding: 15px; margin: 15px 0; border-radius: 6px; box-shadow: var(--shadow-light); }
-  #searchResults, #customerSuggestions { background: var(--white); max-height: 180px; overflow-y: auto; border: 1px solid #ccc; border-top: none; display: none; position: absolute; z-index: 1000; width: 100%; box-sizing: border-box; }
-  #searchResults div, #customerSuggestions div { padding: 8px; cursor: pointer; border-bottom: 1px solid #ddd; }
-  #searchResults div:hover, #customerSuggestions div:hover { background: var(--primary-color); color: var(--white); }
-  .customer-card { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-  .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-  .flex-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  .flex-end { justify-content: flex-end; }
-  #notification-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 90%; }
-  .notification { background-color: rgba(0, 0, 0, 0.8); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 16px; opacity: 0; transition: opacity 0.5s ease-in-out; }
-  .notification.show { opacity: 1; }
-  #login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #e9ecef; }
-  #login-form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-  #logoutBtn { background: var(--danger-color); }
-  .item-card { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--white); box-shadow: var(--shadow-light); flex-shrink: 0; width: 120px; }
-  .item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-color: var(--primary-color); }
-  .item-card h5 { margin: 5px 0; font-size: 14px; height: 40px; overflow: hidden; }
-  .item-card p { margin: 5px 0; font-size: 12px; color: var(--success-color); font-weight: bold; }
-  
-  /* --- MODIFIED Category Scroller --- */
-  #categoryScrollerContainer { display: none; margin-bottom: 15px; width: 100%; }
-  #salesCategoryFilters { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); gap: 8px; overflow-x: auto; padding: 10px; background: #e9ecef; border-radius: 6px; }
-  #salesCategoryFilters button { width: auto; padding: 5px 10px; white-space: nowrap; background-color: var(--primary-color); }
-  #salesCategoryFilters button.active { background-color: var(--success-color); color: white; }
-
-  #itemGrid { display: none; grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; background: #e9ecef; }
-  #scanner-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 10001; display: none; justify-content: center; align-items: flex-start; padding-top: 10vh; }
-  #reader { width: 300px; height: 300px; max-width: 80vw; max-height: 80vw; background: #000; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow: hidden; position: relative; }
-  #reader::after { content: ''; position: absolute; top: 0; left: 5%; right: 5%; height: 2px; background: #ff4747; box-shadow: 0 0 5px #ff4747, 0 0 10px #ff4747; animation: laser-beam 2.5s infinite linear; border-radius: 2px; }
-  @keyframes laser-beam { 0% { transform: translateY(10px); } 50% { transform: translateY(calc(300px - 10px)); } 100% { transform: translateY(10px); } }
-  .qty-controls { display: flex; align-items: center; justify-content: space-evenly; }
-  .qty-controls span { font-weight: bold; margin: 0 8px; min-width: 20px; text-align: center; }
-  .qty-controls button { width: 40px; height: 30px; padding: 0; font-size: 16px; }
-  .summary-row { display: flex; justify-content: space-between; align-items: center; text-align: left; margin-top: 10px; }
-  .summary-row h3 { margin: 0; font-size: 18px; }
-  .delivery-controls button { width: 45px; }
-
-  /* --- MODIFIED Sales Header & Footer Layout --- */
-  #sales-header { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 5px; }
-  #sales-header .form-group { margin-bottom: 0; flex-grow: 1; min-width: 200px; position: relative; }
-  #sales-header .search-group { display: flex; align-items: center; }
-  #sales-header .search-group input { border-radius: 0 4px 4px 0; }
-  #sales-header .search-group button { border-radius: 4px 0 0 4px; flex-shrink: 0; width: 50px; }
-  
-  .payment-options { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
-  .payment-options label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
-  .payment-options input[type="radio"] { width: auto; margin: 0; }
-
-  #sales-footer { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  #sales-footer .form-group { margin-bottom: 0; flex: 1 1 150px; }
-  #sales-footer .btn-group { display: flex; gap: 10px; flex: 2 1 300px; justify-content: flex-end;}
-
-  @media (max-width: 768px) {
-    #sales-header, #sales-footer { flex-direction: column; gap: 5px; align-items: stretch; }
-    #sales-header .form-group, #sales-footer .form-group { min-width: 100%; margin-bottom: 10px; }
-    #sales-footer .btn-group { justify-content: center; }
-    nav button { font-size: 14px; } #login-form { width: 90%; }
-    @keyframes laser-beam { 0% { transform: translateY(10px); } 50% { transform: translateY(calc(80vw - 10px)); } 100% { transform: translateY(10px); } }
-  }
-</style>
-</head>
-<body>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-  const firebaseConfig = { apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc", authDomain: "cash-84acc.firebaseapp.com", projectId: "cash-84acc", storageBucket: "cash-84acc.appspot.com", messagingSenderId: "774737678098", appId: "1:774737678098:web:8b918375b4e51692b7edcb", measurementId: "G-GRKNPJ45N1" };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  window.db = db; window.doc = doc; window.collection = collection; window.writeBatch = writeBatch; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs; window.query = query; window.where = where;
-  window.addDocument = async function(collectionName, data) { const dataWithTimestamp = { ...data, createdAt: serverTimestamp() }; return await addDoc(collection(db, collectionName), dataWithTimestamp); }
-  window.readCollection = function(collectionName, callback, orderByField = "createdAt", orderDirection = "desc") { const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection)); return onSnapshot(q, snapshot => { const docs = []; snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() })); callback(docs); }); }
-  window.getDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { return { id: docSnap.id, ...docSnap.data() }; } else { return null; } }
-  window.updateDocument = async function(collectionName, docId, data) { const docRef = doc(db, collectionName, docId); return await updateDoc(docRef, data); }
-  window.deleteDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); return await deleteDoc(docRef); }
-</script>
-
-<div id="login-container">
-    <form id="login-form">
-        <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
-        <div class="form-group"><input type="text" id="usernameInput" placeholder="اسم المستخدم" required /></div>
-        <div class="form-group"><input type="password" id="passwordInput" placeholder="كلمة المرور" required /></div>
-        <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
-    </form>
-</div>
-
-<div id="scanner-container"><div id="reader"></div></div>
-
-<div id="app-container">
-  <header>
-    <span>كاشير متكامل</span>
-    <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button>
-  </header>
-  <nav>
-    <button data-tab="items"><i class="fas fa-box"></i> الأصناف</button>
-    <button data-tab="customers"><i class="fas fa-users"></i> العملاء</button>
-    <button class="active" data-tab="sales"><i class="fas fa-cash-register"></i> المبيعات</button>
-    <button data-tab="invoices"><i class="fas fa-file-invoice"></i> الفواتير</button>
-    <button data-tab="summary"><i class="fas fa-chart-bar"></i> التقارير</button>
-    <button data-tab="users" class="hidden"><i class="fas fa-user-shield"></i> إدارة المستخدمين</button>
-  </nav>
-
-  <main>
-    <section id="items">
-      <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
-      <div class="form-group flex-container"><input type="text" id="itemCode" placeholder="كود الصنف" disabled /><input type="text" id="itemName" placeholder="اسم الصنف" /><input type="text" id="itemUnit" placeholder="الوحدة" /></div>
-      <div class="form-group flex-container"><input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" /><input type="number" id="itemStock" placeholder="المخزون" min="0" /><button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button></div>
-      <div class="form-group flex-container" style="margin-top: 20px;"><label for="filterCategorySelect" style="flex-grow: 0; margin-right: 10px;">تصفية حسب الفئة:</label><select id="filterCategorySelect"><option value="all">جميع الفئات</option></select></div>
-      <table><thead><tr><th>كود</th><th>اسم</th><th>وحدة</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th><th>حذف</th></tr></thead><tbody id="itemsTable"></tbody></table>
-    </section>
-
-    <section id="customers">
-      <h2><i class="fas fa-users"></i> إدارة العملاء</h2>
-      <div class="form-group flex-container"><input type="text" id="newCustomerId" placeholder="رقم هاتف العميل" /><input type="text" id="newCustomerName" placeholder="اسم العميل" /><button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ العميل</button></div>
-      <div id="customersList"></div>
-    </section>
-    
-    <section id="sales" class="active" style="position: relative;">
-      <h2><i class="fas fa-cash-register"></i> عملية بيع</h2>
-      <div id="sales-header">
-        <div class="form-group">
-          <div class="search-group"><input type="text" id="searchItem" placeholder="بحث بالاسم أو مسح الباركود" autocomplete="off" /><button id="startScannerBtn" title="فتح ماسح الباركود"><i class="fas fa-barcode"></i></button></div>
-          <div id="searchResults"></div>
-        </div>
-        <div class="form-group">
-          <input type="text" id="customerName" placeholder="اسم العميل (اختياري)" autocomplete="off" />
-          <div id="customerSuggestions"></div>
-        </div>
-        <div class="form-group"><input type="tel" id="customerPhone" placeholder="رقم هاتف العميل" /></div>
-      </div>
-      <button id="toggleItemsGridBtn" class="btn-warning" style="width: 100%; margin-bottom: 15px;"><i class="fas fa-th-large"></i> عرض الأصناف حسب الفئة</button>
-      <div id="categoryScrollerContainer"><div id="salesCategoryFilters"></div></div>
-      <div id="itemGrid"></div>
-      <h3><i class="fas fa-file-invoice"></i> تفاصيل الفاتورة</h3>
-      <table><thead><tr><th>اسم الصنف</th><th>كمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>حذف</th></tr></thead><tbody id="invoiceTable"></tbody></table>
-      <div class="summary-row"><h3><i class="fas fa-truck"></i> خدمة التوصيل: <span id="deliveryFeeValue">30.00</span> ج.م</h3><div class="delivery-controls"><button id="increaseDeliveryBtn" class="btn-small btn-success">+5</button><button id="decreaseDeliveryBtn" class="btn-small btn-danger">-5</button></div></div>
-      <hr>
-      <h3 style="text-align: left;">إجمالي الفاتورة: <span id="invoiceTotal">0.00</span> ج.م</h3>
-      
-      <div class="payment-options"><label>طريقة الدفع:</label><label><input type="radio" name="paymentMethod" value="cash" checked> نقداً</label><label><input type="radio" name="paymentMethod" value="visa"> فيزا</label><label><input type="radio" name="paymentMethod" value="wallet"> محفظة</label></div>
-      
-      <div id="sales-footer">
-        <div class="form-group"><input type="number" id="amountPaidInput" placeholder="المبلغ المدفوع" min="0" step="0.01" /></div>
-        <div class="btn-group"><button id="sendWhatsAppBtn" class="btn-whatsapp"><i class="fab fa-whatsapp"></i> واتساب</button><button id="printInvoiceBtn" class="btn-success"><i class="fas fa-print"></i> طباعة</button><button id="saveInvoiceBtn"><i class="fas fa-save"></i> حفظ</button></div>
-      </div>
-      <h3 style="text-align: left;"><span id="changeText">الباقي للعميل:</span> <span id="changeAmount">0.00</span> ج.م</h3>
-    </section>
-
-    <section id="invoices"><h2><i class="fas fa-file-invoice-dollar"></i> الفواتير المحفوظة</h2><div id="invoicesList"></div></section>
-    <section id="summary">
-      <h2><i class="fas fa-chart-bar"></i> التقارير</h2>
-      <div class="form-group flex-container"><label for="summaryGroupSelect">تجميع حسب:</label><select id="summaryGroupSelect"><option value="day">اليوم</option><option value="week">الأسبوع</option><option value="month">الشهر</option></select></div>
-      <div class="summary-box"><i class="fas fa-coins"></i> <strong>المجموع الكلي للمبيعات:</strong> <span id="totalSalesAmount">0.00</span> ج.م</div>
-      <table><thead><tr><th>الفترة</th><th>عدد الفواتير</th><th>المبلغ</th></tr></thead><tbody id="salesSummaryTable"></tbody></table>
-      <div style="margin-top: 30px;"><h3><i class="fas fa-star"></i> الأصناف الأكثر مبيعًا</h3><div id="bestSellingItems" class="summary-box"><p>لا توجد بيانات متاحة.</p></div></div>
-      <div class="flex-container flex-end" style="margin-top: 20px;"><button id="resetAfterDateBtn" class="btn-warning"><i class="fas fa-history"></i> حذف الفواتير بعد تاريخ</button><button id="fullResetBtn" class="btn-danger"><i class="fas fa-trash-alt"></i> إعادة ضبط كاملة</button></div>
-    </section>
-    <section id="users">
-      <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
-      <div class="form-group flex-container"><input type="text" id="newUsernameInput" placeholder="اسم المستخدم" /><input type="password" id="newUserPasswordInput" placeholder="كلمة المرور" /><button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة مستخدم</button></div>
-      <div id="usersList"></div>
-      <div id="changePinSection"><h4><i class="fas fa-key"></i> تغيير كلمة مرور المدير العام</h4><div class="form-group flex-container"><input type="password" id="oldPinInput" placeholder="الكلمة القديمة" /><input type="password" id="newPinInput" placeholder="الكلمة الجديدة" /><button id="changePinBtn" class="btn-warning"><i class="fas fa-sync-alt"></i> تغيير الكلمة</button></div></div>
-    </section>
-  </main>
-</div>
-<div id="notification-container"></div>
-
 <script type="module">
 // #region Global Variables and DOM Elements
 const DOM = {
@@ -429,7 +216,19 @@ const UsersController = { /* Unchanged */ };
 
 // #region Scanner Controller
 const ScannerController = {
-    onScanSuccess: (decodedText) => { ScannerController.stopScanner(); if (window.navigator.vibrate) { window.navigator.vibrate(100); } const product = appState.items.find(p => String(p.code).trim() === String(decodedText).trim()); if (product) { SalesController.addToInvoice(product); } else { Helpers.showNotification("الصنف غير موجود."); } },
+    // <<< START OF MODIFICATION: BARCODE LEADING ZEROS >>>
+    onScanSuccess: (decodedText) => {
+        ScannerController.stopScanner();
+        if (window.navigator.vibrate) { window.navigator.vibrate(100); }
+        // Compare barcode as a number to ignore leading zeros
+        const product = appState.items.find(p => Number(p.code) === Number(decodedText));
+        if (product) {
+            SalesController.addToInvoice(product);
+        } else {
+            Helpers.showNotification("الصنف غير موجود.");
+        }
+    },
+    // <<< END OF MODIFICATION >>>
     startScanner: () => { DOM.scannerContainer.style.display = 'flex'; appState.html5QrCode = new Html5Qrcode("reader"); const config = { fps: 10, qrbox: { width: 250, height: 250 } }; appState.html5QrCode.start({ facingMode: "environment" }, config, ScannerController.onScanSuccess, (err) => {}) .catch((err) => { Helpers.showNotification("خطأ في تشغيل الكاميرا."); ScannerController.stopScanner(); }); },
     stopScanner: () => { if (appState.html5QrCode && appState.html5QrCode.isScanning) { appState.html5QrCode.stop().catch(err => console.error("Scanner stop failed", err)).finally(() => { DOM.scannerContainer.style.display = 'none'; }); } else { DOM.scannerContainer.style.display = 'none'; } }
 };
@@ -446,8 +245,7 @@ const App = {
     listenToFirebase: () => {
         Object.values(appState.unsubscribe).forEach(unsub => unsub());
         
-        // <<< START OF MODIFICATION >>>
-        // Load items from p.json instead of Firestore
+        // <<< START OF MODIFICATION: LOADING AND MAPPING YOUR JSON STRUCTURE >>>
         fetch('p.json')
             .then(response => {
                 if (!response.ok) {
@@ -456,15 +254,22 @@ const App = {
                 return response.json();
             })
             .then(data => {
-                // Assign a unique ID to each item, using its code, for compatibility with the rest of the app logic
-                appState.items = data.map(item => ({ ...item, id: item.code }));
+                // Transform your JSON structure to match what the app expects
+                appState.items = data.map(item => ({
+                    id: item.sku || item.barcode, // Use SKU or barcode as a unique ID
+                    code: item.sku || item.barcode.toString(), // The code used for searching and displaying
+                    name: item.name,
+                    price: item.price,
+                    // Handle the typo "category " and provide a default if missing
+                    category: (item.category || item["category "] || "غير محدد").trim(),
+                    unit: item.unit || 'قطعة', // Provide a default value for unit
+                    stock: item.stock || 9999,  // Provide a default large value for stock
+                }));
                 
-                // Populate category filters using data from the JSON file
                 const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean);
                 DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
                 DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
                 
-                // Re-render the items table if it's the active tab
                 if (document.getElementById('items').classList.contains('active')) {
                     ItemsController.render();
                 }
@@ -472,7 +277,7 @@ const App = {
             })
             .catch(error => {
                 console.error('Error fetching or parsing p.json:', error);
-                Helpers.showNotification("فشل تحميل ملف الأصناف. تأكد من وجوده.", 5000);
+                Helpers.showNotification("فشل تحميل ملف الأصناف. تأكد من وجوده وصحته.", 5000);
             });
         // <<< END OF MODIFICATION >>>
 
@@ -489,7 +294,28 @@ const App = {
         DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
         
         // Sales Tab
-        DOM.searchItemInput.addEventListener("input", (e) => { const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase()); if (q.length > 0) { const matched = appState.items.filter(item => (item.name.toLowerCase().includes(q) || item.code.toLowerCase().includes(q)) && item.stock > 0).slice(0, 10); DOM.searchResultsDiv.innerHTML = matched.map(item => `<div data-id="${item.id}">${item.code} - ${item.name}</div>`).join(""); DOM.searchResultsDiv.style.display = "block"; } else { DOM.searchResultsDiv.style.display = "none"; } });
+        // <<< START OF MODIFICATION: SEARCH WITH LEADING ZEROS FIX >>>
+        DOM.searchItemInput.addEventListener("input", (e) => {
+            const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase());
+            if (q.length > 0) {
+                const isNumericQuery = !isNaN(q);
+                const matched = appState.items.filter(item => {
+                    const itemName = item.name.toLowerCase();
+                    // If the query is numeric, compare it as a number to handle leading zeros
+                    if (isNumericQuery) {
+                        return itemName.includes(q) || Number(item.code) === Number(q);
+                    }
+                    // Otherwise, just search by name
+                    return itemName.includes(q);
+                }).slice(0, 10);
+                DOM.searchResultsDiv.innerHTML = matched.map(item => `<div data-id="${item.id}">${item.code} - ${item.name}</div>`).join("");
+                DOM.searchResultsDiv.style.display = "block";
+            } else {
+                DOM.searchResultsDiv.style.display = "none";
+            }
+        });
+        // <<< END OF MODIFICATION >>>
+
         DOM.customerNameInput.addEventListener("input", (e) => { const q = e.target.value.trim().toLowerCase(); if (q.length > 0) { const matched = appState.customers.filter(c => c.name.toLowerCase().includes(q)).slice(0, 5); DOM.customerSuggestionsDiv.innerHTML = matched.map(c => `<div data-id="${c.id}">${c.name} (${c.id})</div>`).join(""); DOM.customerSuggestionsDiv.style.display = "block";} else {DOM.customerSuggestionsDiv.style.display = "none";} });
         DOM.customerSuggestionsDiv.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { const customer = appState.customers.find(c => c.id === div.dataset.id); if (customer) { appState.selectedCustomer = customer; DOM.customerNameInput.value = customer.name; DOM.customerPhoneInput.value = customer.id; } DOM.customerSuggestionsDiv.style.display = "none"; }});
 
@@ -527,6 +353,3 @@ const App = {
 
 App.init();
 </script>
-
-</body>
-</html>
