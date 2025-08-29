@@ -474,7 +474,7 @@ const App = {
             if (document.getElementById('items').classList.contains('active')) ItemsController.render();
         };
 
-        fetch('p.json').then(res => res.ok ? res.json() : Promise.reject()).then(data => {
+        fetch('https://raw.githubusercontent.com/MahmoudAdelSaleh/cash/main/p.json').then(res => res.ok ? res.json() : Promise.reject()).then(data => {
             data.forEach(item => {
                 const mapped = { id: item.sku || item.barcode.toString(), code: item.sku || item.barcode.toString(), name: item.name, price: item.price, category: (item.category || item["category "] || "غير محدد").trim(), unit: item.unit || 'قطعة', stock: item.stock || 9999 };
                 combinedItems.set(mapped.code, mapped);
