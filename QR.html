@@ -108,359 +108,17 @@
 <body>
 
 <script type="module">
-// #region Global Variables and DOM Elements
-const DOM = {
-    appContainer: document.getElementById("app-container"), loginContainer: document.getElementById("login-container"), loginForm: document.getElementById("login-form"), usernameInput: document.getElementById("usernameInput"), passwordInput: document.getElementById("passwordInput"), loginBtn: document.getElementById("loginBtn"), logoutBtn: document.getElementById("logoutBtn"), navButtons: document.querySelectorAll("nav button"), sections: document.querySelectorAll("main section"),
-    itemCode: document.getElementById("itemCode"), itemName: document.getElementById("itemName"), itemUnit: document.getElementById("itemUnit"), itemPrice: document.getElementById("itemPrice"), itemStock: document.getElementById("itemStock"), saveItemBtn: document.getElementById("saveItemBtn"), itemsTable: document.getElementById("itemsTable"), filterCategorySelect: document.getElementById("filterCategorySelect"),
-    newCustomerId: document.getElementById("newCustomerId"), newCustomerName: document.getElementById("newCustomerName"), saveCustomerBtn: document.getElementById("saveCustomerBtn"), customersList: document.getElementById("customersList"),
-    customerNameInput: document.getElementById("customerName"), customerPhoneInput: document.getElementById("customerPhone"), customerSuggestionsDiv: document.getElementById("customerSuggestions"), searchItemInput: document.getElementById("searchItem"), searchResultsDiv: document.getElementById("searchResults"), invoiceTable: document.getElementById("invoiceTable"), invoiceTotalSpan: document.getElementById("invoiceTotal"), saveInvoiceBtn: document.getElementById("saveInvoiceBtn"), printInvoiceBtn: document.getElementById("printInvoiceBtn"), sendWhatsAppBtn: document.getElementById("sendWhatsAppBtn"), amountPaidInput: document.getElementById("amountPaidInput"), changeTextSpan: document.getElementById("changeText"), changeAmountSpan: document.getElementById("changeAmount"),
-    invoicesList: document.getElementById("invoicesList"), salesSummaryTable: document.getElementById("salesSummaryTable"), totalSalesAmount: document.getElementById("totalSalesAmount"), summaryGroupSelect: document.getElementById("summaryGroupSelect"), fullResetBtn: document.getElementById("fullResetBtn"), resetAfterDateBtn: document.getElementById("resetAfterDateBtn"), bestSellingItems: document.getElementById("bestSellingItems"),
-    newUsernameInput: document.getElementById("newUsernameInput"), newUserPasswordInput: document.getElementById("newUserPasswordInput"), saveUserBtn: document.getElementById("saveUserBtn"), usersList: document.getElementById("usersList"), changePinBtn: document.getElementById("changePinBtn"), oldPinInput: document.getElementById("oldPinInput"), newPinInput: document.getElementById("newPinInput"),
-    toggleItemsGridBtn: document.getElementById("toggleItemsGridBtn"), salesCategoryFilters: document.getElementById("salesCategoryFilters"), itemGrid: document.getElementById("itemGrid"), startScannerBtn: document.getElementById("startScannerBtn"), scannerContainer: document.getElementById("scanner-container"), readerDiv: document.getElementById("reader"), categoryScrollerContainer: document.getElementById("categoryScrollerContainer"),
-    notificationContainer: document.getElementById("notification-container"),
-    deliveryFeeValue: document.getElementById("deliveryFeeValue"), increaseDeliveryBtn: document.getElementById("increaseDeliveryBtn"), decreaseDeliveryBtn: document.getElementById("decreaseDeliveryBtn"),
-};
-
-let appState = {
-    items: [], invoices: [], customers: [], users: [], adminPIN: null, currentUser: null,
-    currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, editingUserId: null,
-    selectedItem: null, selectedCustomer: null, unsubscribe: {}, html5QrCode: null 
-};
-// #endregion
-
-// #region Helper & Utility Functions
-const Helpers = {
-    showNotification: (message, duration = 3000) => { const n = document.createElement("div"); n.className = "notification"; n.textContent = message; DOM.notificationContainer.appendChild(n); setTimeout(() => n.classList.add("show"), 10); setTimeout(() => { n.classList.remove("show"); setTimeout(() => n.remove(), 500); }, duration); },
-    switchTab: (tabId) => { DOM.sections.forEach(s => s.classList.remove("active")); document.getElementById(tabId).classList.add("active"); if (document.getElementById(tabId).classList.contains('active')) App.onTabSwitch(tabId); },
-    updateNavButtons: (activeButton) => { DOM.navButtons.forEach(btn => btn.classList.remove("active")); activeButton.classList.add("active"); },
-    clearCustomerForm: () => { DOM.newCustomerId.value = ""; DOM.newCustomerName.value = ""; appState.editingCustomerId = null; DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العميل'; },
-    clearUserForm: () => { DOM.newUsernameInput.value = ""; DOM.newUserPasswordInput.value = ""; appState.editingUserId = null; DOM.saveUserBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إضافة مستخدم'; },
-    calculateChange: () => { const total = parseFloat(DOM.invoiceTotalSpan.textContent) || 0; const paid = parseFloat(DOM.amountPaidInput.value) || 0; const change = paid - total; if (change >= 0) { DOM.changeTextSpan.textContent = "الباقي للعميل:"; DOM.changeAmountSpan.textContent = change.toFixed(2); } else { DOM.changeTextSpan.textContent = "المطلوب منه:"; DOM.changeAmountSpan.textContent = Math.abs(change).toFixed(2); } },
-    convertToArabicAndEnglishDigits: (text) => { if (!text) return ""; const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']; const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']; let convertedText = text.toString(); for (let i = 0; i < arabicDigits.length; i++) { convertedText = convertedText.replace(new RegExp(arabicDigits[i], 'g'), englishDigits[i]); } return convertedText; },
-    getWeekNumber: (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7); return [d.getUTCFullYear(), weekNo]; },
-    generatePrintContent: (invoice) => { /* Unchanged */ return `<div>Print content for invoice</div>`; },
-};
-// #endregion
-
-// #region Authentication Controller
-const Auth = {
-  login: (username, password) => {
-    const pin = Helpers.convertToArabicAndEnglishDigits(password);
-    if (pin === appState.adminPIN) { appState.currentUser = { username: "المدير العام", role: "admin" }; localStorage.setItem('currentUser', JSON.stringify(appState.currentUser)); Helpers.showNotification("تم تسجيل الدخول كمدير عام."); Auth.showApp("admin"); return; }
-    const user = appState.users.find(u => u.username === username && u.password === pin);
-    if (user) { appState.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); Helpers.showNotification(`أهلاً بك, ${user.username}!`); Auth.showApp("user"); } 
-    else { Helpers.showNotification("اسم المستخدم أو كلمة المرور غير صحيحة.", 5000); }
-  },
-  logout: () => { appState.currentUser = null; localStorage.removeItem('currentUser'); DOM.appContainer.style.display = "none"; DOM.loginContainer.style.display = "flex"; DOM.usernameInput.value = ""; DOM.passwordInput.value = ""; Helpers.showNotification("تم تسجيل الخروج بنجاح."); },
-  showApp: (role) => { DOM.loginContainer.style.display = "none"; DOM.appContainer.style.display = "block"; DOM.navButtons.forEach(b => b.dataset.tab === 'users' ? b.classList.toggle("hidden", role !== "admin") : null); document.querySelector('[data-tab="sales"]').click(); }
-};
-// #endregion
-
-// #region Items Controller
-const ItemsController = {
-    render: () => {
-        const filterCategory = DOM.filterCategorySelect.value;
-        const filteredItems = filterCategory === "all" ? appState.items : appState.items.filter(item => item.category === filterCategory);
-        DOM.itemsTable.innerHTML = filteredItems.map(item => `<tr><td>${item.code}</td><td>${item.name}</td><td>${item.unit}</td><td>${item.price.toFixed(2)}</td><td>${item.stock}</td><td>${item.category || 'غير محدد'}</td><td><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td></tr>`).join("");
-    },
-    edit: (id) => {
-        const item = appState.items.find(i => i.id === id); if (!item) return;
-        appState.editingItemId = id;
-        DOM.itemCode.value = item.code; DOM.itemName.value = item.name; DOM.itemUnit.value = item.unit; DOM.itemPrice.value = item.price; DOM.itemStock.value = item.stock;
-        DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف';
-    },
-    saveItem: async () => {
-        const itemData = {
-            code: DOM.itemCode.value, name: DOM.itemName.value, unit: DOM.itemUnit.value,
-            price: parseFloat(DOM.itemPrice.value), stock: parseInt(DOM.itemStock.value)
-        };
-        // Basic validation
-        if (!itemData.code || !itemData.name || isNaN(itemData.price) || isNaN(itemData.stock)) {
-            Helpers.showNotification("الرجاء ملء جميع حقول الصنف بشكل صحيح."); return;
-        }
-        try {
-            if (appState.editingItemId) {
-                await window.updateDocument("items", appState.editingItemId, itemData);
-                Helpers.showNotification("تم تحديث الصنف بنجاح.");
-            } else {
-                await window.addDocument("items", itemData);
-                Helpers.showNotification("تم إضافة الصنف بنجاح.");
-            }
-            appState.editingItemId = null;
-            DOM.itemCode.value = ''; DOM.itemName.value = ''; DOM.itemUnit.value = '';
-            DOM.itemPrice.value = ''; DOM.itemStock.value = '';
-            DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف';
-        } catch (error) {
-            console.error("Error saving item: ", error);
-            Helpers.showNotification("حدث خطأ أثناء حفظ الصنف.");
-        }
-    },
-    deleteItem: async (id) => {
-        if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
-            try {
-                await window.deleteDocument("items", id);
-                Helpers.showNotification("تم حذف الصنف بنجاح.");
-            } catch (error) {
-                console.error("Error deleting item:", error);
-                Helpers.showNotification("حدث خطأ أثناء الحذف.");
-            }
-        }
-    }
-};
-// #endregion
-
-// #region Customers Controller
-const CustomersController = {
-    render: () => { DOM.customersList.innerHTML = appState.customers.map(cust => `<div class="customer-card"><div><b>${cust.name}</b><br/><small>هاتف: ${cust.id}</small></div><div class="flex-container"><button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button></div></div>`).join(""); },
-    saveCustomer: async () => { 
-        const customerId = Helpers.convertToArabicAndEnglishDigits(DOM.newCustomerId.value.trim()); 
-        const name = DOM.newCustomerName.value.trim(); 
-        if (!customerId || !name) { Helpers.showNotification("يرجى إدخال اسم ورقم هاتف العميل.", 5000); return; } 
-        const customerData = { name: name }; 
-        try { 
-            if (appState.editingCustomerId) { 
-                await window.updateDocument("customers", appState.editingCustomerId, customerData); 
-                Helpers.showNotification("تم تعديل العميل بنجاح."); 
-            } else { 
-                const docRef = window.doc(db, "customers", customerId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    Helpers.showNotification("هذا الرقم مسجل لعميل آخر.", 5000);
-                    return;
-                }
-                await window.updateDoc(docRef, customerData, { merge: true });
-                Helpers.showNotification("تم حفظ العميل بنجاح."); 
-            } 
-            Helpers.clearCustomerForm(); 
-        } catch (error) { 
-            console.error("Error saving customer: ", error); 
-            Helpers.showNotification("حدث خطأ أثناء حفظ العميل.", 5000); 
-        } 
-    },
-    edit: (id) => { const customer = appState.customers.find(c => c.id === id); if (!customer) return; DOM.newCustomerId.value = id; DOM.newCustomerId.disabled = true; DOM.newCustomerName.value = customer.name; appState.editingCustomerId = id; DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل العميل'; },
-    deleteCustomer: async (id) => { 
-        const promptMessage = "هذا العميل قد يكون مرتبطًا بفواتير. هل أنت متأكد من حذفه؟\nللتأكيد، أدخل الرقم السري:";
-        const pin = prompt(promptMessage);
-        if (pin === null) return;
-        if (pin === "790707071") {
-            try { 
-                await window.deleteDocument("customers", id); 
-                Helpers.showNotification("تم حذف العميل بنجاح."); 
-            } catch (error) { 
-                console.error("Error deleting customer: ", error); 
-                Helpers.showNotification("حدث خطأ أثناء حذف العميل.", 5000); 
-            }
-        } else {
-            Helpers.showNotification("الرقم السري غير صحيح. لم يتم الحذف.");
-        }
-    },
-};
-// #endregion
-
-// #region Sales Controller
-const SalesController = {
-    updateTotals: () => { const itemsTotal = appState.currentInvoice.reduce((sum, item) => sum + (item.price * item.qty), 0); const grandTotal = itemsTotal + appState.deliveryFee; DOM.invoiceTotalSpan.textContent = grandTotal.toFixed(2); DOM.deliveryFeeValue.textContent = appState.deliveryFee.toFixed(2); Helpers.calculateChange(); },
-    renderInvoice: () => { DOM.invoiceTable.innerHTML = appState.currentInvoice.map((item, index) => `<tr><td>${item.name}</td><td><div class="qty-controls"><button class="btn-small btn-success qty-increase" data-index="${index}">+1</button><span>${item.qty}</span><button class="btn-small btn-danger qty-decrease" data-index="${index}">-1</button></div></td><td>${item.price.toFixed(2)}</td><td>${(item.price * item.qty).toFixed(2)}</td><td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td></tr>`).join(""); SalesController.updateTotals(); },
-    addToInvoice: (item) => { const existingItem = appState.currentInvoice.find(i => i.id === item.id); const itemInStock = appState.items.find(i => i.id === item.id); if (!itemInStock || itemInStock.stock <= 0) { Helpers.showNotification("المخزون غير متوفر لهذا الصنف."); return; } if (existingItem) { if (itemInStock.stock > existingItem.qty) { existingItem.qty++; } else { Helpers.showNotification(`أقصى كمية متاحة: ${itemInStock.stock}`); return; } } else { appState.currentInvoice.push({ ...item, qty: 1 }); } SalesController.renderInvoice(); },
-    updateItemQty: (index, change) => { const item = appState.currentInvoice[index]; if (!item) return; if (change > 0) { const stockItem = appState.items.find(i => i.id === item.id); if (item.qty + change > stockItem.stock) { Helpers.showNotification(`أقصى كمية متاحة: ${stockItem.stock}`); return; } } item.qty += change; if (item.qty <= 0) { appState.currentInvoice.splice(index, 1); } SalesController.renderInvoice(); },
-    removeFromInvoice: (index) => { appState.currentInvoice.splice(index, 1); SalesController.renderInvoice(); },
-    saveInvoice: async () => { if (appState.currentInvoice.length === 0) { Helpers.showNotification("لا يمكن حفظ فاتورة فارغة."); return; } DOM.saveInvoiceBtn.disabled = true; const invoiceTotal = parseFloat(DOM.invoiceTotalSpan.textContent); const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value; const newInvoiceData = { customerId: appState.selectedCustomer ? appState.selectedCustomer.id : null, customerName: appState.selectedCustomer ? appState.selectedCustomer.name : DOM.customerNameInput.value.trim() || 'عميل نقدي', paymentMethod: paymentMethod, amountPaid: parseFloat(DOM.amountPaidInput.value) || 0, changeOrBalance: (parseFloat(DOM.amountPaidInput.value) || 0) - invoiceTotal, items: appState.currentInvoice.map(i => ({ name: i.name, qty: i.qty, price: i.price, code: i.code })), deliveryFee: appState.deliveryFee, total: invoiceTotal, }; try { const docRef = await window.addDocument("invoices", newInvoiceData); const batch = window.writeBatch(db); appState.currentInvoice.forEach(ci => { const itemRef = window.doc(db, "items", ci.id); batch.update(itemRef, { stock: window.increment(-ci.qty) }); }); await batch.commit(); Helpers.showNotification("تم حفظ الفاتورة بنجاح!"); appState.currentInvoice = []; appState.deliveryFee = 30; DOM.customerNameInput.value = ""; DOM.customerPhoneInput.value = ""; DOM.amountPaidInput.value = ""; appState.selectedCustomer = null; SalesController.renderInvoice(); } catch (error) { console.error("Save Invoice Error: ", error); Helpers.showNotification("فشل الحفظ. تأكد من اتصالك وقواعد الأمان في Firebase.", 6000); } finally { DOM.saveInvoiceBtn.disabled = false; } },
-    sendWhatsApp: () => { /* Unchanged */ }
-};
-// #endregion
-
-// #region Reports Controller
-const ReportsController = {
-    renderInvoices: () => {
-        DOM.invoicesList.innerHTML = ""; if (appState.invoices.length === 0) { DOM.invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>"; return; }
-        const sortedInvoices = [...appState.invoices].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-        DOM.invoicesList.innerHTML = sortedInvoices.map((inv, index) => {
-            const dateObj = inv.createdAt && typeof inv.createdAt.toDate === 'function' ? inv.createdAt.toDate() : new Date();
-            const date = dateObj.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
-            return `<div class="summary-box">
-                <p><b>فاتورة رقم:</b> ${sortedInvoices.length - index} | <b>التاريخ:</b> ${date}</p>
-                <p><b>العميل:</b> ${inv.customerName}</p>
-                <table style="font-size: 14px;"><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th></tr></thead><tbody>${inv.items.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price.toFixed(2)}</td></tr>`).join('')}</tbody></table>
-                <p><b>خدمة التوصيل:</b> ${(inv.deliveryFee || 0).toFixed(2)} ج.م</p>
-                <p style="font-weight:bold;">الإجمالي: ${inv.total.toFixed(2)} ج.م | المدفوع: ${inv.amountPaid.toFixed(2)} ج.م</p>
-            </div>`;
-        }).join('');
-    },
-    renderSummary: () => { /* Unchanged */ },
-    resetData: async (mode) => {
-        const pin = prompt("للتأكيد، الرجاء إدخال الرقم السري:");
-        if (pin !== "790707071") {
-            if (pin !== null) Helpers.showNotification("الرقم السري غير صحيح.");
-            return;
-        }
-
-        if (mode === 'full') {
-            if (!confirm("تحذير! سيتم حذف جميع الفواتير والعملاء. هل أنت متأكد؟")) return;
-            try {
-                // Delete all invoices
-                const invoicesSnapshot = await getDocs(collection(db, 'invoices'));
-                const batch1 = writeBatch(db);
-                invoicesSnapshot.forEach(doc => batch1.delete(doc.ref));
-                await batch1.commit();
-                
-                // Delete all customers
-                const customersSnapshot = await getDocs(collection(db, 'customers'));
-                const batch2 = writeBatch(db);
-                customersSnapshot.forEach(doc => batch2.delete(doc.ref));
-                await batch2.commit();
-                
-                Helpers.showNotification("تمت إعادة الضبط الكاملة بنجاح.");
-            } catch (error) {
-                console.error("Full reset error: ", error);
-                Helpers.showNotification("حدث خطأ أثناء إعادة الضبط.");
-            }
-        }
-    }
-};
-// #endregion
-
-// #region User Management Controller
-const UsersController = { /* Unchanged */ };
-// #endregion
-
-// #region Scanner Controller
-const ScannerController = {
-    // <<< START OF MODIFICATION: BARCODE LEADING ZEROS >>>
-    onScanSuccess: (decodedText) => {
-        ScannerController.stopScanner();
-        if (window.navigator.vibrate) { window.navigator.vibrate(100); }
-        // Compare barcode as a number to ignore leading zeros
-        const product = appState.items.find(p => Number(p.code) === Number(decodedText));
-        if (product) {
-            SalesController.addToInvoice(product);
-        } else {
-            Helpers.showNotification("الصنف غير موجود.");
-        }
-    },
-    // <<< END OF MODIFICATION >>>
-    startScanner: () => { DOM.scannerContainer.style.display = 'flex'; appState.html5QrCode = new Html5Qrcode("reader"); const config = { fps: 10, qrbox: { width: 250, height: 250 } }; appState.html5QrCode.start({ facingMode: "environment" }, config, ScannerController.onScanSuccess, (err) => {}) .catch((err) => { Helpers.showNotification("خطأ في تشغيل الكاميرا."); ScannerController.stopScanner(); }); },
-    stopScanner: () => { if (appState.html5QrCode && appState.html5QrCode.isScanning) { appState.html5QrCode.stop().catch(err => console.error("Scanner stop failed", err)).finally(() => { DOM.scannerContainer.style.display = 'none'; }); } else { DOM.scannerContainer.style.display = 'none'; } }
-};
-// #endregion
-
-// #region App Logic & Event Listeners
-const App = {
-    init: async () => {
-        App.listenToFirebase();
-        const savedUser = localStorage.getItem('currentUser'); if (savedUser) { appState.currentUser = JSON.parse(savedUser); Auth.showApp(appState.currentUser.role); }
-        App.bindEvents();
-        SalesController.updateTotals();
-    },
-    listenToFirebase: () => {
-        Object.values(appState.unsubscribe).forEach(unsub => unsub());
-        
-        // <<< START OF MODIFICATION: LOADING AND MAPPING YOUR JSON STRUCTURE >>>
-        fetch('p.json')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Transform your JSON structure to match what the app expects
-                appState.items = data.map(item => ({
-                    id: item.sku || item.barcode, // Use SKU or barcode as a unique ID
-                    code: item.sku || item.barcode.toString(), // The code used for searching and displaying
-                    name: item.name,
-                    price: item.price,
-                    // Handle the typo "category " and provide a default if missing
-                    category: (item.category || item["category "] || "غير محدد").trim(),
-                    unit: item.unit || 'قطعة', // Provide a default value for unit
-                    stock: item.stock || 9999,  // Provide a default large value for stock
-                }));
-                
-                const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean);
-                DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
-                DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
-                
-                if (document.getElementById('items').classList.contains('active')) {
-                    ItemsController.render();
-                }
-                Helpers.showNotification("تم تحميل الأصناف من الملف المحلي بنجاح.");
-            })
-            .catch(error => {
-                console.error('Error fetching or parsing p.json:', error);
-                Helpers.showNotification("فشل تحميل ملف الأصناف. تأكد من وجوده وصحته.", 5000);
-            });
-        // <<< END OF MODIFICATION >>>
-
-        appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); }, "name", "asc");
-        appState.unsubscribe.invoices = window.readCollection("invoices", (data) => { appState.invoices = data; App.onTabSwitch(document.querySelector('nav button.active').dataset.tab); });
-        appState.unsubscribe.users = window.readCollection("users", (data) => { appState.users = data; if (document.getElementById('users').classList.contains('active')) UsersController.render(); });
-        window.getDocument("config", "admin").then(doc => { if (doc && doc.pin) appState.adminPIN = doc.pin; else appState.adminPIN = "790707071"; });
-    },
-    onTabSwitch: (tabId) => { if (tabId === 'items') ItemsController.render(); if (tabId === 'customers') CustomersController.render(); if (tabId === 'invoices') ReportsController.renderInvoices(); if (tabId === 'summary') ReportsController.renderSummary(); if (tabId === 'users') UsersController.render(); },
-    renderItemsGrid: (category) => { DOM.itemGrid.innerHTML = appState.items.filter(item => item.category === category && item.stock > 0).map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name}</h5><p>${item.price.toFixed(2)} ج.م</p></div>`).join(""); },
-    bindEvents: () => {
-        DOM.loginForm.addEventListener("submit", (e) => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
-        DOM.logoutBtn.addEventListener("click", Auth.logout);
-        DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
-        
-        // Sales Tab
-        // <<< START OF MODIFICATION: SEARCH WITH LEADING ZEROS FIX >>>
-        DOM.searchItemInput.addEventListener("input", (e) => {
-            const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase());
-            if (q.length > 0) {
-                const isNumericQuery = !isNaN(q);
-                const matched = appState.items.filter(item => {
-                    const itemName = item.name.toLowerCase();
-                    // If the query is numeric, compare it as a number to handle leading zeros
-                    if (isNumericQuery) {
-                        return itemName.includes(q) || Number(item.code) === Number(q);
-                    }
-                    // Otherwise, just search by name
-                    return itemName.includes(q);
-                }).slice(0, 10);
-                DOM.searchResultsDiv.innerHTML = matched.map(item => `<div data-id="${item.id}">${item.code} - ${item.name}</div>`).join("");
-                DOM.searchResultsDiv.style.display = "block";
-            } else {
-                DOM.searchResultsDiv.style.display = "none";
-            }
-        });
-        // <<< END OF MODIFICATION >>>
-
-        DOM.customerNameInput.addEventListener("input", (e) => { const q = e.target.value.trim().toLowerCase(); if (q.length > 0) { const matched = appState.customers.filter(c => c.name.toLowerCase().includes(q)).slice(0, 5); DOM.customerSuggestionsDiv.innerHTML = matched.map(c => `<div data-id="${c.id}">${c.name} (${c.id})</div>`).join(""); DOM.customerSuggestionsDiv.style.display = "block";} else {DOM.customerSuggestionsDiv.style.display = "none";} });
-        DOM.customerSuggestionsDiv.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { const customer = appState.customers.find(c => c.id === div.dataset.id); if (customer) { appState.selectedCustomer = customer; DOM.customerNameInput.value = customer.name; DOM.customerPhoneInput.value = customer.id; } DOM.customerSuggestionsDiv.style.display = "none"; }});
-
-        DOM.searchItemInput.addEventListener("keydown", (e) => { if (e.key === 'Enter') { e.preventDefault(); const results = DOM.searchResultsDiv.querySelectorAll('div'); if (results.length === 1) { results[0].click(); } } });
-        DOM.searchResultsDiv.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { const item = appState.items.find(i => i.id === div.dataset.id); if (item) SalesController.addToInvoice(item); DOM.searchItemInput.value = ""; DOM.searchResultsDiv.style.display = "none"; } });
-        DOM.itemGrid.addEventListener("click", (e) => { const card = e.target.closest(".item-card[data-id]"); if (card) { const item = appState.items.find(i => i.id === card.dataset.id); if (item) SalesController.addToInvoice(item); } });
-        DOM.invoiceTable.addEventListener("click", (e) => { const btn = e.target.closest("button"); if (!btn) return; const index = parseInt(btn.dataset.index); if (btn.classList.contains("qty-increase")) SalesController.updateItemQty(index, 1); if (btn.classList.contains("qty-decrease")) SalesController.updateItemQty(index, -1); if (btn.classList.contains("remove-from-invoice-btn")) SalesController.removeFromInvoice(index); });
-        DOM.increaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee += 5; SalesController.updateTotals(); });
-        DOM.decreaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee = Math.max(0, appState.deliveryFee - 5); SalesController.updateTotals(); });
-        DOM.saveInvoiceBtn.addEventListener("click", SalesController.saveInvoice);
-        DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
-        DOM.sendWhatsAppBtn.addEventListener("click", SalesController.sendWhatsApp);
-        DOM.toggleItemsGridBtn.addEventListener("click", () => { const isHidden = DOM.itemGrid.style.display === 'none'; DOM.categoryScrollerContainer.style.display = isHidden ? 'block' : 'none'; DOM.itemGrid.style.display = isHidden ? 'grid' : 'none'; DOM.toggleItemsGridBtn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i> إخفاء الأصناف' : '<i class="fas fa-th-large"></i> عرض الأصناف'; });
-        DOM.salesCategoryFilters.addEventListener("click", (e) => { const btn = e.target.closest("button[data-category]"); if(btn){ DOM.salesCategoryFilters.querySelectorAll("button").forEach(b => b.classList.remove("active")); btn.classList.add("active"); App.renderItemsGrid(btn.dataset.category); }});
-        DOM.startScannerBtn.addEventListener("click", ScannerController.startScanner);
-
-        // Items Tab
-        DOM.saveItemBtn.addEventListener("click", ItemsController.saveItem);
-        DOM.itemsTable.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-item-btn")) ItemsController.edit(btn.dataset.id); if (btn.classList.contains("delete-item-btn")) ItemsController.deleteItem(btn.dataset.id); }});
-        DOM.filterCategorySelect.addEventListener("change", ItemsController.render);
-
-        // Customers Tab
-        DOM.saveCustomerBtn.addEventListener("click", CustomersController.saveCustomer);
-        DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if(!btn) return; if(btn.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); if(btn.classList.contains("delete-customer-btn")) CustomersController.deleteCustomer(btn.dataset.id); });
-    
-        // Users Tab
-        DOM.saveUserBtn.addEventListener("click", UsersController.saveUser);
-        DOM.usersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn) { const id = btn.dataset.id; if (btn.classList.contains("delete-user-btn")) UsersController.delete(id); if (btn.classList.contains("edit-user-btn")) UsersController.edit(id); }});
-    
-        // Summary Tab
-        DOM.fullResetBtn.addEventListener("click", () => ReportsController.resetData('full'));
-    }
-};
-// #endregion
-
-App.init();
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, where, increment } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  const firebaseConfig = { apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc", authDomain: "cash-84acc.firebaseapp.com", projectId: "cash-84acc", storageBucket: "cash-84acc.appspot.com", messagingSenderId: "774737678098", appId: "1:774737678098:web:8b918375b4e51692b7edcb", measurementId: "G-GRKNPJ45N1" };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  window.db = db; window.doc = doc; window.collection = collection; window.writeBatch = writeBatch; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs; window.query = query; window.where = where; window.increment = increment;
+  window.addDocument = async function(collectionName, data) { const dataWithTimestamp = { ...data, createdAt: serverTimestamp() }; return await addDoc(collection(db, collectionName), dataWithTimestamp); }
+  window.readCollection = function(collectionName, callback, orderByField = "createdAt", orderDirection = "desc") { const q = query(collection(db, collectionName), orderBy(orderByField, orderDirection)); return onSnapshot(q, snapshot => { const docs = []; snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() })); callback(docs); }); }
+  window.getDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); const docSnap = await getDoc(docRef); if (docSnap.exists()) { return { id: docSnap.id, ...docSnap.data() }; } else { return null; } }
+  window.updateDocument = async function(collectionName, docId, data) { const docRef = doc(db, collectionName, docId); return await updateDoc(docRef, data); }
+  window.deleteDocument = async function(collectionName, docId) { const docRef = doc(db, collectionName, docId); return await deleteDoc(docRef); }
 </script>
 
 <div id="login-container">
@@ -491,7 +149,7 @@ App.init();
   <main>
     <section id="items">
       <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
-      <div class="form-group flex-container"><input type="text" id="itemCode" placeholder="كود الصنف" disabled /><input type="text" id="itemName" placeholder="اسم الصنف" /><input type="text" id="itemUnit" placeholder="الوحدة" /></div>
+      <div class="form-group flex-container"><input type="text" id="itemCode" placeholder="كود الصنف (SKU)" /><input type="text" id="itemName" placeholder="اسم الصنف" /><input type="text" id="itemUnit" placeholder="الوحدة" /></div>
       <div class="form-group flex-container"><input type="number" id="itemPrice" placeholder="السعر" min="0" step="0.01" /><input type="number" id="itemStock" placeholder="المخزون" min="0" /><button id="saveItemBtn"><i class="fas fa-save"></i> حفظ الصنف</button></div>
       <div class="form-group flex-container" style="margin-top: 20px;"><label for="filterCategorySelect" style="flex-grow: 0; margin-right: 10px;">تصفية حسب الفئة:</label><select id="filterCategorySelect"><option value="all">جميع الفئات</option></select></div>
       <table><thead><tr><th>كود</th><th>اسم</th><th>وحدة</th><th>سعر</th><th>مخزون</th><th>فئة</th><th>تعديل</th><th>حذف</th></tr></thead><tbody id="itemsTable"></tbody></table>
@@ -570,7 +228,8 @@ const DOM = {
 let appState = {
     items: [], invoices: [], customers: [], users: [], adminPIN: null, currentUser: null,
     currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, editingUserId: null,
-    selectedItem: null, selectedCustomer: null, unsubscribe: {}, html5QrCode: null 
+    selectedItem: null, selectedCustomer: null, unsubscribe: {}, html5QrCode: null,
+    localItemsLoaded: false // Flag to check if p.json is loaded
 };
 // #endregion
 
@@ -581,6 +240,7 @@ const Helpers = {
     updateNavButtons: (activeButton) => { DOM.navButtons.forEach(btn => btn.classList.remove("active")); activeButton.classList.add("active"); },
     clearCustomerForm: () => { DOM.newCustomerId.value = ""; DOM.newCustomerName.value = ""; appState.editingCustomerId = null; DOM.saveCustomerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العميل'; },
     clearUserForm: () => { DOM.newUsernameInput.value = ""; DOM.newUserPasswordInput.value = ""; appState.editingUserId = null; DOM.saveUserBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إضافة مستخدم'; },
+    clearItemForm: () => { DOM.itemCode.value = ''; DOM.itemName.value = ''; DOM.itemUnit.value = ''; DOM.itemPrice.value = ''; DOM.itemStock.value = ''; appState.editingItemId = null; DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف'; DOM.itemCode.disabled = false; },
     calculateChange: () => { const total = parseFloat(DOM.invoiceTotalSpan.textContent) || 0; const paid = parseFloat(DOM.amountPaidInput.value) || 0; const change = paid - total; if (change >= 0) { DOM.changeTextSpan.textContent = "الباقي للعميل:"; DOM.changeAmountSpan.textContent = change.toFixed(2); } else { DOM.changeTextSpan.textContent = "المطلوب منه:"; DOM.changeAmountSpan.textContent = Math.abs(change).toFixed(2); } },
     convertToArabicAndEnglishDigits: (text) => { if (!text) return ""; const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']; const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']; let convertedText = text.toString(); for (let i = 0; i < arabicDigits.length; i++) { convertedText = convertedText.replace(new RegExp(arabicDigits[i], 'g'), englishDigits[i]); } return convertedText; },
     getWeekNumber: (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7); return [d.getUTCFullYear(), weekNo]; },
@@ -606,36 +266,50 @@ const Auth = {
 const ItemsController = {
     render: () => {
         const filterCategory = DOM.filterCategorySelect.value;
+        appState.items.sort((a, b) => a.name.localeCompare(b.name, 'ar')); // Sort items alphabetically
         const filteredItems = filterCategory === "all" ? appState.items : appState.items.filter(item => item.category === filterCategory);
         DOM.itemsTable.innerHTML = filteredItems.map(item => `<tr><td>${item.code}</td><td>${item.name}</td><td>${item.unit}</td><td>${item.price.toFixed(2)}</td><td>${item.stock}</td><td>${item.category || 'غير محدد'}</td><td><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></td></tr>`).join("");
     },
     edit: (id) => {
         const item = appState.items.find(i => i.id === id); if (!item) return;
         appState.editingItemId = id;
-        DOM.itemCode.value = item.code; DOM.itemName.value = item.name; DOM.itemUnit.value = item.unit; DOM.itemPrice.value = item.price; DOM.itemStock.value = item.stock;
+        DOM.itemCode.value = item.code; 
+        DOM.itemCode.disabled = true; // Cannot edit code
+        DOM.itemName.value = item.name; 
+        DOM.itemUnit.value = item.unit; 
+        DOM.itemPrice.value = item.price; 
+        DOM.itemStock.value = item.stock;
         DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف';
     },
     saveItem: async () => {
         const itemData = {
-            code: DOM.itemCode.value, name: DOM.itemName.value, unit: DOM.itemUnit.value,
-            price: parseFloat(DOM.itemPrice.value), stock: parseInt(DOM.itemStock.value)
+            code: DOM.itemCode.value.trim(), 
+            name: DOM.itemName.value.trim(), 
+            unit: DOM.itemUnit.value.trim(),
+            price: parseFloat(DOM.itemPrice.value), 
+            stock: parseInt(DOM.itemStock.value)
         };
         // Basic validation
-        if (!itemData.code || !itemData.name || isNaN(itemData.price) || isNaN(itemData.stock)) {
+        if (!itemData.code || !itemData.name || !itemData.unit || isNaN(itemData.price) || isNaN(itemData.stock)) {
             Helpers.showNotification("الرجاء ملء جميع حقول الصنف بشكل صحيح."); return;
         }
         try {
             if (appState.editingItemId) {
+                // When editing, we update by the document ID from Firebase
                 await window.updateDocument("items", appState.editingItemId, itemData);
                 Helpers.showNotification("تم تحديث الصنف بنجاح.");
             } else {
-                await window.addDocument("items", itemData);
+                // When adding, we use the code as the document ID to prevent duplicates
+                const docRef = doc(db, "items", itemData.code);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    Helpers.showNotification("هذا الكود مسجل لصنف آخر.", 5000);
+                    return;
+                }
+                await window.updateDoc(docRef, itemData, { merge: true }); // Using updateDoc with merge on a specific ID
                 Helpers.showNotification("تم إضافة الصنف بنجاح.");
             }
-            appState.editingItemId = null;
-            DOM.itemCode.value = ''; DOM.itemName.value = ''; DOM.itemUnit.value = '';
-            DOM.itemPrice.value = ''; DOM.itemStock.value = '';
-            DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف';
+            Helpers.clearItemForm();
         } catch (error) {
             console.error("Error saving item: ", error);
             Helpers.showNotification("حدث خطأ أثناء حفظ الصنف.");
@@ -743,13 +417,11 @@ const ReportsController = {
         if (mode === 'full') {
             if (!confirm("تحذير! سيتم حذف جميع الفواتير والعملاء. هل أنت متأكد؟")) return;
             try {
-                // Delete all invoices
                 const invoicesSnapshot = await getDocs(collection(db, 'invoices'));
                 const batch1 = writeBatch(db);
                 invoicesSnapshot.forEach(doc => batch1.delete(doc.ref));
                 await batch1.commit();
                 
-                // Delete all customers
                 const customersSnapshot = await getDocs(collection(db, 'customers'));
                 const batch2 = writeBatch(db);
                 customersSnapshot.forEach(doc => batch2.delete(doc.ref));
@@ -771,7 +443,16 @@ const UsersController = { /* Unchanged */ };
 
 // #region Scanner Controller
 const ScannerController = {
-    onScanSuccess: (decodedText) => { ScannerController.stopScanner(); if (window.navigator.vibrate) { window.navigator.vibrate(100); } const product = appState.items.find(p => String(p.code).trim() === String(decodedText).trim()); if (product) { SalesController.addToInvoice(product); } else { Helpers.showNotification("الصنف غير موجود."); } },
+    onScanSuccess: (decodedText) => {
+        ScannerController.stopScanner();
+        if (window.navigator.vibrate) { window.navigator.vibrate(100); }
+        const product = appState.items.find(p => Number(p.code) === Number(decodedText));
+        if (product) {
+            SalesController.addToInvoice(product);
+        } else {
+            Helpers.showNotification("الصنف غير موجود.");
+        }
+    },
     startScanner: () => { DOM.scannerContainer.style.display = 'flex'; appState.html5QrCode = new Html5Qrcode("reader"); const config = { fps: 10, qrbox: { width: 250, height: 250 } }; appState.html5QrCode.start({ facingMode: "environment" }, config, ScannerController.onScanSuccess, (err) => {}) .catch((err) => { Helpers.showNotification("خطأ في تشغيل الكاميرا."); ScannerController.stopScanner(); }); },
     stopScanner: () => { if (appState.html5QrCode && appState.html5QrCode.isScanning) { appState.html5QrCode.stop().catch(err => console.error("Scanner stop failed", err)).finally(() => { DOM.scannerContainer.style.display = 'none'; }); } else { DOM.scannerContainer.style.display = 'none'; } }
 };
@@ -785,44 +466,68 @@ const App = {
         App.bindEvents();
         SalesController.updateTotals();
     },
+    
+    // <<< START OF MODIFICATION: HYBRID DATA LOADING LOGIC >>>
     listenToFirebase: () => {
         Object.values(appState.unsubscribe).forEach(unsub => unsub());
-        
-        // <<< START OF MODIFICATION >>>
-        // Load items from p.json instead of Firestore
+
+        const combinedItems = new Map();
+
+        const processAndRenderItems = () => {
+            appState.items = Array.from(combinedItems.values());
+            const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean);
+            DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
+            DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
+            if (document.getElementById('items').classList.contains('active')) {
+                ItemsController.render();
+            }
+        };
+
+        // Step 1: Fetch from local p.json
         fetch('p.json')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
+            .then(response => response.ok ? response.json() : Promise.reject('File not found'))
             .then(data => {
-                // Assign a unique ID to each item, using its code, for compatibility with the rest of the app logic
-                appState.items = data.map(item => ({ ...item, id: item.code }));
-                
-                // Populate category filters using data from the JSON file
-                const categories = [...new Set(appState.items.map(item => item.category))].filter(Boolean);
-                DOM.salesCategoryFilters.innerHTML = categories.map(cat => `<button class="btn-small" data-category="${cat}">${cat}</button>`).join("");
-                DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
-                
-                // Re-render the items table if it's the active tab
-                if (document.getElementById('items').classList.contains('active')) {
-                    ItemsController.render();
-                }
-                Helpers.showNotification("تم تحميل الأصناف من الملف المحلي بنجاح.");
+                data.forEach(item => {
+                    const mappedItem = {
+                        id: item.sku || item.barcode.toString(),
+                        code: item.sku || item.barcode.toString(),
+                        name: item.name,
+                        price: item.price,
+                        category: (item.category || item["category "] || "غير محدد").trim(),
+                        unit: item.unit || 'قطعة',
+                        stock: item.stock || 9999,
+                    };
+                    combinedItems.set(mappedItem.code, mappedItem);
+                });
+                appState.localItemsLoaded = true;
+                processAndRenderItems();
+                Helpers.showNotification("تم تحميل الأصناف من الملف المحلي.");
             })
             .catch(error => {
-                console.error('Error fetching or parsing p.json:', error);
-                Helpers.showNotification("فشل تحميل ملف الأصناف. تأكد من وجوده.", 5000);
+                console.error('Error with p.json:', error);
+                Helpers.showNotification("لم يتم العثور على ملف الأصناف المحلي، سيتم الاعتماد على Firebase.", 4000);
             });
-        // <<< END OF MODIFICATION >>>
 
+        // Step 2: Listen for real-time updates from Firebase
+        appState.unsubscribe.items = window.readCollection("items", (firebaseItems) => {
+            firebaseItems.forEach(item => {
+                // Firebase data has priority
+                combinedItems.set(item.code, item);
+            });
+            // Only re-render if local items have been processed to avoid race conditions
+            if(appState.localItemsLoaded) {
+                 processAndRenderItems();
+            }
+        }, "name", "asc");
+
+        // Other listeners
         appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); }, "name", "asc");
         appState.unsubscribe.invoices = window.readCollection("invoices", (data) => { appState.invoices = data; App.onTabSwitch(document.querySelector('nav button.active').dataset.tab); });
         appState.unsubscribe.users = window.readCollection("users", (data) => { appState.users = data; if (document.getElementById('users').classList.contains('active')) UsersController.render(); });
         window.getDocument("config", "admin").then(doc => { if (doc && doc.pin) appState.adminPIN = doc.pin; else appState.adminPIN = "790707071"; });
     },
+    // <<< END OF MODIFICATION >>>
+
     onTabSwitch: (tabId) => { if (tabId === 'items') ItemsController.render(); if (tabId === 'customers') CustomersController.render(); if (tabId === 'invoices') ReportsController.renderInvoices(); if (tabId === 'summary') ReportsController.renderSummary(); if (tabId === 'users') UsersController.render(); },
     renderItemsGrid: (category) => { DOM.itemGrid.innerHTML = appState.items.filter(item => item.category === category && item.stock > 0).map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name}</h5><p>${item.price.toFixed(2)} ج.م</p></div>`).join(""); },
     bindEvents: () => {
@@ -830,8 +535,24 @@ const App = {
         DOM.logoutBtn.addEventListener("click", Auth.logout);
         DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
         
-        // Sales Tab
-        DOM.searchItemInput.addEventListener("input", (e) => { const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase()); if (q.length > 0) { const matched = appState.items.filter(item => (item.name.toLowerCase().includes(q) || item.code.toLowerCase().includes(q)) && item.stock > 0).slice(0, 10); DOM.searchResultsDiv.innerHTML = matched.map(item => `<div data-id="${item.id}">${item.code} - ${item.name}</div>`).join(""); DOM.searchResultsDiv.style.display = "block"; } else { DOM.searchResultsDiv.style.display = "none"; } });
+        DOM.searchItemInput.addEventListener("input", (e) => {
+            const q = Helpers.convertToArabicAndEnglishDigits(e.target.value.trim().toLowerCase());
+            if (q.length > 0) {
+                const isNumericQuery = !isNaN(q) && q.length > 2; // Treat as code only if numeric and long enough
+                const matched = appState.items.filter(item => {
+                    const itemName = item.name.toLowerCase();
+                    if (isNumericQuery) {
+                        return Number(item.code) === Number(q);
+                    }
+                    return itemName.includes(q);
+                }).slice(0, 10);
+                DOM.searchResultsDiv.innerHTML = matched.map(item => `<div data-id="${item.id}">${item.code} - ${item.name}</div>`).join("");
+                DOM.searchResultsDiv.style.display = "block";
+            } else {
+                DOM.searchResultsDiv.style.display = "none";
+            }
+        });
+
         DOM.customerNameInput.addEventListener("input", (e) => { const q = e.target.value.trim().toLowerCase(); if (q.length > 0) { const matched = appState.customers.filter(c => c.name.toLowerCase().includes(q)).slice(0, 5); DOM.customerSuggestionsDiv.innerHTML = matched.map(c => `<div data-id="${c.id}">${c.name} (${c.id})</div>`).join(""); DOM.customerSuggestionsDiv.style.display = "block";} else {DOM.customerSuggestionsDiv.style.display = "none";} });
         DOM.customerSuggestionsDiv.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { const customer = appState.customers.find(c => c.id === div.dataset.id); if (customer) { appState.selectedCustomer = customer; DOM.customerNameInput.value = customer.name; DOM.customerPhoneInput.value = customer.id; } DOM.customerSuggestionsDiv.style.display = "none"; }});
 
