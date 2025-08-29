@@ -209,13 +209,13 @@
 <script type="module">
 // #region Firebase Initialization and Offline Persistence
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, where, increment, enablePersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDoc, writeBatch, getDocs, where, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 const firebaseConfig = { apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc", authDomain: "cash-84acc.firebaseapp.com", projectId: "cash-84acc", storageBucket: "cash-84acc.appspot.com", messagingSenderId: "774737678098", appId: "1:774737678098:web:8b918375b4e51692b7edcb", measurementId: "G-GRKNPJ45N1" };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // Enable Offline Persistence
-enablePersistence(db).catch(err => {
+enableIndexedDbPersistence(db).catch(err => {
     if (err.code == 'failed-precondition') {
         console.warn("Firebase persistence failed, possibly due to multiple open tabs.");
     } else if (err.code == 'unimplemented') {
