@@ -213,7 +213,7 @@ import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTim
 const firebaseConfig = { apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc", authDomain: "cash-84acc.firebaseapp.com", projectId: "cash-84acc", storageBucket: "cash-84acc.appspot.com", messagingSenderId: "774737678098", appId: "1:774737678098:web:8b918375b4e51692b7edcb", measurementId: "G-GRKNPJ45N1" };
 const app = initializeApp(firebaseConfig);
 
-// <<< تم تحديث طريقة تفعيل وضع الأوفلاين للطريقة الأحدث >>>
+// <<< تم تحديث طريقة تفعيل وضع الأوفلاين للطريقة الأحدث لحل التحذير >>>
 const db = initializeFirestore(app, {
   cache: persistentLocalCache({})
 });
@@ -241,7 +241,7 @@ const DOM = {
     notificationContainer: document.getElementById("notification-container"),
 };
 
-// <<< تم إصلاح الخطأ بإعادة إضافة متغير unsubscribe هنا >>>
+// <<< تم إصلاح الخطأ الفادح بإعادة إضافة متغير unsubscribe هنا >>>
 let appState = { items: [], invoices: [], customers: [], users: [], adminPIN: "790707071", currentUser: null, currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, editingUserId: null, html5QrCode: null, localItemsLoaded: false, unsubscribe: {} };
 // #endregion
 
@@ -286,6 +286,7 @@ const UsersController = {
         appState.editingUserId = id;
         DOM.newUsernameInput.value = user.username;
         DOM.newUsernameInput.disabled = true;
+        DOM.newUserPasswordInput.value = ""; // Clear password field for security
         DOM.newUserPasswordInput.placeholder = "اتركها فارغة لعدم التغيير";
         DOM.saveUserBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل المستخدم';
     },
@@ -353,11 +354,12 @@ const ItemsController = {
 };
 // #endregion
 
-// #region Customers Controller (Unchanged)
+// #region Customers Controller
 const CustomersController = {
     render: () => { DOM.customersList.innerHTML = appState.customers.map(cust => `<div class="customer-card"><div><b>${cust.name}</b><br/><small>هاتف: ${cust.id}</small></div><div class="flex-container"><button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button></div></div>`).join(""); },
     save: async () => { const id = DOM.newCustomerId.value.trim(), name = DOM.newCustomerName.value.trim(); if (!id || !name) { Helpers.showNotification("يرجى إدخال اسم ورقم هاتف العميل."); return; } const ref = doc(db, "customers", id); if (!appState.editingCustomerId && (await getDoc(ref)).exists()) { Helpers.showNotification("هذا الرقم مسجل لعميل آخر."); return; } await updateDoc(ref, { name }, { merge: true }); Helpers.showNotification("تم حفظ العميل بنجاح."); DOM.newCustomerId.value = ""; DOM.newCustomerName.value = ""; appState.editingCustomerId = null; },
     edit: (id) => { const c = appState.customers.find(c => c.id === id); if (!c) return; DOM.newCustomerId.value = c.id; DOM.newCustomerName.value = c.name; appState.editingCustomerId = id; },
+    delete: async (id) => { if (confirm("هل أنت متأكد؟")) { await window.deleteDocument("customers", id); Helpers.showNotification("تم حذف العميل."); } }
 };
 // #endregion
 
@@ -367,35 +369,14 @@ const SalesController = {
     renderInvoice: () => { DOM.invoiceTable.innerHTML = appState.currentInvoice.map((item, index) => `<tr><td>${item.name}</td><td><div class="qty-controls"><button class="btn-small btn-success qty-increase" data-index="${index}">+</button><span>${item.qty}</span><button class="btn-small btn-danger qty-decrease" data-index="${index}">-</button></div></td><td>${item.price.toFixed(2)}</td><td>${(item.price * item.qty).toFixed(2)}</td><td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td></tr>`).join(""); SalesController.updateTotals(); },
     addToInvoice: (item) => { const existing = appState.currentInvoice.find(i => i.id === item.id); const stockItem = appState.items.find(i => i.id === item.id); if (!stockItem || stockItem.stock <= 0) { Helpers.showNotification("المخزون غير متوفر."); return; } if (existing) { if (stockItem.stock > existing.qty) existing.qty++; else { Helpers.showNotification(`أقصى كمية: ${stockItem.stock}`); return; } } else appState.currentInvoice.push({ ...item, qty: 1 }); SalesController.renderInvoice(); },
     updateItemQty: (index, change) => { const item = appState.currentInvoice[index]; if (!item) return; const stockItem = appState.items.find(i => i.id === item.id); if (change > 0 && item.qty + change > stockItem.stock) { Helpers.showNotification(`أقصى كمية: ${stockItem.stock}`); return; } item.qty += change; if (item.qty <= 0) appState.currentInvoice.splice(index, 1); SalesController.renderInvoice(); },
-    save: async () => { if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة."); return; } DOM.saveInvoiceBtn.disabled = true; const total = parseFloat(DOM.invoiceTotal.textContent); const data = { customerName: DOM.customerName.value.trim() || 'عميل نقدي', customerPhone: DOM.customerPhone.value.trim(), paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value, items: appState.currentInvoice, deliveryFee: appState.deliveryFee, total, createdAt: serverTimestamp() }; try { const batch = writeBatch(db); await addDoc(collection(db, "invoices"), data); appState.currentInvoice.forEach(ci => batch.update(doc(db, "items", ci.id), { stock: increment(-ci.qty) })); await batch.commit(); Helpers.showNotification("تم حفظ الفاتورة بنجاح!"); appState.currentInvoice = []; DOM.customerName.value = ""; DOM.customerPhone.value = ""; DOM.amountPaidInput.value = ""; SalesController.renderInvoice(); } catch (e) { console.error("Save Invoice Error:", e); Helpers.showNotification("فشل الحفظ.", 5000); } finally { DOM.saveInvoiceBtn.disabled = false; } },
+    save: async () => { if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة."); return; } DOM.saveInvoiceBtn.disabled = true; const total = parseFloat(DOM.invoiceTotal.textContent); const data = { customerName: DOM.customerName.value.trim() || 'عميل نقدي', customerPhone: DOM.customerPhone.value.trim(), paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value, items: appState.currentInvoice, deliveryFee: appState.deliveryFee, total, createdAt: serverTimestamp() }; try { const batch = writeBatch(db); addDoc(collection(db, "invoices"), data); appState.currentInvoice.forEach(ci => batch.update(doc(db, "items", ci.id), { stock: increment(-ci.qty) })); await batch.commit(); Helpers.showNotification("تم حفظ الفاتورة بنجاح!"); appState.currentInvoice = []; DOM.customerName.value = ""; DOM.customerPhone.value = ""; DOM.amountPaidInput.value = ""; SalesController.renderInvoice(); } catch (e) { console.error("Save Invoice Error:", e); Helpers.showNotification("فشل الحفظ.", 5000); } finally { DOM.saveInvoiceBtn.disabled = false; } },
     print: () => {
         if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة للطباعة."); return; }
         const total = parseFloat(DOM.invoiceTotal.textContent).toFixed(2);
         const paid = parseFloat(DOM.amountPaidInput.value || total).toFixed(2);
         const change = (paid - total).toFixed(2);
-        let itemsHtml = appState.currentInvoice.map(item => `
-            <tr>
-                <td>${item.name}</td>
-                <td>${item.qty}</td>
-                <td>${item.price.toFixed(2)}</td>
-                <td>${(item.price * item.qty).toFixed(2)}</td>
-            </tr>`).join('');
-        const printContent = `
-            <style>
-                body { font-family: monospace; direction: rtl; margin: 0; padding: 5px; }
-                h2, h4 { text-align: center; margin: 5px 0; }
-                table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-                th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
-                .summary { text-align: left; margin-top: 10px; font-size: 13px; font-weight: bold; }
-            </style>
-            <h2>فاتورة بيع</h2>
-            <h4>${new Date().toLocaleString('ar-EG')}</h4>
-            <p>العميل: ${DOM.customerName.value || 'عميل نقدي'}</p>
-            <table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table>
-            <div class="summary">خدمة التوصيل: ${appState.deliveryFee.toFixed(2)}</div>
-            <div class="summary">الإجمالي: ${total}</div>
-            <div class="summary">المدفوع: ${paid}</div>
-            <div class="summary">الباقي: ${change}</div>`;
+        let itemsHtml = appState.currentInvoice.map(item => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.price * item.qty).toFixed(2)}</td></tr>`).join('');
+        const printContent = `<style> body { font-family: monospace; direction: rtl; margin: 0; padding: 5px; } h2, h4 { text-align: center; margin: 5px 0; } table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; } th, td { border: 1px solid #ccc; padding: 4px; text-align: center; } .summary { text-align: left; margin-top: 10px; font-size: 13px; font-weight: bold; } </style> <h2>فاتورة بيع</h2> <h4>${new Date().toLocaleString('ar-EG')}</h4> <p>العميل: ${DOM.customerName.value || 'عميل نقدي'}</p> <table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table> <div class="summary">خدمة التوصيل: ${appState.deliveryFee.toFixed(2)}</div> <div class="summary">الإجمالي: ${total}</div> <div class="summary">المدفوع: ${paid}</div> <div class="summary">الباقي: ${change}</div>`;
         const printWindow = window.open('', '', 'height=600,width=800');
         printWindow.document.write(printContent);
         printWindow.document.close();
@@ -406,18 +387,10 @@ const SalesController = {
         if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة."); return; }
         let phone = DOM.customerPhone.value.replace(/\s+/g, '');
         if (!phone) { Helpers.showNotification("يرجى إدخال رقم هاتف العميل."); return; }
-        if (!phone.startsWith('20')) phone = '20' + phone; // Add country code for Egypt
-        
-        let message = `*فاتورة جديدة*\n-------------------\n`;
-        appState.currentInvoice.forEach(item => {
-            message += `${item.name} (الكمية: ${item.qty}) - ${item.price.toFixed(2)} ج.م\n`;
-        });
-        message += `-------------------\n`;
-        message += `خدمة التوصيل: ${appState.deliveryFee.toFixed(2)} ج.م\n`;
-        message += `*الإجمالي: ${DOM.invoiceTotal.textContent} ج.م*`;
-        
-        const encodedMessage = encodeURIComponent(message);
-        window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
+        if (phone.startsWith('0')) phone = phone.substring(1);
+        if (!phone.startsWith('20')) phone = '20' + phone;
+        let message = `*فاتورة جديدة*\n-------------------\n${appState.currentInvoice.map(item => `${item.name} (الكمية: ${item.qty}) - ${item.price.toFixed(2)} ج.م`).join('\n')}\n-------------------\nخدمة التوصيل: ${appState.deliveryFee.toFixed(2)} ج.م\n*الإجمالي: ${DOM.invoiceTotal.textContent} ج.م*`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     }
 };
 // #endregion
@@ -453,10 +426,7 @@ const ReportsController = {
         Helpers.showNotification("جاري تجهيز النسخة الاحتياطية...", 4000);
         try {
             const [invoices, customers] = await Promise.all([getDocs(collection(db, 'invoices')), getDocs(collection(db, 'customers'))]);
-            const backupData = {
-                invoices: invoices.docs.map(doc => doc.data()),
-                customers: customers.docs.map(doc => ({id: doc.id, ...doc.data()}))
-            };
+            const backupData = { invoices: invoices.docs.map(doc => doc.data()), customers: customers.docs.map(doc => ({id: doc.id, ...doc.data()})) };
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -474,12 +444,8 @@ const ReportsController = {
             try {
                 const data = JSON.parse(e.target.result);
                 const batch = writeBatch(db);
-                data.customers?.forEach(customer => {
-                    batch.set(doc(db, "customers", customer.id), { name: customer.name }, { merge: true });
-                });
-                data.invoices?.forEach(invoice => {
-                    batch.set(doc(collection(db, "invoices")), invoice);
-                });
+                data.customers?.forEach(customer => batch.set(doc(db, "customers", customer.id), { name: customer.name }, { merge: true }));
+                data.invoices?.forEach(invoice => batch.set(doc(collection(db, "invoices")), invoice));
                 await batch.commit();
                 Helpers.showNotification("تمت استعادة النسخة ودمجها بنجاح.");
             } catch (err) { console.error(err); Helpers.showNotification("ملف غير صالح أو حدث خطأ."); }
@@ -515,7 +481,10 @@ const App = {
             });
             appState.localItemsLoaded = true;
             processAndRender();
-        }).catch(() => console.warn("p.json not found, relying on Firebase only."));
+        }).catch(() => {
+            appState.localItemsLoaded = true; // Still flag as loaded to allow Firebase to render
+            console.warn("p.json not found, relying on Firebase only.");
+        });
 
         appState.unsubscribe.items = window.readCollection("items", (fbItems) => { fbItems.forEach(item => combinedItems.set(item.code, item)); if (appState.localItemsLoaded) processAndRender(); }, "name", "asc");
         appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); }, "name", "asc");
@@ -581,7 +550,7 @@ const App = {
         
         // Customers Tab
         DOM.saveCustomerBtn.addEventListener("click", CustomersController.save);
-        DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn?.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); });
+        DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn?.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); if (btn?.classList.contains("delete-customer-btn")) CustomersController.delete(btn.dataset.id); });
 
         // Reports Tab
         DOM.resetInvoicesBtn.addEventListener("click", ReportsController.resetInvoices);
@@ -600,8 +569,5 @@ const App = {
 
 App.init();
 </script>
-
-</body>
-</html>
 </body>
 </html>
