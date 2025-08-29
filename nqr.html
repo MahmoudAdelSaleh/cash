@@ -89,24 +89,7 @@ th { background: #e9ecef; }
 <body>
 
 <script type="module">
- rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // اسمح بقراءة وكتابة أي مستند في جدول الفواتير والعملاء والمستخدمين
-    match /invoices/{invoiceId} {
-      allow read, write: if true;
-    }
-    match /customers/{customerId} {
-      allow read, write: if true;
-    }
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-     match /config/{configId} {
-      allow read, write: if true;
-    }
-  }
-}
+////////////////////////////////
 </script>
 
 <div id="login-container">
