@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>الهادي ماركت - Firebase</title>
+<title>كاشير متكامل - Firebase</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <style>
@@ -61,7 +61,7 @@
 
 <div id="app-container">
   <header>
-    <span>الهادي ماركت</span>
+    <span>كاشير متكامل</span>
     <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button>
   </header>
   <nav>
@@ -375,7 +375,6 @@ const CustomersController = {
         if (!id || !name) { Helpers.showNotification("يرجى إدخال اسم ورقم هاتف العميل."); return; }
         const ref = doc(db, "customers", id);
         if (!appState.editingCustomerId && (await getDoc(ref)).exists()) { Helpers.showNotification("هذا الرقم مسجل لعميل آخر."); return; }
-        // Set balance to 0 if it's a new customer
         const dataToSave = appState.editingCustomerId ? { name } : { name, balance: 0 };
         await updateDoc(ref, dataToSave, { merge: true });
         Helpers.showNotification("تم حفظ العميل بنجاح.");
@@ -389,10 +388,10 @@ const CustomersController = {
 
 // #region Sales Controller
 const SalesController = {
-    updateTotals: () => { /* ... Unchanged ... */ },
-    renderInvoice: () => { /* ... Unchanged ... */ },
-    addToInvoice: (item) => { /* ... Unchanged ... */ },
-    updateItemQty: (index, change) => { /* ... Unchanged ... */ },
+    updateTotals: () => { const itemsTotal = appState.currentInvoice.reduce((sum, item) => sum + (item.price * item.qty), 0); const grandTotal = itemsTotal + appState.deliveryFee; DOM.invoiceTotal.textContent = grandTotal.toFixed(2); DOM.deliveryFeeValue.textContent = appState.deliveryFee.toFixed(2); Helpers.calculateChange(); },
+    renderInvoice: () => { DOM.invoiceTable.innerHTML = appState.currentInvoice.map((item, index) => `<tr><td>${item.name}</td><td><div class="qty-controls"><button class="btn-small btn-success qty-increase" data-index="${index}">+</button><span>${item.qty}</span><button class="btn-small btn-danger qty-decrease" data-index="${index}">-</button></div></td><td>${(item.price || 0).toFixed(2)}</td><td>${((item.price || 0) * item.qty).toFixed(2)}</td><td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td></tr>`).join(""); SalesController.updateTotals(); },
+    addToInvoice: (item) => { const existing = appState.currentInvoice.find(i => i.id === item.id); const stockItem = appState.items.find(i => i.id === item.id); if (!stockItem || stockItem.qunt <= 0) { Helpers.showNotification("المخزون غير متوفر."); return; } if (existing) { if (stockItem.qunt > existing.qty) existing.qty++; else { Helpers.showNotification(`أقصى كمية: ${stockItem.qunt}`); return; } } else appState.currentInvoice.push({ ...item, qty: 1 }); SalesController.renderInvoice(); },
+    updateItemQty: (index, change) => { const item = appState.currentInvoice[index]; if (!item) return; const stockItem = appState.items.find(i => i.id === item.id); if (change > 0 && item.qty + change > stockItem.qunt) { Helpers.showNotification(`أقصى كمية: ${stockItem.qunt}`); return; } item.qty += change; if (item.qty <= 0) appState.currentInvoice.splice(index, 1); SalesController.renderInvoice(); },
     save: async () => {
         if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة."); return; }
         DOM.saveInvoiceBtn.disabled = true;
@@ -403,7 +402,7 @@ const SalesController = {
         
         const invoiceData = { 
             customerName: DOM.customerName.value.trim() || 'عميل نقدي', 
-            customerPhone: DOM.customerPhone.value.trim(),
+            customerPhone: customerId || DOM.customerPhone.value.trim(),
             paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
             items: appState.currentInvoice,
             deliveryFee: appState.deliveryFee,
@@ -452,7 +451,15 @@ const SalesController = {
 
 // #region Reports Controller
 const ReportsController = {
-    renderInvoices: () => { /* ... Unchanged ... */ },
+    renderInvoices: () => {
+        DOM.invoicesList.innerHTML = ""; if (appState.invoices.length === 0) { DOM.invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>"; return; }
+        const sortedInvoices = [...appState.invoices].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        DOM.invoicesList.innerHTML = sortedInvoices.map((inv, index) => {
+            const dateObj = inv.createdAt?.toDate ? inv.createdAt.toDate() : new Date();
+            const date = dateObj.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+            return `<div class="summary-box"><p><b>فاتورة رقم:</b> ${sortedInvoices.length - index} | <b>التاريخ:</b> ${date}</p><p><b>العميل:</b> ${inv.customerName}</p><table style="font-size: 14px;"><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th></tr></thead><tbody>${(inv.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${(i.price || 0).toFixed(2)}</td></tr>`).join('')}</tbody></table><p><b>خدمة التوصيل:</b> ${(inv.deliveryFee || 0).toFixed(2)} ج.م</p><p style="font-weight:bold;">الإجمالي: ${(inv.total || 0).toFixed(2)} ج.م</p></div>`;
+        }).join('');
+    },
     renderSummary: () => {
         const group = DOM.summaryGroupSelect.value;
         const grouped = {};
@@ -462,7 +469,7 @@ const ReportsController = {
                 const day = date.getDay();
                 const diff = date.getDate() - day + (day === 0 ? -6 : 1);
                 const startOfWeek = new Date(date.setDate(diff));
-                return `أسبوع ${startOfWeek.toLocaleDateString('ar-EG')}`;
+                return `أسبوع يبدأ في ${startOfWeek.toLocaleDateString('ar-EG')}`;
             }
             if (group === 'month') return date.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
             return date.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -472,14 +479,14 @@ const ReportsController = {
             const date = inv.createdAt?.toDate();
             if (!date) return;
             const key = getGroupKey(date);
-            if (!grouped[key]) grouped[key] = { count: 0, total: 0 };
+            if (!grouped[key]) grouped[key] = { count: 0, total: 0, dateObj: date };
             grouped[key].count++;
             grouped[key].total += inv.total;
         });
         
         DOM.totalSalesAmount.textContent = appState.invoices.reduce((sum, inv) => sum + (inv.total || 0), 0).toFixed(2);
         DOM.salesSummaryTable.innerHTML = Object.entries(grouped)
-            .sort((a, b) => new Date(b[0]) - new Date(a[0])) // Sort by date descending
+            .sort((a, b) => b[1].dateObj - a[1].dateObj)
             .map(([key, value]) => `<tr><td>${key}</td><td>${value.count}</td><td>${value.total.toFixed(2)}</td></tr>`).join('');
     },
 };
@@ -496,7 +503,15 @@ const App = {
         }
         App.bindEvents();
     },
-    listenToFirebase: () => { /* ... Unchanged ... */ },
+    listenToFirebase: () => {
+        Object.values(appState.unsubscribe).forEach(unsub => unsub());
+        
+        appState.unsubscribe.items = window.readCollection("items", (fbItems) => { appState.items = fbItems; if (document.getElementById('items').classList.contains('active')) ItemsController.render(); });
+        appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); });
+        appState.unsubscribe.invoices = window.readCollection("invoices", (data) => { appState.invoices = data; if (document.querySelector('nav button.active')?.dataset.tab === 'invoices') ReportsController.renderInvoices(); if (document.querySelector('nav button.active')?.dataset.tab === 'summary') ReportsController.renderSummary(); }, "createdAt", "desc");
+        appState.unsubscribe.users = window.readCollection("users", (data) => { appState.users = data; if (document.getElementById('users').classList.contains('active')) UsersController.render(); }, "username", "asc");
+        window.getDocument("config", "admin").then(doc => { if (doc?.pin) appState.adminPIN = doc.pin; });
+    },
     onTabSwitch: (tabId) => {
         switch (tabId) {
             case 'items': ItemsController.render(); break;
@@ -511,7 +526,51 @@ const App = {
         DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
         DOM.summaryGroupSelect.addEventListener("change", ReportsController.renderSummary);
         DOM.saveInvoiceBtn.addEventListener("click", SalesController.save);
-        // ... other bindings
+        DOM.printInvoiceBtn.addEventListener("click", SalesController.print);
+        DOM.sendWhatsAppBtn.addEventListener("click", SalesController.sendWhatsApp);
+        DOM.saveItemBtn.addEventListener("click", ItemsController.save);
+        DOM.itemsTable.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-item-btn")) ItemsController.edit(btn.dataset.id); if (btn.classList.contains("delete-item-btn")) ItemsController.delete(btn.dataset.id); }});
+        DOM.saveCustomerBtn.addEventListener("click", CustomersController.save);
+        DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn?.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); });
+        DOM.saveUserBtn.addEventListener("click", UsersController.save);
+        DOM.usersList.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-user-btn")) UsersController.edit(btn.dataset.id); if (btn.classList.contains("delete-user-btn")) UsersController.delete(btn.dataset.id); }});
+        DOM.changePinBtn.addEventListener("click", UsersController.changeAdminPin);
+        DOM.invoiceTable.addEventListener("click", (e) => { const btn = e.target.closest("button"); if (!btn) return; const idx = parseInt(btn.dataset.index); if (btn.classList.contains("qty-increase")) SalesController.updateItemQty(idx, 1); if (btn.classList.contains("qty-decrease")) SalesController.updateItemQty(idx, -1); if (btn.classList.contains("remove-from-invoice-btn")) { appState.currentInvoice.splice(idx, 1); SalesController.renderInvoice();} });
+        DOM.increaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee += 5; SalesController.updateTotals(); });
+        DOM.decreaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee = Math.max(0, appState.deliveryFee - 5); SalesController.updateTotals(); });
+        DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
+        DOM.searchItem.addEventListener("input", () => {
+            const q = DOM.searchItem.value.trim();
+            DOM.searchResults.style.display = "none";
+            if (q.length < 1) return;
+            const matched = appState.items.filter(i => (i.name || '').toLowerCase().includes(q.toLowerCase()) || (i.barcode1 || '').includes(q)).slice(0, 5);
+            if (matched.length > 0) {
+                DOM.searchResults.innerHTML = matched.map(i => `<div data-id="${i.id}">${i.barcode1} - ${i.name}</div>`).join('');
+                DOM.searchResults.style.display = "block";
+            }
+        });
+        DOM.searchResults.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { SalesController.addToInvoice(appState.items.find(i => i.id === div.dataset.id)); DOM.searchItem.value = ""; DOM.searchResults.style.display = "none"; }});
+        DOM.customerName.addEventListener("input", () => {
+            const q = DOM.customerName.value.trim().toLowerCase();
+            if (q.length < 1) { DOM.customerSuggestions.style.display = "none"; appState.selectedCustomer = null; return;}
+            const matched = appState.customers.filter(c => (c.name || '').toLowerCase().includes(q)).slice(0, 5);
+            if(matched.length > 0) {
+                DOM.customerSuggestions.innerHTML = matched.map(c => `<div data-id="${c.id}">${c.name} (${c.id})</div>`).join('');
+                DOM.customerSuggestions.style.display = "block";
+            }
+        });
+        DOM.customerSuggestions.addEventListener("click", (e) => {
+            const div = e.target.closest("div[data-id]");
+            if (div) { 
+                const c = appState.customers.find(c => c.id === div.dataset.id); 
+                if(c){ 
+                    DOM.customerName.value = c.name; 
+                    DOM.customerPhone.value = c.id; 
+                    appState.selectedCustomer = c;
+                } 
+                DOM.customerSuggestions.style.display = "none";
+            }
+        });
     }
 };
 
