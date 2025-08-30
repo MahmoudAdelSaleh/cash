@@ -235,7 +235,7 @@ const firebaseConfig = { apiKey: "AIzaSyAWhNkYnC2n4iuHvdp1O_-S5suxivDidgc", auth
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, { cache: persistentLocalCache({}) });
 
-window.db = db; window.doc = doc; window.collection = collection; window.writeBatch = writeBatch; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs; window.query = query; window.where = where; window.increment = increment;
+window.db = db; window.doc = doc; window.collection = collection; window.writeBatch = writeBatch; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs; window.query = query; window.where = where; window.increment = increment; window.Timestamp = Timestamp;
 window.readCollection = (collectionName, callback, orderByField = "name", orderDirection = "asc") => onSnapshot(query(collection(db, collectionName), orderBy(orderByField, orderDirection)), s => callback(s.docs.map(d => ({ id: d.id, ...d.data() }))));
 window.updateDocument = (collectionName, docId, data) => updateDoc(doc(db, collectionName, docId), data);
 window.deleteDocument = (collectionName, docId) => deleteDoc(doc(db, collectionName, docId));
@@ -292,7 +292,42 @@ const Auth = {
 // #endregion
 
 // #region User Management Controller
-const UsersController = { /* ... Unchanged ... */ };
+const UsersController = {
+    render: () => { DOM.usersList.innerHTML = appState.users.map(user => `<div class="user-card"><div><b><i class="fas fa-user"></i> ${user.username}</b></div><div class="action-buttons"><button class="btn-small btn-warning edit-user-btn" data-id="${user.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-user-btn" data-id="${user.id}"><i class="fas fa-trash-alt"></i></button></div></div>`).join(""); },
+    clearForm: () => { DOM.newUsernameInput.value = ""; DOM.newUserPasswordInput.value = ""; appState.editingUserId = null; DOM.saveUserBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إضافة مستخدم'; DOM.newUsernameInput.disabled = false; DOM.newUserPasswordInput.placeholder = "كلمة المرور"; },
+    edit: (id) => { const user = appState.users.find(u => u.id === id); if (!user) return; appState.editingUserId = id; DOM.newUsernameInput.value = user.username; DOM.newUsernameInput.disabled = true; DOM.newUserPasswordInput.value = ""; DOM.newUserPasswordInput.placeholder = "اتركها فارغة لعدم التغيير"; DOM.saveUserBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل المستخدم'; },
+    save: async () => {
+        const username = DOM.newUsernameInput.value.trim();
+        let password = DOM.newUserPasswordInput.value.trim();
+        if (!username) { Helpers.showNotification("يجب إدخال اسم المستخدم."); return; }
+        try {
+            if (appState.editingUserId) {
+                const userData = {};
+                if (password) userData.password = password;
+                await window.updateDocument("users", appState.editingUserId, userData);
+                Helpers.showNotification("تم تعديل المستخدم بنجاح.");
+            } else {
+                if (!password) { Helpers.showNotification("يجب إدخال كلمة المرور للمستخدم الجديد."); return; }
+                const docRef = doc(db, "users", username);
+                if ((await getDoc(docRef)).exists()) { Helpers.showNotification("اسم المستخدم هذا موجود بالفعل."); return; }
+                await updateDoc(docRef, { username, password }, { merge: true });
+                Helpers.showNotification("تمت إضافة المستخدم بنجاح.");
+            }
+            UsersController.clearForm();
+        } catch (error) { console.error("Error saving user:", error); Helpers.showNotification("حدث خطأ."); }
+    },
+    delete: async (id) => { if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) { await window.deleteDocument("users", id); Helpers.showNotification("تم حذف المستخدم."); } },
+    changeAdminPin: async () => {
+        const oldPin = DOM.oldPinInput.value;
+        const newPin = DOM.newPinInput.value;
+        if (!oldPin || !newPin) { Helpers.showNotification("يرجى ملء جميع الحقول."); return; }
+        if (oldPin !== appState.adminPIN) { Helpers.showNotification("كلمة المرور القديمة غير صحيحة."); return; }
+        await window.updateDocument("config", "admin", { pin: newPin });
+        appState.adminPIN = newPin;
+        DOM.oldPinInput.value = ""; DOM.newPinInput.value = "";
+        Helpers.showNotification("تم تغيير كلمة مرور المدير بنجاح.");
+    }
+};
 // #endregion
 
 // #region Items Controller
@@ -303,25 +338,79 @@ const ItemsController = {
         const filteredItems = filterCategory === "all" ? appState.items : appState.items.filter(item => item.category === filterCategory);
         DOM.itemsTable.innerHTML = filteredItems.map(item => `<tr><td>${item.barcode1}</td><td>${item.name || 'اسم غير متوفر'}</td><td>${item.unit}</td><td>${item.sku || ''}</td><td>${(item.price || 0).toFixed(2)}</td><td>${item.qunt}</td><td>${item.category || 'غير محدد'}</td><td><div class="action-buttons"><button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button></div></td></tr>`).join("");
     },
-    edit: (id) => { /* ... Unchanged ... */ },
-    save: async () => { /* ... Unchanged ... */ },
-    delete: async (id) => { if (confirm("هل أنت متأكد؟")) { await window.deleteDocument("items", id); Helpers.showNotification("تم حذف الصنف."); } }
+    edit: (id) => { 
+        const item = appState.items.find(i => i.id === id); if (!item) return; 
+        appState.editingItemId = id; 
+        DOM.itemCode.value = item.barcode1; 
+        DOM.itemCode.disabled = true; 
+        DOM.itemSku.value = item.sku || '';
+        DOM.itemName.value = item.name; 
+        DOM.itemUnit.value = item.unit;
+        DOM.itemPrice.value = item.price; 
+        DOM.itemStock.value = item.qunt; 
+        DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف'; 
+    },
+    save: async () => {
+        const itemData = { 
+            barcode1: DOM.itemCode.value.trim(), 
+            sku: DOM.itemSku.value.trim(),
+            name: DOM.itemName.value.trim(), 
+            unit: DOM.itemUnit.value.trim(), 
+            price: parseFloat(DOM.itemPrice.value), 
+            qunt: parseInt(DOM.itemStock.value), 
+            category: "غير محدد"
+        };
+        if (!itemData.barcode1 || !itemData.name || !itemData.unit || isNaN(itemData.price) || isNaN(itemData.qunt)) { Helpers.showNotification("يرجى ملء الحقول الأساسية: الباركود، الاسم، الوحدة، السعر، الكمية."); return; }
+        
+        try {
+            const docRef = doc(db, "items", itemData.barcode1);
+            await updateDoc(docRef, itemData, { merge: true });
+            Helpers.showNotification(appState.editingItemId ? "تم تحديث الصنف بنجاح." : "تم إضافة الصنف بنجاح.");
+            Helpers.clearItemForm();
+        } catch (e) { console.error("Error saving item: ", e); Helpers.showNotification("حدث خطأ أثناء الحفظ."); }
+    },
+    delete: async (id) => { if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) { await window.deleteDocument("items", id); Helpers.showNotification("تم حذف الصنف."); } }
 };
 // #endregion
 
 // #region Customers Controller
-const CustomersController = { /* ... Unchanged ... */ };
+const CustomersController = {
+    render: () => { DOM.customersList.innerHTML = appState.customers.map(cust => `<div class="customer-card"><div><b>${cust.name}</b><br/><small>هاتف: ${cust.id}</small></div><div class="action-buttons"><button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button><button class="btn-small btn-danger delete-customer-btn" data-id="${cust.id}"><i class="fas fa-trash-alt"></i></button></div></div>`).join(""); },
+    save: async () => { const id = DOM.newCustomerId.value.trim(), name = DOM.newCustomerName.value.trim(); if (!id || !name) { Helpers.showNotification("يرجى إدخال اسم ورقم هاتف العميل."); return; } const ref = doc(db, "customers", id); if (!appState.editingCustomerId && (await getDoc(ref)).exists()) { Helpers.showNotification("هذا الرقم مسجل لعميل آخر."); return; } await updateDoc(ref, { name }, { merge: true }); Helpers.showNotification("تم حفظ العميل بنجاح."); DOM.newCustomerId.value = ""; DOM.newCustomerName.value = ""; appState.editingCustomerId = null; },
+    edit: (id) => { const c = appState.customers.find(c => c.id === id); if (!c) return; DOM.newCustomerId.value = c.id; DOM.newCustomerName.value = c.name; appState.editingCustomerId = id; },
+    delete: async (id) => { if (confirm("هل أنت متأكد؟")) { await window.deleteDocument("customers", id); Helpers.showNotification("تم حذف العميل."); } }
+};
 // #endregion
 
 // #region Sales Controller
 const SalesController = {
+    updateTotals: () => { const itemsTotal = appState.currentInvoice.reduce((sum, item) => sum + (item.price * item.qty), 0); const grandTotal = itemsTotal + appState.deliveryFee; DOM.invoiceTotal.textContent = grandTotal.toFixed(2); DOM.deliveryFeeValue.textContent = appState.deliveryFee.toFixed(2); Helpers.calculateChange(); },
     renderInvoice: () => { DOM.invoiceTable.innerHTML = appState.currentInvoice.map((item, index) => `<tr><td>${item.name}</td><td><div class="qty-controls"><button class="btn-small btn-success qty-increase" data-index="${index}">+</button><span>${item.qty}</span><button class="btn-small btn-danger qty-decrease" data-index="${index}">-</button></div></td><td>${(item.price || 0).toFixed(2)}</td><td>${((item.price || 0) * item.qty).toFixed(2)}</td><td><button class="btn-small btn-danger remove-from-invoice-btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button></td></tr>`).join(""); SalesController.updateTotals(); },
     addToInvoice: (item) => { const existing = appState.currentInvoice.find(i => i.id === item.id); const stockItem = appState.items.find(i => i.id === item.id); if (!stockItem || stockItem.qunt <= 0) { Helpers.showNotification("المخزون غير متوفر."); return; } if (existing) { if (stockItem.qunt > existing.qty) existing.qty++; else { Helpers.showNotification(`أقصى كمية: ${stockItem.qunt}`); return; } } else appState.currentInvoice.push({ ...item, qty: 1 }); SalesController.renderInvoice(); },
     updateItemQty: (index, change) => { const item = appState.currentInvoice[index]; if (!item) return; const stockItem = appState.items.find(i => i.id === item.id); if (change > 0 && item.qty + change > stockItem.qunt) { Helpers.showNotification(`أقصى كمية: ${stockItem.qunt}`); return; } item.qty += change; if (item.qty <= 0) appState.currentInvoice.splice(index, 1); SalesController.renderInvoice(); },
-    save: async () => { /* ... Unchanged ... */ },
-    print: () => { /* ... Unchanged ... */ },
-    sendWhatsApp: () => { /* ... Unchanged ... */ },
-    updateTotals: () => { /* ... Unchanged ... */ },
+    save: async () => { if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة."); return; } DOM.saveInvoiceBtn.disabled = true; const total = parseFloat(DOM.invoiceTotal.textContent); const data = { customerName: DOM.customerName.value.trim() || 'عميل نقدي', customerPhone: DOM.customerPhone.value.trim(), paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value, items: appState.currentInvoice, deliveryFee: appState.deliveryFee, total, createdAt: serverTimestamp() }; try { const batch = writeBatch(db); addDoc(collection(db, "invoices"), data); appState.currentInvoice.forEach(ci => batch.update(doc(db, "items", ci.id), { qunt: increment(-ci.qty) })); await batch.commit(); Helpers.showNotification("تم حفظ الفاتورة بنجاح!"); appState.currentInvoice = []; DOM.customerName.value = ""; DOM.customerPhone.value = ""; DOM.amountPaidInput.value = ""; SalesController.renderInvoice(); } catch (e) { console.error("Save Invoice Error:", e); Helpers.showNotification("فشل الحفظ.", 5000); } finally { DOM.saveInvoiceBtn.disabled = false; } },
+    print: () => {
+        if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة للطباعة."); return; }
+        const total = parseFloat(DOM.invoiceTotal.textContent).toFixed(2);
+        const paid = parseFloat(DOM.amountPaidInput.value || total).toFixed(2);
+        const change = (paid - total).toFixed(2);
+        let itemsHtml = appState.currentInvoice.map(item => `<tr><td>${item.name}</td><td>${item.qty}</td><td>${(item.price || 0).toFixed(2)}</td><td>${((item.price || 0) * item.qty).toFixed(2)}</td></tr>`).join('');
+        const printContent = `<style> body { font-family: monospace; direction: rtl; margin: 0; padding: 5px; } h2, h4 { text-align: center; margin: 5px 0; } table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; } th, td { border: 1px solid #ccc; padding: 4px; text-align: center; } .summary { text-align: left; margin-top: 10px; font-size: 13px; font-weight: bold; } </style> <h2>فاتورة بيع</h2> <h4>${new Date().toLocaleString('ar-EG')}</h4> <p>العميل: ${DOM.customerName.value || 'عميل نقدي'}</p> <table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table> <div class="summary">خدمة التوصيل: ${appState.deliveryFee.toFixed(2)}</div> <div class="summary">الإجمالي: ${total}</div> <div class="summary">المدفوع: ${paid}</div> <div class="summary">الباقي: ${change}</div>`;
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    },
+    sendWhatsApp: () => {
+        if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة."); return; }
+        let phone = DOM.customerPhone.value.replace(/\s+/g, '');
+        if (!phone) { Helpers.showNotification("يرجى إدخال رقم هاتف العميل."); return; }
+        if (phone.startsWith('0')) phone = phone.substring(1);
+        if (!phone.startsWith('20')) phone = '20' + phone;
+        let message = `*فاتورة جديدة*\n-------------------\n${appState.currentInvoice.map(item => `${item.name} (الكمية: ${item.qty}) - ${(item.price || 0).toFixed(2)} ج.م`).join('\n')}\n-------------------\nخدمة التوصيل: ${appState.deliveryFee.toFixed(2)} ج.م\n*الإجمالي: ${DOM.invoiceTotal.textContent} ج.م*`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    }
 };
 // #endregion
 
@@ -333,26 +422,39 @@ const ScannerController = {
         if (product) { SalesController.addToInvoice(product); } 
         else { Helpers.showNotification("الصنف غير موجود بهذا الباركود."); }
     },
-    start: () => { /* ... Unchanged ... */ },
-    stop: () => { /* ... Unchanged ... */ }
+    start: () => {
+        const html5QrCode = new Html5Qrcode("reader");
+        appState.html5QrCode = html5QrCode;
+        DOM.scannerContainer.style.display = 'flex';
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, ScannerController.onScanSuccess, (errorMessage) => {})
+        .catch((err) => Helpers.showNotification("فشل تشغيل الكاميرا."));
+    },
+    stop: () => {
+        if (appState.html5QrCode && appState.html5QrCode.isScanning) {
+            appState.html5QrCode.stop().catch(err => console.error("Scanner stop failed", err));
+        }
+        DOM.scannerContainer.style.display = 'none';
+    }
 };
 // #endregion
 
 // #region Reports Controller
 const ReportsController = {
-    renderInvoices: () => { /* ... Unchanged ... */ },
+    renderInvoices: () => {
+        DOM.invoicesList.innerHTML = ""; if (appState.invoices.length === 0) { DOM.invoicesList.innerHTML = "<p>لا توجد فواتير محفوظة.</p>"; return; }
+        const sortedInvoices = [...appState.invoices].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        DOM.invoicesList.innerHTML = sortedInvoices.map((inv, index) => {
+            const dateObj = inv.createdAt?.toDate ? inv.createdAt.toDate() : new Date();
+            const date = dateObj.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+            return `<div class="summary-box"><p><b>فاتورة رقم:</b> ${sortedInvoices.length - index} | <b>التاريخ:</b> ${date}</p><p><b>العميل:</b> ${inv.customerName}</p><table style="font-size: 14px;"><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th></tr></thead><tbody>${(inv.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${(i.price || 0).toFixed(2)}</td></tr>`).join('')}</tbody></table><p><b>خدمة التوصيل:</b> ${(inv.deliveryFee || 0).toFixed(2)} ج.م</p><p style="font-weight:bold;">الإجمالي: ${(inv.total || 0).toFixed(2)} ج.م</p></div>`;
+        }).join('');
+    },
     generateSettlement: async () => {
         const dateVal = DOM.settlementDate.value;
-        if (!dateVal) {
-            Helpers.showNotification("الرجاء اختيار تاريخ للتسوية.");
-            return;
-        }
+        if (!dateVal) { Helpers.showNotification("الرجاء اختيار تاريخ للتسوية."); return; }
         
-        const startOfDay = new Date(dateVal);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(dateVal);
-        endOfDay.setHours(23, 59, 59, 999);
-
+        const startOfDay = new Date(dateVal); startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(dateVal); endOfDay.setHours(23, 59, 59, 999);
         const startTimestamp = Timestamp.fromDate(startOfDay);
         const endTimestamp = Timestamp.fromDate(endOfDay);
         
@@ -360,20 +462,12 @@ const ReportsController = {
         
         try {
             const querySnapshot = await getDocs(q);
-            const invoicesToday = [];
-            querySnapshot.forEach(doc => invoicesToday.push(doc.data()));
+            const invoicesToday = querySnapshot.docs.map(doc => doc.data());
 
-            if (invoicesToday.length === 0) {
-                DOM.settlementResult.innerHTML = `<p>لا توجد فواتير لهذا اليوم.</p>`;
-                return;
-            }
+            if (invoicesToday.length === 0) { DOM.settlementResult.innerHTML = `<p>لا توجد فواتير لهذا اليوم.</p>`; return; }
 
             const totalSales = invoicesToday.reduce((sum, inv) => sum + (inv.total || 0), 0);
-            const paymentMethods = {
-                cash: 0,
-                visa: 0,
-                wallet: 0
-            };
+            const paymentMethods = { cash: 0, visa: 0, wallet: 0 };
             invoicesToday.forEach(inv => {
                 if(paymentMethods[inv.paymentMethod] !== undefined) {
                     paymentMethods[inv.paymentMethod] += inv.total || 0;
@@ -384,14 +478,11 @@ const ReportsController = {
                 <p><strong>إجمالي المبيعات:</strong> ${totalSales.toFixed(2)} ج.م</p>
                 <p><strong>عدد الفواتير:</strong> ${invoicesToday.length}</p>
                 <hr>
-                <p><strong>نقداً:</strong> ${paymentMethods.cash.toFixed(2)} ج.م</p>
-                <p><strong>فيزا:</strong> ${paymentMethods.visa.toFixed(2)} ج.م</p>
-                <p><strong>محفظة:</strong> ${paymentMethods.wallet.toFixed(2)} ج.م</p>
+                <p><strong><i class="fas fa-money-bill-wave"></i> نقداً:</strong> ${paymentMethods.cash.toFixed(2)} ج.م</p>
+                <p><strong><i class="far fa-credit-card"></i> فيزا:</strong> ${paymentMethods.visa.toFixed(2)} ج.م</p>
+                <p><strong><i class="fas fa-wallet"></i> محفظة:</strong> ${paymentMethods.wallet.toFixed(2)} ج.م</p>
             `;
-        } catch (error) {
-            console.error("Error generating settlement report: ", error);
-            Helpers.showNotification("حدث خطأ أثناء جلب تقرير التسوية.");
-        }
+        } catch (error) { console.error("Error generating settlement report: ", error); Helpers.showNotification("حدث خطأ أثناء جلب تقرير التسوية."); }
     },
     resetInvoices: async () => { /* ... Unchanged ... */ },
     fullReset: async () => { /* ... Unchanged ... */ },
@@ -412,11 +503,104 @@ const App = {
         }
         App.bindEvents();
     },
-    listenToFirebase: () => { /* ... Unchanged ... */ },
-    onTabSwitch: (tabId) => { /* ... Unchanged ... */ },
-    renderItemsGrid: (category) => { /* ... Unchanged ... */ },
+    listenToFirebase: () => {
+        Object.values(appState.unsubscribe).forEach(unsub => unsub());
+        
+        appState.unsubscribe.items = window.readCollection("items", (fbItems) => { 
+            appState.items = fbItems; 
+            const categories = [...new Set(appState.items.map(i => i.category))].filter(Boolean);
+            DOM.salesCategoryFilters.innerHTML = categories.map(c => `<button class="btn-small" data-category="${c}">${c}</button>`).join('');
+            DOM.filterCategorySelect.innerHTML = '<option value="all">جميع الفئات</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            if (document.getElementById('items').classList.contains('active')) ItemsController.render();
+        });
+
+        appState.unsubscribe.customers = window.readCollection("customers", (data) => { appState.customers = data; if (document.getElementById('customers').classList.contains('active')) CustomersController.render(); });
+        appState.unsubscribe.invoices = window.readCollection("invoices", (data) => { appState.invoices = data; if (document.querySelector('nav button.active')?.dataset.tab === 'invoices') ReportsController.renderInvoices(); }, "createdAt", "desc");
+        appState.unsubscribe.users = window.readCollection("users", (data) => { appState.users = data; if (document.getElementById('users').classList.contains('active')) UsersController.render(); }, "username", "asc");
+        window.getDocument("config", "admin").then(doc => { if (doc?.pin) appState.adminPIN = doc.pin; });
+    },
+    onTabSwitch: (tabId) => {
+        switch (tabId) {
+            case 'items': ItemsController.render(); break;
+            case 'customers': CustomersController.render(); break;
+            case 'invoices': ReportsController.renderInvoices(); break;
+            case 'users': if (appState.currentUser?.role === 'admin') UsersController.render(); break;
+        }
+    },
+    renderItemsGrid: (category) => {
+        const itemsToShow = category ? appState.items.filter(item => item.category === category && item.qunt > 0) : [];
+        DOM.itemGrid.innerHTML = itemsToShow.map(item => `<div class="item-card" data-id="${item.id}"><h5>${item.name || 'غير متوفر'}</h5><p>${(item.price || 0).toFixed(2)} ج.م</p></div>`).join("");
+    },
     bindEvents: () => {
-        // ... ALL BINDINGS FROM PREVIOUS VERSION ...
+        DOM.loginForm.addEventListener("submit", (e) => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
+        DOM.logoutBtn.addEventListener("click", Auth.logout);
+        DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
+        DOM.searchItem.addEventListener("input", () => {
+            const q = DOM.searchItem.value.trim();
+            DOM.searchResults.style.display = "none";
+            if (q.length < 1) return;
+            const matched = appState.items.filter(i => (i.name || '').toLowerCase().includes(q.toLowerCase()) || (i.barcode1 || '').includes(q)).slice(0, 5);
+            if (matched.length > 0) {
+                DOM.searchResults.innerHTML = matched.map(i => `<div data-id="${i.id}">${i.barcode1} - ${i.name}</div>`).join('');
+                DOM.searchResults.style.display = "block";
+            }
+        });
+        DOM.searchResults.addEventListener("click", (e) => { const div = e.target.closest("div[data-id]"); if (div) { SalesController.addToInvoice(appState.items.find(i => i.id === div.dataset.id)); DOM.searchItem.value = ""; DOM.searchResults.style.display = "none"; }});
+        DOM.toggleItemsGridBtn.addEventListener("click", () => {
+            const isHidden = DOM.categoryScrollerContainer.style.display === 'none';
+            DOM.categoryScrollerContainer.style.display = isHidden ? 'block' : 'none';
+            DOM.itemGrid.style.display = isHidden ? 'grid' : 'none';
+            DOM.toggleItemsGridBtn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i> إخفاء الأصناف' : '<i class="fas fa-th-large"></i> عرض الأصناف';
+            if(isHidden){
+                DOM.salesCategoryFilters.querySelector('button')?.click();
+            }
+        });
+        DOM.salesCategoryFilters.addEventListener("click", (e) => {
+            const btn = e.target.closest("button[data-category]");
+            if(btn){
+                DOM.salesCategoryFilters.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                App.renderItemsGrid(btn.dataset.category);
+            }
+        });
+        DOM.itemGrid.addEventListener("click", (e) => {
+            const card = e.target.closest(".item-card[data-id]");
+            if (card) {
+                const item = appState.items.find(i => i.id === card.dataset.id);
+                if (item) SalesController.addToInvoice(item);
+            }
+        });
+        DOM.invoiceTable.addEventListener("click", (e) => { 
+            const btn = e.target.closest("button"); 
+            if (!btn) return; 
+            const idx = parseInt(btn.dataset.index); 
+            if (btn.classList.contains("qty-increase")) SalesController.updateItemQty(idx, 1); 
+            if (btn.classList.contains("qty-decrease")) SalesController.updateItemQty(idx, -1); 
+            if (btn.classList.contains("remove-from-invoice-btn")) { 
+                appState.currentInvoice.splice(idx, 1); 
+                SalesController.renderInvoice();
+            }
+        });
+        DOM.saveInvoiceBtn.addEventListener("click", SalesController.save);
+        DOM.printInvoiceBtn.addEventListener("click", SalesController.print);
+        DOM.sendWhatsAppBtn.addEventListener("click", SalesController.sendWhatsApp);
+        DOM.amountPaidInput.addEventListener("input", Helpers.calculateChange);
+        DOM.increaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee += 5; SalesController.updateTotals(); });
+        DOM.decreaseDeliveryBtn.addEventListener("click", () => { appState.deliveryFee = Math.max(0, appState.deliveryFee - 5); SalesController.updateTotals(); });
+        DOM.saveItemBtn.addEventListener("click", ItemsController.save);
+        DOM.itemsTable.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-item-btn")) ItemsController.edit(btn.dataset.id); if (btn.classList.contains("delete-item-btn")) ItemsController.delete(btn.dataset.id); }});
+        DOM.saveCustomerBtn.addEventListener("click", CustomersController.save);
+        DOM.customersList.addEventListener("click", e => { const btn = e.target.closest("button"); if (btn?.classList.contains("edit-customer-btn")) CustomersController.edit(btn.dataset.id); if (btn?.classList.contains("delete-customer-btn")) CustomersController.delete(btn.dataset.id); });
+        DOM.saveUserBtn.addEventListener("click", UsersController.save);
+        DOM.usersList.addEventListener("click", e => { const btn = e.target.closest("button"); if(btn) { if (btn.classList.contains("edit-user-btn")) UsersController.edit(btn.dataset.id); if (btn.classList.contains("delete-user-btn")) UsersController.delete(btn.dataset.id); }});
+        DOM.changePinBtn.addEventListener("click", UsersController.changeAdminPin);
+        DOM.fullResetBtn.addEventListener("click", ReportsController.fullReset);
+        DOM.resetInvoicesBtn.addEventListener("click", ReportsController.resetInvoices);
+        DOM.backupBtn.addEventListener("click", ReportsController.backup);
+        DOM.restoreBtn.addEventListener("click", () => DOM.restoreInput.click());
+        DOM.restoreInput.addEventListener("change", (e) => ReportsController.restore(e.target.files[0]));
+        DOM.startScannerBtn.addEventListener("click", ScannerController.start);
+        DOM.scannerContainer.addEventListener("click", (e) => { if(e.target === DOM.scannerContainer) ScannerController.stop(); });
         DOM.settlementBtn.addEventListener("click", ReportsController.generateSettlement);
     }
 };
