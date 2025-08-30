@@ -533,7 +533,8 @@ bindEvents: () => {
     
     DOM.startScannerBtn.addEventListener("click", ScannerController.start);
     DOM.scannerContainer.addEventListener("click", (e) => { if(e.target === DOM.scannerContainer) ScannerController.stop(); });
-  
+  }
+};
 App.init();
 </script>
 </body>
