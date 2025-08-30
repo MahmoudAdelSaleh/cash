@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>كاشير متكامل - Firebase</title>
+<title>الهادي ماركت - Firebase</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <style>
@@ -61,7 +61,7 @@
 
 <div id="app-container">
   <header>
-    <span>كاشير متكامل</span>
+    <span>الهادي ماركت</span>
     <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button>
   </header>
   <nav>
@@ -176,6 +176,7 @@
         <button type="submit" id="loginBtn"><i class="fas fa-sign-in-alt"></i> دخول</button>
     </form>
 </div>
+<div id="notification-container"></div>
 
 <script type="module">
 // #region Firebase Initialization
@@ -195,6 +196,7 @@ window.getDocument = async (collectionName, docId) => { const d = await getDoc(d
 // #region Global Variables and DOM Elements
 const DOM = {
     appContainer: document.getElementById("app-container"), loginContainer: document.getElementById("login-container"), loginForm: document.getElementById("login-form"),
+    usernameInput: document.getElementById("usernameInput"), passwordInput: document.getElementById("passwordInput"),
     navButtons: document.querySelectorAll("nav button"), sections: document.querySelectorAll("main section"), logoutBtn: document.getElementById("logoutBtn"),
     itemCode: document.getElementById("itemCode"), itemSku: document.getElementById("itemSku"), itemName: document.getElementById("itemName"), itemUnit: document.getElementById("itemUnit"), itemPrice: document.getElementById("itemPrice"), itemStock: document.getElementById("itemStock"), saveItemBtn: document.getElementById("saveItemBtn"), itemsTable: document.getElementById("itemsTable"), filterCategorySelect: document.getElementById("filterCategorySelect"),
     newCustomerId: document.getElementById("newCustomerId"), newCustomerName: document.getElementById("newCustomerName"), saveCustomerBtn: document.getElementById("saveCustomerBtn"), customersList: document.getElementById("customersList"),
@@ -207,28 +209,80 @@ const DOM = {
     notificationContainer: document.getElementById("notification-container"),
 };
 
-let appState = { items: [], invoices: [], customers: [], users: [], adminPIN: "790707071", currentUser: null, currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, editingUserId: null, unsubscribe: {} };
+let appState = { items: [], invoices: [], customers: [], users: [], adminPIN: "790707071", currentUser: null, currentInvoice: [], deliveryFee: 30, editingItemId: null, editingCustomerId: null, selectedCustomer: null, editingUserId: null, unsubscribe: {} };
 // #endregion
 
 // #region Helper & Utility Functions
 const Helpers = {
-    showNotification: (message, duration = 3000) => { /* ... */ },
-    switchTab: (tabId) => { /* ... */ },
-    updateNavButtons: (activeButton) => { /* ... */ },
-    clearItemForm: () => { /* ... */ },
-    calculateChange: () => { /* ... */ },
+    showNotification: (message, duration = 3000) => {
+        const notification = document.createElement("div");
+        notification.className = "notification";
+        notification.textContent = message;
+        DOM.notificationContainer.appendChild(notification);
+        setTimeout(() => notification.classList.add("show"), 10);
+        setTimeout(() => {
+            notification.classList.remove("show");
+            setTimeout(() => notification.remove(), 500);
+        }, duration);
+    },
+    switchTab: (tabId) => {
+        document.querySelectorAll("main section").forEach(s => s.classList.remove("active"));
+        document.getElementById(tabId)?.classList.add("active");
+        App.onTabSwitch(tabId);
+    },
+    updateNavButtons: (activeButton) => {
+        DOM.navButtons.forEach(btn => btn.classList.remove("active"));
+        activeButton.classList.add("active");
+    },
+    clearItemForm: () => {
+        DOM.itemCode.value = '';
+        DOM.itemSku.value = '';
+        DOM.itemName.value = '';
+        DOM.itemUnit.value = '';
+        DOM.itemPrice.value = '';
+        DOM.itemStock.value = '';
+        appState.editingItemId = null;
+        DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الصنف';
+        DOM.itemCode.disabled = false;
+    },
+    calculateChange: () => {
+        const total = parseFloat(DOM.invoiceTotal.textContent) || 0;
+        const paid = parseFloat(DOM.amountPaidInput.value) || 0;
+        const change = paid - total;
+        if (change >= 0) {
+            DOM.changeText.textContent = "الباقي للعميل:";
+            DOM.changeAmount.textContent = change.toFixed(2);
+        } else {
+            DOM.changeText.textContent = "المطلوب منه:";
+            DOM.changeAmount.textContent = Math.abs(change).toFixed(2);
+        }
+    },
 };
 // #endregion
 
 // #region Authentication Controller
 const Auth = {
     login: (username, password) => {
-        if (password === appState.adminPIN) { appState.currentUser = { username: "المدير العام", role: "admin" }; localStorage.setItem('currentUser', JSON.stringify(appState.currentUser)); Auth.showApp("admin"); return; }
+        if (password === appState.adminPIN) {
+            appState.currentUser = { username: "المدير العام", role: "admin" };
+            localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
+            Auth.showApp("admin");
+            return;
+        }
         const user = appState.users.find(u => u.username === username && u.password === password);
-        if (user) { appState.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); Auth.showApp("user"); } 
-        else { Helpers.showNotification("اسم المستخدم أو كلمة المرور غير صحيحة."); }
+        if (user) {
+            appState.currentUser = user;
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            Auth.showApp("user");
+        } else {
+            Helpers.showNotification("اسم المستخدم أو كلمة المرور غير صحيحة.");
+        }
     },
-    logout: () => { /* ... */ },
+    logout: () => {
+        appState.currentUser = null;
+        localStorage.removeItem('currentUser');
+        window.location.reload();
+    },
     showApp: (role) => {
         DOM.loginContainer.style.display = "none";
         DOM.appContainer.style.display = "block";
@@ -238,12 +292,62 @@ const Auth = {
 };
 // #endregion
 
-// #region User Management Controller
-const UsersController = { /* ... Unchanged ... */ };
-// #endregion
-
 // #region Items Controller
-const ItemsController = { /* ... Unchanged ... */ };
+const ItemsController = {
+    render: () => {
+        const filterCategory = DOM.filterCategorySelect.value;
+        appState.items.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+        const filteredItems = filterCategory === "all" ? appState.items : appState.items.filter(item => item.category === filterCategory);
+        DOM.itemsTable.innerHTML = filteredItems.map(item => `
+            <tr>
+                <td>${item.barcode1}</td>
+                <td>${item.name || 'اسم غير متوفر'}</td>
+                <td>${item.unit}</td>
+                <td>${item.sku || ''}</td>
+                <td>${(item.price || 0).toFixed(2)}</td>
+                <td>${item.qunt}</td>
+                <td>${item.category || 'غير محدد'}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-small btn-warning edit-item-btn" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-small btn-danger delete-item-btn" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </td>
+            </tr>`).join("");
+    },
+    edit: (id) => { 
+        const item = appState.items.find(i => i.id === id); if (!item) return; 
+        appState.editingItemId = id; 
+        DOM.itemCode.value = item.barcode1; 
+        DOM.itemCode.disabled = true; 
+        DOM.itemSku.value = item.sku || '';
+        DOM.itemName.value = item.name; 
+        DOM.itemUnit.value = item.unit;
+        DOM.itemPrice.value = item.price; 
+        DOM.itemStock.value = item.qunt; 
+        DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل الصنف'; 
+    },
+    save: async () => {
+        const itemData = { 
+            barcode1: DOM.itemCode.value.trim(), 
+            sku: DOM.itemSku.value.trim(),
+            name: DOM.itemName.value.trim(), 
+            unit: DOM.itemUnit.value.trim(), 
+            price: parseFloat(DOM.itemPrice.value), 
+            qunt: parseInt(DOM.itemStock.value), 
+            category: "غير محدد"
+        };
+        if (!itemData.barcode1 || !itemData.name || !itemData.unit || isNaN(itemData.price) || isNaN(itemData.qunt)) { Helpers.showNotification("يرجى ملء الحقول الأساسية."); return; }
+        
+        try {
+            const docRef = doc(db, "items", itemData.barcode1);
+            await updateDoc(docRef, itemData, { merge: true });
+            Helpers.showNotification(appState.editingItemId ? "تم تحديث الصنف بنجاح." : "تم إضافة الصنف بنجاح.");
+            Helpers.clearItemForm();
+        } catch (e) { console.error("Error saving item: ", e); Helpers.showNotification("حدث خطأ أثناء الحفظ."); }
+    },
+    delete: async (id) => { if (confirm("هل أنت متأكد؟")) { await window.deleteDocument("items", id); Helpers.showNotification("تم حذف الصنف."); } }
+};
 // #endregion
 
 // #region Customers Controller
@@ -251,13 +355,13 @@ const CustomersController = {
     render: () => {
         DOM.customersList.innerHTML = appState.customers.map(cust => {
             const balance = cust.balance || 0;
-            const balanceClass = balance < 0 ? 'text-danger' : 'text-success';
-            const balanceText = balance < 0 ? 'مدين' : 'دائن';
+            const balanceClass = balance < 0 ? 'text-danger' : (balance > 0 ? 'text-success' : '');
+            const balanceText = balance < 0 ? `مدين: ${Math.abs(balance).toFixed(2)}` : `له رصيد: ${balance.toFixed(2)}`;
             return `<div class="customer-card">
                 <div>
                     <b>${cust.name}</b><br/>
                     <small>هاتف: ${cust.id}</small><br/>
-                    <small class="${balanceClass}">الرصيد: ${Math.abs(balance).toFixed(2)} ج.م (${balanceText})</small>
+                    ${balance !== 0 ? `<small class="${balanceClass}">الرصيد: ${balanceText} ج.م</small>` : ''}
                 </div>
                 <div class="action-buttons">
                     <button class="btn-small btn-warning edit-customer-btn" data-id="${cust.id}"><i class="fas fa-edit"></i></button>
@@ -265,25 +369,54 @@ const CustomersController = {
             </div>`;
         }).join("");
     },
-    save: async () => { /* ... */ },
-    edit: (id) => { /* ... */ },
+    save: async () => { 
+        const id = DOM.newCustomerId.value.trim();
+        const name = DOM.newCustomerName.value.trim();
+        if (!id || !name) { Helpers.showNotification("يرجى إدخال اسم ورقم هاتف العميل."); return; }
+        const ref = doc(db, "customers", id);
+        if (!appState.editingCustomerId && (await getDoc(ref)).exists()) { Helpers.showNotification("هذا الرقم مسجل لعميل آخر."); return; }
+        // Set balance to 0 if it's a new customer
+        const dataToSave = appState.editingCustomerId ? { name } : { name, balance: 0 };
+        await updateDoc(ref, dataToSave, { merge: true });
+        Helpers.showNotification("تم حفظ العميل بنجاح.");
+        DOM.newCustomerId.value = "";
+        DOM.newCustomerName.value = "";
+        appState.editingCustomerId = null;
+    },
+    edit: (id) => { const c = appState.customers.find(c => c.id === id); if (!c) return; DOM.newCustomerId.value = c.id; DOM.newCustomerName.value = c.name; appState.editingCustomerId = id; },
 };
 // #endregion
 
 // #region Sales Controller
 const SalesController = {
+    updateTotals: () => { /* ... Unchanged ... */ },
+    renderInvoice: () => { /* ... Unchanged ... */ },
+    addToInvoice: (item) => { /* ... Unchanged ... */ },
+    updateItemQty: (index, change) => { /* ... Unchanged ... */ },
     save: async () => {
         if (appState.currentInvoice.length === 0) { Helpers.showNotification("الفاتورة فارغة."); return; }
         DOM.saveInvoiceBtn.disabled = true;
+
         const total = parseFloat(DOM.invoiceTotal.textContent);
         const paid = parseFloat(DOM.amountPaidInput.value) || 0;
         const customerId = appState.selectedCustomer ? appState.selectedCustomer.id : null;
-        const data = { /* ... */ };
+        
+        const invoiceData = { 
+            customerName: DOM.customerName.value.trim() || 'عميل نقدي', 
+            customerPhone: DOM.customerPhone.value.trim(),
+            paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
+            items: appState.currentInvoice,
+            deliveryFee: appState.deliveryFee,
+            total,
+            paid,
+            due: total - paid,
+            createdAt: serverTimestamp() 
+        };
         
         try {
             const batch = writeBatch(db);
             const newInvoiceRef = doc(collection(db, "invoices"));
-            batch.set(newInvoiceRef, data);
+            batch.set(newInvoiceRef, invoiceData);
 
             appState.currentInvoice.forEach(ci => {
                 const itemRef = doc(db, "items", ci.id);
@@ -298,27 +431,41 @@ const SalesController = {
 
             await batch.commit();
             Helpers.showNotification("تم حفظ الفاتورة بنجاح!");
-            // ... reset form ...
-        } catch (e) { /*...*/ } finally { DOM.saveInvoiceBtn.disabled = false; }
+            appState.currentInvoice = [];
+            DOM.customerName.value = "";
+            DOM.customerPhone.value = "";
+            DOM.amountPaidInput.value = "";
+            appState.selectedCustomer = null;
+            SalesController.renderInvoice();
+
+        } catch (e) {
+            console.error("Save Invoice Error:", e);
+            Helpers.showNotification("فشل حفظ الفاتورة.", 5000);
+        } finally {
+            DOM.saveInvoiceBtn.disabled = false;
+        }
     },
-    // ... other functions
+    print: () => { /* ... Unchanged ... */ },
+    sendWhatsApp: () => { /* ... Unchanged ... */ }
 };
 // #endregion
 
 // #region Reports Controller
 const ReportsController = {
+    renderInvoices: () => { /* ... Unchanged ... */ },
     renderSummary: () => {
         const group = DOM.summaryGroupSelect.value;
         const grouped = {};
         
         const getGroupKey = (date) => {
             if (group === 'week') {
-                const startOfWeek = new Date(date);
-                startOfWeek.setDate(date.getDate() - date.getDay());
-                return `الأسبوع ${startOfWeek.toLocaleDateString('ar-EG')}`;
+                const day = date.getDay();
+                const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+                const startOfWeek = new Date(date.setDate(diff));
+                return `أسبوع ${startOfWeek.toLocaleDateString('ar-EG')}`;
             }
             if (group === 'month') return date.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
-            return date.toLocaleDateString('ar-EG'); // Day
+            return date.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         };
 
         appState.invoices.forEach(inv => {
@@ -330,16 +477,26 @@ const ReportsController = {
             grouped[key].total += inv.total;
         });
         
-        DOM.totalSalesAmount.textContent = appState.invoices.reduce((sum, inv) => sum + inv.total, 0).toFixed(2);
-        DOM.salesSummaryTable.innerHTML = Object.entries(grouped).map(([key, value]) => `<tr><td>${key}</td><td>${value.count}</td><td>${value.total.toFixed(2)}</td></tr>`).join('');
+        DOM.totalSalesAmount.textContent = appState.invoices.reduce((sum, inv) => sum + (inv.total || 0), 0).toFixed(2);
+        DOM.salesSummaryTable.innerHTML = Object.entries(grouped)
+            .sort((a, b) => new Date(b[0]) - new Date(a[0])) // Sort by date descending
+            .map(([key, value]) => `<tr><td>${key}</td><td>${value.count}</td><td>${value.total.toFixed(2)}</td></tr>`).join('');
     },
 };
 // #endregion
 
 // #region App Logic
 const App = {
-    init: () => { /* ... */ },
-    listenToFirebase: () => { /* ... */ },
+    init: () => {
+        App.listenToFirebase();
+        const savedUser = localStorage.getItem('currentUser'); 
+        if (savedUser) { 
+            appState.currentUser = JSON.parse(savedUser); 
+            Auth.showApp(appState.currentUser.role); 
+        }
+        App.bindEvents();
+    },
+    listenToFirebase: () => { /* ... Unchanged ... */ },
     onTabSwitch: (tabId) => {
         switch (tabId) {
             case 'items': ItemsController.render(); break;
@@ -350,8 +507,11 @@ const App = {
         }
     },
     bindEvents: () => {
-        // ... all bindings
+        DOM.loginForm.addEventListener("submit", (e) => { e.preventDefault(); Auth.login(DOM.usernameInput.value, DOM.passwordInput.value); });
+        DOM.navButtons.forEach(btn => btn.addEventListener("click", () => { Helpers.updateNavButtons(btn); Helpers.switchTab(btn.dataset.tab); }));
         DOM.summaryGroupSelect.addEventListener("change", ReportsController.renderSummary);
+        DOM.saveInvoiceBtn.addEventListener("click", SalesController.save);
+        // ... other bindings
     }
 };
 
