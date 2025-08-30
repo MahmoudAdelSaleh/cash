@@ -1,331 +1,449 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة المبيعات - الهادي ماركت</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #2c3e50; --secondary: #3498db; --success: #2ecc71;
-            --danger: #e74c3c; --warning: #f39c12; --light: #ecf0f1;
-            --dark: #2c3e50; --sidebar-width: 250px;
-        }
-        /* ... باقي كود CSS يبقى كما هو ... */
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f5f7f9; }
-        .container { display: flex; min-height: 100vh; }
-        .sidebar { width: var(--sidebar-width); background-color: var(--primary); color: white; position: fixed; height: 100vh; right: 0; top: 0; }
-        .main-content { flex: 1; margin-right: var(--sidebar-width); padding: 20px; }
-        .section { display: none; }
-        .section.active { display: block; }
-        .card { background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
-        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; }
-        .btn-primary { background-color: var(--secondary); color: white; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 15px; text-align: right; border-bottom: 1px solid #eee; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        /* Modal Styles */
-        .modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
-        .close-btn { color: #aaa; float: left; font-size: 28px; font-weight: bold; cursor: pointer; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>الهادي ماركت - نسخة أوفلاين</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --primary-color: #007bff; --secondary-color: #343a40; --success-color: #28a745;
+    --danger-color: #dc3545; --warning-color: #ffc107; --text-dark: #222;
+    --bg-light: #f8f9fa; --white: #fff; --border-color: #dee2e6;
+    --shadow-light: 0 0 6px rgba(0, 0, 0, 0.1);
+  }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg-light); color: var(--text-dark); direction: rtl; }
+  #app-container { display: none; }
+  header { background: var(--primary-color); color: var(--white); padding: 15px; text-align: center; font-size: 24px; display: flex; justify-content: space-between; align-items: center; }
+  nav { display: flex; background: var(--secondary-color); overflow-x: auto; }
+  nav button { flex: 1; flex-shrink: 0; padding: 12px 10px; border: none; background: var(--secondary-color); color: var(--white); font-size: 16px; cursor: pointer; transition: background 0.3s; }
+  nav button.active, nav button:hover { background: #0056b3; }
+  nav button.hidden { display: none; }
+  main { padding: 15px; max-width: 900px; margin: auto; }
+  section { display: none; }
+  section.active { display: block; }
+  input, select, button, table { font-size: 16px; }
+  input, select { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+  button { background: var(--primary-color); color: var(--white); border: none; padding: 10px; border-radius: 4px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  button:disabled { background: #6c757d; cursor: not-allowed; }
+  button:hover:not(:disabled) { background: #0056b3; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+  th, td { border: 1px solid var(--border-color); padding: 10px; text-align: center; vertical-align: middle; }
+  th { background: #e9ecef; }
+  .btn-small { padding: 5px 10px; font-size: 14px; margin: 0 2px; }
+  .btn-danger { background: var(--danger-color); }
+  .btn-warning { background: var(--warning-color); color: var(--text-dark); }
+  .summary-box, .card { background: var(--white); padding: 15px; margin: 15px 0; border-radius: 6px; box-shadow: var(--shadow-light); }
+  .card { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+  .form-group { margin-bottom: 15px; }
+  .flex-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .flex-end { justify-content: flex-end; }
+  #notification-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+  .notification { background-color: rgba(0, 0, 0, 0.8); color: white; padding: 15px 25px; border-radius: 8px; opacity: 0; transition: opacity 0.5s ease-in-out; }
+  .notification.show { opacity: 1; }
+  #login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+  #login-form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+  #logoutBtn { background: var(--danger-color); }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="sidebar">
-            <div class="sidebar-header"><h2>الهادي ماركت</h2></div>
-            <ul class="sidebar-menu">
-                <li class="active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> <span>لوحة التحكم</span></li>
-                <li data-section="sales"><i class="fas fa-cash-register"></i> <span>المبيعات</span></li>
-                <li data-section="products"><i class="fas fa-box"></i> <span>المنتجات</span></li>
-                <li data-section="customers"><i class="fas fa-users"></i> <span>العملاء</span></li>
-                <li data-section="invoices"><i class="fas fa-file-invoice"></i> <span>الفواتير</span></li>
-                <li id="logoutBtn"><i class="fas fa-sign-out-alt"></i> <span>تسجيل الخروج</span></li>
-            </ul>
+
+<div id="app-container">
+  <header>
+    <span>الهادي ماركت (أوفلاين)</span>
+    <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> خروج</button>
+  </header>
+  <nav>
+    <button data-tab="items"><i class="fas fa-box"></i> الأصناف</button>
+    <button data-tab="customers"><i class="fas fa-users"></i> العملاء</button>
+    <button class="active" data-tab="sales"><i class="fas fa-cash-register"></i> المبيعات</button>
+    <button data-tab="invoices"><i class="fas fa-file-invoice"></i> الفواتير</button>
+    <button data-tab="summary"><i class="fas fa-chart-bar"></i> التقارير</button>
+    <button data-tab="users" class="hidden"><i class="fas fa-user-shield"></i> المستخدمين</button>
+  </nav>
+
+  <main>
+    <section id="items">
+      <h2><i class="fas fa-box"></i> إدارة الأصناف</h2>
+      <div class="summary-box">
+          <div class="form-group flex-container">
+            <input type="text" id="itemCode" placeholder="الباركود (المعرّف)" />
+            <input type="text" id="itemName" placeholder="اسم الصنف" />
+            <input type="number" id="itemPrice" placeholder="السعر" min="0" />
+            <input type="number" id="itemStock" placeholder="الكمية" min="0" />
+            <button id="saveItemBtn"><i class="fas fa-save"></i> حفظ</button>
+          </div>
+      </div>
+      <table>
+          <thead><tr><th>باركود</th><th>اسم</th><th>سعر</th><th>كمية</th><th>تعديل/حذف</th></tr></thead>
+          <tbody id="itemsTable"></tbody>
+      </table>
+    </section>
+
+    <section id="customers">
+       <h2><i class="fas fa-users"></i> إدارة العملاء</h2>
+       <div class="summary-box">
+           <div class="form-group flex-container">
+               <input type="text" id="customerId" placeholder="رقم العميل (الهاتف)" />
+               <input type="text" id="customerName" placeholder="اسم العميل" />
+               <button id="saveCustomerBtn"><i class="fas fa-save"></i> حفظ</button>
+           </div>
+       </div>
+       <div id="customersList"></div>
+    </section>
+
+    <section id="sales" class="active">
+        <h2><i class="fas fa-cash-register"></i> قسم المبيعات (قيد التطوير)</h2>
+    </section>
+
+    <section id="invoices">
+        <h2><i class="fas fa-file-invoice-dollar"></i> الفواتير (قيد التطوير)</h2>
+    </section>
+
+    <section id="summary">
+        <h2><i class="fas fa-chart-bar"></i> النسخ الاحتياطي والاستعادة</h2>
+        <div class="summary-box">
+            <p>يمكنك حفظ جميع بياناتك الحالية (أصناف، عملاء، الخ) في ملف JSON على جهازك، أو استعادة البيانات من ملف تم حفظه مسبقاً.</p>
+            <div class="flex-container flex-end" style="gap: 15px; margin-top: 20px;">
+                <button id="backupBtn" class="btn-success"><i class="fas fa-download"></i> نسخة احتياطية</button>
+                <button id="restoreBtn" class="btn-warning"><i class="fas fa-upload"></i> استعادة نسخة</button>
+                <input type="file" id="restoreInput" accept=".json" style="display: none;" />
+          </div>
         </div>
+    </section>
+    
+    <section id="users">
+        <h2><i class="fas fa-user-shield"></i> إدارة المستخدمين</h2>
+        <div class="summary-box">
+           <div class="form-group flex-container">
+               <input type="text" id="usernameInput" placeholder="اسم المستخدم" />
+               <input type="password" id="passwordInput" placeholder="كلمة المرور" />
+               <select id="userRoleSelect"><option value="user">مستخدم عادي</option><option value="admin">مدير</option></select>
+               <button id="saveUserBtn"><i class="fas fa-plus-circle"></i> إضافة</button>
+           </div>
+       </div>
+       <div id="usersList"></div>
+    </section>
+  </main>
+</div>
 
-        <div class="main-content">
-            <div class="section" id="products">
-                <div class="card">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2>إدارة المنتجات</h2>
-                        <button id="addProductBtn" class="btn btn-primary">إضافة منتج جديد</button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table id="productsTable">
-                                <thead><tr><th>اسم المنتج</th><th>الفئة</th><th>السعر</th><th>المخزون</th><th>الإجراءات</th></tr></thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div id="login-container">
+    <form id="login-form">
+        <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
+        <div class="form-group"><input type="text" id="loginUsername" placeholder="اسم المستخدم" required /></div>
+        <div class="form-group"><input type="password" id="loginPassword" placeholder="كلمة المرور" required /></div>
+        <button type="submit" id="loginBtn">دخول</button>
+    </form>
+</div>
 
-            <div class="section" id="customers">
-                <div class="card">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2>إدارة العملاء</h2>
-                        <button id="addCustomerBtn" class="btn btn-primary">إضافة عميل جديد</button>
-                    </div>
-                    <div class="card-body">
-                         <table id="customersTable">
-                                <thead><tr><th>الاسم</th><th>الهاتف</th><th>ملاحظات</th><th>الإجراءات</th></tr></thead>
-                                <tbody></tbody>
-                            </table>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="section active" id="dashboard"><h2>لوحة التحكم (يتم تطويرها)</h2></div>
-            <div class="section" id="sales"><h2>قسم المبيعات (يتم تطويره)</h2></div>
-            <div class="section" id="invoices"><h2>قسم الفواتير (يتم تطويره)</h2></div>
+<div id="notification-container"></div>
 
-        </div>
-    </div>
-
-    <div id="productModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" data-modal="productModal">&times;</span>
-            <h2>إضافة/تعديل منتج</h2>
-            <form id="productForm">
-                <input type="hidden" id="productId">
-                <div class="form-group"><label for="productName">اسم المنتج</label><input type="text" id="productName" class="form-control" required></div>
-                <div class="form-group"><label for="productCategory">الفئة</label><input type="text" id="productCategory" class="form-control"></div>
-                <div class="form-group"><label for="productPrice">السعر</label><input type="number" id="productPrice" class="form-control" required></div>
-                <div class="form-group"><label for="productStock">المخزون</label><input type="number" id="productStock" class="form-control" required></div>
-                <button type="submit" class="btn btn-primary">حفظ</button>
-            </form>
-        </div>
-    </div>
-     <div id="customerModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" data-modal="customerModal">&times;</span>
-            <h2>إضافة/تعديل عميل</h2>
-            <form id="customerForm">
-                 <input type="hidden" id="customerId">
-                <div class="form-group"><label for="customerName">اسم العميل</label><input type="text" id="customerName" class="form-control" required></div>
-                <div class="form-group"><label for="customerPhone">الهاتف</label><input type="tel" id="customerPhone" class="form-control"></div>
-                <div class="form-group"><label for="customerNotes">ملاحظات</label><textarea id="customerNotes" class="form-control"></textarea></div>
-                <button type="submit" class="btn btn-primary">حفظ العميل</button>
-            </form>
-        </div>
-    </div>
-
-    ```
-
-<hr>
-
-#### الجزء الثاني: JavaScript (الكود الجديد والفعّال)
-هذا هو الجزء الأهم. ستحتاج لوضعه داخل وسم `<script>` في نهاية ملفك، و**الأهم** هو ربطه بمشروع Firebase الخاص بك.
-
-```javascript
 <script type="module">
-    // 1. إعداد Firebase (استبدل القيم بقيم مشروعك)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_AUTH_DOMAIN",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID"
+    // --- DOM Elements ---
+    const DOM = {
+        app: document.getElementById('app-container'),
+        login: document.getElementById('login-container'),
+        loginForm: document.getElementById('login-form'),
+        navButtons: document.querySelectorAll('nav button'),
+        notificationContainer: document.getElementById('notification-container'),
+        logoutBtn: document.getElementById('logoutBtn'),
+        // Items
+        saveItemBtn: document.getElementById('saveItemBtn'),
+        itemCode: document.getElementById('itemCode'),
+        itemName: document.getElementById('itemName'),
+        itemPrice: document.getElementById('itemPrice'),
+        itemStock: document.getElementById('itemStock'),
+        itemsTable: document.getElementById('itemsTable'),
+        // Customers
+        saveCustomerBtn: document.getElementById('saveCustomerBtn'),
+        customerId: document.getElementById('customerId'),
+        customerName: document.getElementById('customerName'),
+        customersList: document.getElementById('customersList'),
+        // Users
+        saveUserBtn: document.getElementById('saveUserBtn'),
+        usernameInput: document.getElementById('usernameInput'),
+        passwordInput: document.getElementById('passwordInput'),
+        userRoleSelect: document.getElementById('userRoleSelect'),
+        usersList: document.getElementById('usersList'),
+        // Backup & Restore
+        backupBtn: document.getElementById('backupBtn'),
+        restoreBtn: document.getElementById('restoreBtn'),
+        restoreInput: document.getElementById('restoreInput'),
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // --- Application State ---
+    let state = {
+        currentUser: null,
+        editingItemId: null,
+        editingCustomerId: null,
+        editingUserId: null,
+        data: {
+            items: [],
+            customers: [],
+            users: [],
+            invoices: [],
+            config: {}
+        }
+    };
 
-    // --- DOM Elements ---
-    const menuItems = document.querySelectorAll('.sidebar-menu li');
-    const sections = document.querySelectorAll('.section');
-    const modals = document.querySelectorAll('.modal');
-    const closeButtons = document.querySelectorAll('.close-btn');
-
-    // --- Navigation Logic ---
-    menuItems.forEach(item => {
-        item.addEventListener('click', function() {
-            if (this.id === 'logoutBtn') {
-                if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                    // Handle logout logic here
+    // --- Data Manager (Handles localStorage and JSON) ---
+    const DataManager = {
+        async initialize() {
+            const localData = localStorage.getItem('appData');
+            if (localData) {
+                state.data = JSON.parse(localData);
+                console.log('Data loaded from localStorage.');
+            } else {
+                try {
+                    const response = await fetch('data.json');
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    state.data = await response.json();
+                    this.save();
+                    console.log('Initial data loaded from data.json.');
+                } catch (error) {
+                    console.error('Failed to fetch initial data:', error);
+                    showNotification('فشل تحميل البيانات الأولية. تأكد من وجود ملف data.json', 'danger');
                 }
+            }
+        },
+        save() {
+            localStorage.setItem('appData', JSON.stringify(state.data));
+        }
+    };
+    
+    // --- UI Functions ---
+    const showNotification = (message, type = 'success') => {
+        const notif = document.createElement('div');
+        notif.className = `notification ${type}`;
+        notif.textContent = message;
+        DOM.notificationContainer.appendChild(notif);
+        setTimeout(() => notif.classList.add('show'), 10);
+        setTimeout(() => {
+            notif.classList.remove('show');
+            setTimeout(() => notif.remove(), 500);
+        }, 3000);
+    };
+
+    const switchTab = (tabId) => {
+        document.querySelectorAll('main section').forEach(s => s.classList.remove('active'));
+        document.getElementById(tabId)?.classList.add('active');
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+    };
+
+    // --- Authentication ---
+    const Auth = {
+        login(username, password) {
+            const user = state.data.users.find(u => u.username === username && u.password === password);
+            const isAdmin = password === state.data.config.adminPin;
+
+            if (isAdmin) {
+                state.currentUser = { username: 'المدير العام', role: 'admin' };
+            } else if (user) {
+                state.currentUser = user;
+            }
+
+            if (state.currentUser) {
+                sessionStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+                this.showApp();
+            } else {
+                showNotification('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger');
+            }
+        },
+        logout() {
+            state.currentUser = null;
+            sessionStorage.removeItem('currentUser');
+            DOM.app.style.display = 'none';
+            DOM.login.style.display = 'flex';
+        },
+        showApp() {
+            DOM.login.style.display = 'none';
+            DOM.app.style.display = 'block';
+            document.querySelector('button[data-tab="users"]').classList.toggle('hidden', state.currentUser.role !== 'admin');
+            switchTab('sales');
+        },
+        checkSession() {
+            const user = sessionStorage.getItem('currentUser');
+            if (user) {
+                state.currentUser = JSON.parse(user);
+                this.showApp();
+            }
+        }
+    };
+
+    // --- Items Controller ---
+    const ItemsController = {
+        render() {
+            DOM.itemsTable.innerHTML = state.data.items.map(item => `
+                <tr>
+                    <td>${item.id}</td>
+                    <td>${item.name}</td>
+                    <td>${item.price}</td>
+                    <td>${item.stock}</td>
+                    <td>
+                        <button class="btn-small btn-warning edit-item" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-small btn-danger delete-item" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        },
+        save() {
+            const id = DOM.itemCode.value.trim();
+            const name = DOM.itemName.value.trim();
+            const price = parseFloat(DOM.itemPrice.value);
+            const stock = parseInt(DOM.itemStock.value);
+
+            if (!id || !name || isNaN(price) || isNaN(stock)) {
+                showNotification('يرجى ملء جميع الحقول بشكل صحيح', 'danger');
                 return;
             }
             
-            menuItems.forEach(i => i.classList.remove('active'));
-            sections.forEach(s => s.classList.remove('active'));
-            
-            this.classList.add('active');
-            const sectionId = this.getAttribute('data-section');
-            document.getElementById(sectionId).classList.add('active');
-        });
-    });
+            const existingItem = state.data.items.find(item => item.id === id);
 
-    // --- Modal Logic ---
-    const openModal = (modalId) => document.getElementById(modalId).style.display = 'block';
-    const closeModal = (modalId) => document.getElementById(modalId).style.display = 'none';
-
-    closeButtons.forEach(btn => btn.onclick = () => closeModal(btn.dataset.modal));
-    window.onclick = (event) => {
-        modals.forEach(modal => {
-            if (event.target == modal) {
-                modal.style.display = "none";
+            if (state.editingItemId && state.editingItemId !== id) {
+                 showNotification('لا يمكن تغيير الباركود أثناء التعديل', 'danger');
+                 return;
             }
-        });
-    };
-
-    // ==========================================
-    // --- Products Management (CRUD) ---
-    // ==========================================
-    const productForm = document.getElementById('productForm');
-    const productsTableBody = document.querySelector('#productsTable tbody');
-
-    document.getElementById('addProductBtn').onclick = () => {
-        productForm.reset();
-        document.getElementById('productId').value = '';
-        openModal('productModal');
-    };
-
-    // Save or Update Product
-    productForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('productId').value;
-        const productData = {
-            name: document.getElementById('productName').value,
-            category: document.getElementById('productCategory').value,
-            price: parseFloat(document.getElementById('productPrice').value),
-            stock: parseInt(document.getElementById('productStock').value),
-        };
-
-        if (id) { // Update existing product
-            await updateDoc(doc(db, "products", id), productData);
-            alert('تم تحديث المنتج بنجاح!');
-        } else { // Add new product
-            await addDoc(collection(db, "products"), productData);
-            alert('تمت إضافة المنتج بنجاح!');
-        }
-        
-        productForm.reset();
-        closeModal('productModal');
-        fetchProducts();
-    });
-
-    // Fetch and Display Products
-    const fetchProducts = async () => {
-        productsTableBody.innerHTML = '';
-        const querySnapshot = await getDocs(collection(db, "products"));
-        querySnapshot.forEach((doc) => {
-            const product = doc.data();
-            const row = `
-                <tr data-id="${doc.id}">
-                    <td>${product.name}</td>
-                    <td>${product.category}</td>
-                    <td>${product.price} ر.س</td>
-                    <td>${product.stock}</td>
-                    <td>
-                        <button class="btn btn-warning btn-sm edit-product"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-danger btn-sm delete-product"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `;
-            productsTableBody.innerHTML += row;
-        });
-    };
-
-    // Handle Edit and Delete buttons on products table
-    productsTableBody.addEventListener('click', async (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-        
-        const row = target.closest('tr');
-        const id = row.dataset.id;
-        
-        if (target.classList.contains('delete-product')) {
-            if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
-                await deleteDoc(doc(db, "products", id));
-                fetchProducts();
+            if (!state.editingItemId && existingItem) {
+                showNotification('هذا الباركود موجود بالفعل', 'danger');
+                return;
             }
-        } else if (target.classList.contains('edit-product')) {
-             const querySnapshot = await getDocs(collection(db, "products"));
-             const productDoc = querySnapshot.docs.find(doc => doc.id === id);
-             if(productDoc){
-                const product = productDoc.data();
-                document.getElementById('productId').value = id;
-                document.getElementById('productName').value = product.name;
-                document.getElementById('productCategory').value = product.category;
-                document.getElementById('productPrice').value = product.price;
-                document.getElementById('productStock').value = product.stock;
-                openModal('productModal');
-             }
-        }
-    });
 
-    // ========================================
-    // --- Customers Management (CRUD) ---
-    // ========================================
-     const customerForm = document.getElementById('customerForm');
-     const customersTableBody = document.querySelector('#customersTable tbody');
-     
-     document.getElementById('addCustomerBtn').onclick = () => {
-        customerForm.reset();
-        document.getElementById('customerId').value = '';
-        openModal('customerModal');
+            if (state.editingItemId) { // Update
+                const item = state.data.items.find(i => i.id === state.editingItemId);
+                item.name = name;
+                item.price = price;
+                item.stock = stock;
+            } else { // Create
+                state.data.items.push({ id, name, price, stock });
+            }
+
+            DataManager.save();
+            this.render();
+            this.clearForm();
+        },
+        edit(id) {
+            const item = state.data.items.find(i => i.id === id);
+            if (!item) return;
+            state.editingItemId = id;
+            DOM.itemCode.value = item.id;
+            DOM.itemName.value = item.name;
+            DOM.itemPrice.value = item.price;
+            DOM.itemStock.value = item.stock;
+            DOM.saveItemBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل';
+        },
+        delete(id) {
+            if (confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
+                state.data.items = state.data.items.filter(i => i.id !== id);
+                DataManager.save();
+                this.render();
+            }
+        },
+        clearForm() {
+            state.editingItemId = null;
+            DOM.itemCode.value = '';
+            DOM.itemName.value = '';
+            DOM.itemPrice.value = '';
+            DOM.itemStock.value = '';
+            DOM.saveItemBtn.innerHTML = '<i class="fas fa-save"></i> حفظ';
+        }
+    };
+    
+    // --- Customers & Users Controllers (Similar structure) ---
+    // Placeholder for Customer/User logic to be filled in similarly
+    const CustomersController = {
+        render() {
+             DOM.customersList.innerHTML = state.data.customers.map(c => `
+                <div class="card">
+                    <div><b>${c.name}</b><br/><small>${c.id}</small></div>
+                    <div class="flex-container">
+                        <button class="btn-small btn-warning edit-customer" data-id="${c.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-small btn-danger delete-customer" data-id="${c.id}"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        },
+        save(){ /* ... */ }, edit(id){ /* ... */ }, delete(id){ /* ... */ }, clearForm(){ /* ... */ }
+    };
+     const UsersController = {
+        render() { /* ... */ }, save(){ /* ... */ }, edit(id){ /* ... */ }, delete(id){ /* ... */ }, clearForm(){ /* ... */ }
     };
 
-     // Save or Update Customer
-    customerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('customerId').value;
-        const customerData = {
-            name: document.getElementById('customerName').value,
-            phone: document.getElementById('customerPhone').value,
-            notes: document.getElementById('customerNotes').value,
-        };
-
-        if (id) {
-            await updateDoc(doc(db, "customers", id), customerData);
-            alert('تم تحديث العميل بنجاح!');
-        } else {
-            await addDoc(collection(db, "customers"), customerData);
-            alert('تمت إضافة العميل بنجاح!');
+    // --- Backup & Restore ---
+    const BackupRestore = {
+        backup() {
+            const dataStr = JSON.stringify(state.data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showNotification('تم إنشاء النسخة الاحتياطية بنجاح.');
+        },
+        restore(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const restoredData = JSON.parse(e.target.result);
+                    // Basic validation
+                    if (restoredData.items && restoredData.customers && restoredData.users) {
+                        state.data = restoredData;
+                        DataManager.save();
+                        showNotification('تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة.');
+                        setTimeout(() => window.location.reload(), 2000);
+                    } else {
+                        throw new Error('Invalid file structure');
+                    }
+                } catch (err) {
+                    showNotification('خطأ في قراءة الملف. تأكد من أنه ملف نسخة احتياطية صالح.', 'danger');
+                }
+            };
+            reader.readAsText(file);
         }
-        
-        customerForm.reset();
-        closeModal('customerModal');
-        fetchCustomers();
-    });
+    };
 
-    // Fetch and Display Customers
-    const fetchCustomers = async () => {
-        customersTableBody.innerHTML = '';
-        const querySnapshot = await getDocs(collection(db, "customers"));
-        querySnapshot.forEach((doc) => {
-            const customer = doc.data();
-            const row = `
-                <tr data-id="${doc.id}">
-                    <td>${customer.name}</td>
-                    <td>${customer.phone}</td>
-                    <td>${customer.notes}</td>
-                    <td>
-                        <button class="btn btn-warning btn-sm edit-customer"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-danger btn-sm delete-customer"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `;
-            customersTableBody.innerHTML += row;
+    // --- Event Listeners ---
+    function setupEventListeners() {
+        DOM.navButtons.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
+        DOM.loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            Auth.login(username, password);
         });
-    };
+        DOM.logoutBtn.onclick = Auth.logout;
+        
+        // Items
+        DOM.saveItemBtn.onclick = () => ItemsController.save();
+        DOM.itemsTable.addEventListener('click', e => {
+            if (e.target.closest('.edit-item')) ItemsController.edit(e.target.closest('.edit-item').dataset.id);
+            if (e.target.closest('.delete-item')) ItemsController.delete(e.target.closest('.delete-item').dataset.id);
+        });
+        
+        // Backup & Restore
+        DOM.backupBtn.onclick = BackupRestore.backup;
+        DOM.restoreBtn.onclick = () => DOM.restoreInput.click();
+        DOM.restoreInput.onchange = BackupRestore.restore;
+    }
 
-    // Handle Edit and Delete for customers
-    customersTableBody.addEventListener('click', async (e) => {
-        // ... (Logic similar to products for edit/delete) ...
-    });
+    // --- App Initialization ---
+    async function main() {
+        await DataManager.initialize();
+        Auth.checkSession();
+        setupEventListeners();
+        ItemsController.render();
+        CustomersController.render();
+        // UsersController.render();
+    }
 
-
-    // Initial data fetch on page load
-    fetchProducts();
-    fetchCustomers();
+    main();
 </script>
 </body>
 </html>
