@@ -1,0 +1,48 @@
+{
+  "config": {
+    "adminPin": "790707071"
+  },
+  "items": [
+    {
+      "id": "1001",
+      "name": "أرز بسمتي فاخر",
+      "price": 35.50,
+      "stock": 100
+    },
+    {
+      "id": "1002",
+      "name": "زيت زيتون بكر",
+      "price": 50.00,
+      "stock": 75
+    },
+    {
+      "id": "1003",
+      "name": "سكر أبيض ناعم",
+      "price": 12.00,
+      "stock": 250
+    }
+  ],
+  "customers": [
+    {
+      "id": "0551234567",
+      "name": "أحمد عبدالله"
+    },
+    {
+      "id": "0509876543",
+      "name": "فاطمة محمد"
+    }
+  ],
+  "users": [
+    {
+      "username": "cashier1",
+      "password": "123",
+      "role": "user"
+    },
+    {
+      "username": "manager",
+      "password": "456",
+      "role": "admin"
+    }
+  ],
+  "invoices": []
+}
