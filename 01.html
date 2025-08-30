@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المبيعات - الهادي ماركت</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --sidebar-width: 250px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            direction: rtl;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* الشريط الجانبي */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--primary);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            right: 0;
+            top: 0;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-header h2 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 10px 0;
+        }
+        
+        .sidebar-menu li {
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sidebar-menu li i {
+            margin-left: 10px;
+            font-size: 18px;
+        }
+        
+        .sidebar-menu li:hover, .sidebar-menu li.active {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* المحتوى الرئيسي */
+        .main-content {
+            flex: 1;
+            margin-right: var(--sidebar-width);
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            color: var(--dark);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-info span {
+            margin-left: 10px;
+        }
+        
+        /* البطاقات */
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .card-header h2 {
+            font-size: 20px;
+            color: var(--dark);
+        }
+        
+        /* الأزرار */
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn i {
+            margin-left: 5px;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        /* الجداول */
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        table th, table td {
+            padding: 12px 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        
+        table th {
+            background-color: #f8f9fa;
+            color: var(--dark);
+            font-weight: 600;
+        }
+        
+        table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* أشكال الإدخال */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+        
+        /* حالة الاتصال */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+        }
+        
+        .connection-status.online {
+            background-color: var(--success);
+        }
+        
+        .connection-status.offline {
+            background-color: var(--danger);
+        }
+        
+        .connection-status i {
+            margin-left: 5px;
+        }
+        
+        /* الأقسام */
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        /* الشبكة */
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+        }
+        
+        .col {
+            flex: 1;
+            padding: 0 10px;
+            min-width: 300px;
+            margin-bottom: 20px;
+        }
+        
+        /* التنبيهات */
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        /* التبويبات */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom: 2px solid var(--secondary);
+            color: var(--secondary);
+        }
+        
+        /* المحاور */
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .badge-warning {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .badge-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        /* المحتوى المخفي */
+        .hidden-content {
+            display: none;
+        }
+        
+        /* وسائط متجاوبة */
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 70px;
+                overflow: visible;
+            }
+            
+            .sidebar-header h2, .sidebar-menu li span {
+                display: none;
+            }
+            
+            .sidebar-menu li {
+                justify-content: center;
+            }
+            
+            .sidebar-menu li i {
+                margin: 0;
+                font-size: 20px;
+            }
+            
+            .main-content {
+                margin-right: 70px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .col {
+                flex: 100%;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .user-info {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- الشريط الجانبي -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>الهادي ماركت</h2>
+                <p>نظام إدارة المبيعات</p>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>لوحة التحكم</span>
+                </li>
+                <li data-section="sales">
+                    <i class="fas fa-cash-register"></i>
+                    <span>المبيعات</span>
+                </li>
+                <li data-section="products">
+                    <i class="fas fa-box"></i>
+                    <span>المنتجات</span>
+                </li>
+                <li data-section="customers">
+                    <i class="fas fa-users"></i>
+                    <span>العملاء</span>
+                </li>
+                <li data-section="invoices">
+                    <i class="fas fa-file-invoice"></i>
+                    <span>الفواتير</span>
+                </li>
+                <li data-section="employees">
+                    <i class="fas fa-user-tie"></i>
+                    <span>الموظفين</span>
+                </li>
+                <li data-section="reports">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>التقارير</span>
+                </li>
+                <li data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>الإعدادات</span>
+                </li>
+                <li id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>تسجيل الخروج</span>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- المحتوى الرئيسي -->
+        <div class="main-content">
+            <div class="header">
+                <h1>لوحة تحكم نظام المبيعات</h1>
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=مدير+النظام&background=3498db&color=fff" alt="User" width="40" height="40" style="border-radius: 50%;">
+                    <span>مدير النظام</span>
+                </div>
+            </div>
+            
+            <!-- قسم لوحة التحكم -->
+            <div class="section active" id="dashboard">
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>إحصائيات اليوم</h2>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                    <div style="text-align: center;">
+                                        <h3>25</h3>
+                                        <p>فواتير اليوم</p>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <h3>5,430 ر.س</h3>
+                                        <p>إجمالي المبيعات</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <div style="text-align: center;">
+                                        <h3>14</h3>
+                                        <p>عملاء جدد</p>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <h3>83</h3>
+                                        <p>منتجات مباعة</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>أحدث الفواتير</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>رقم الفاتورة</th>
+                                                <th>العميل</th>
+                                                <th>المبلغ</th>
+                                                <th>الحالة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>#12345</td>
+                                                <td>أحمد محمد</td>
+                                                <td>350 ر.س</td>
+                                                <td><span class="badge badge-success">مسددة</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>#12344</td>
+                                                <td>سعيد عبدالله</td>
+                                                <td>720 ر.س</td>
+                                                <td><span class="badge badge-warning">مدينة</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>#12343</td>
+                                                <td>فاطمة علي</td>
+                                                <td>240 ر.س</td>
+                                                <td><span class="badge badge-success">مسددة</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>المنتجات الأكثر مبيعاً</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>المنتج</th>
+                                                <th>الكمية</th>
+                                                <th>الإيرادات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>أرز بسمتي</td>
+                                                <td>45 كيس</td>
+                                                <td>1,350 ر.س</td>
+                                            </tr>
+                                            <tr>
+                                                <td>زيت زيتون</td>
+                                                <td>32 عبوة</td>
+                                                <td>960 ر.س</td>
+                                            </tr>
+                                            <tr>
+                                                <td>سكر</td>
+                                                <td>28 كيس</td>
+                                                <td>420 ر.س</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>التقويم والأحداث</h2>
+                            </div>
+                            <div class="card-body">
+                                <div style="text-align: center; padding: 20px 0;">
+                                    <h3 style="font-size: 24px; margin-bottom: 10px;">الأحد 12 مايو</h3>
+                                    <p style="color: #777;">2023</p>
+                                </div>
+                                <div style="margin-top: 20px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                        <div style="background-color: #3498db; width: 10px; height: 10px; border-radius: 50%; margin-left: 10px;"></div>
+                                        <div>
+                                            <p style="font-weight: 500;">اجتماع مع الموردين</p>
+                                            <p style="color: #777; font-size: 14px;">10:00 صباحاً</p>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                        <div style="background-color: #2ecc71; width: 10px; height: 10px; border-radius: 50%; margin-left: 10px;"></div>
+                                        <div>
+                                            <p style="font-weight: 500;">جرد المخزون</p>
+                                            <p style="color: #777; font-size: 14px;">03:00 مساءً</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم المبيعات -->
+            <div class="section" id="sales">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>إضافة فاتورة بيع</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label>بحث عن منتج</label>
+                                    <input type="text" class="form-control" placeholder="اكتب اسم المنتج أو الباركود">
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>المنتج</th>
+                                                <th>السعر</th>
+                                                <th>المخزون</th>
+                                                <th>الإجراء</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>أرز بسمتي - 5 كجم</td>
+                                                <td>30 ر.س</td>
+                                                <td>45</td>
+                                                <td><button class="btn btn-primary">إضافة</button></td>
+                                            </tr>
+                                            <tr>
+                                                <td>زيت زيتون - 2 لتر</td>
+                                                <td>35 ر.س</td>
+                                                <td>32</td>
+                                                <td><button class="btn btn-primary">إضافة</button></td>
+                                            </tr>
+                                            <tr>
+                                                <td>سكر - 2 كجم</td>
+                                                <td>15 ر.س</td>
+                                                <td>28</td>
+                                                <td><button class="btn btn-primary">إضافة</button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="col">
+                                <div class="form-group">
+                                    <label>العميل</label>
+                                    <select class="form-control">
+                                        <option>عميل نقدي</option>
+                                        <option>أحمد محمد</option>
+                                        <option>سعيد عبدالله</option>
+                                        <option>فاطمة علي</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>المنتج</th>
+                                                <th>الكمية</th>
+                                                <th>السعر</th>
+                                                <th>الإجمالي</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>أرز بسمتي - 5 كجم</td>
+                                                <td>2</td>
+                                                <td>30 ر.س</td>
+                                                <td>60 ر.س</td>
+                                            </tr>
+                                            <tr>
+                                                <td>زيت زيتون - 2 لتر</td>
+                                                <td>1</td>
+                                                <td>35 ر.س</td>
+                                                <td>35 ر.س</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                                    <div>
+                                        <h3>المجموع: 95 ر.س</h3>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-success">حفظ الفاتورة</button>
+                                        <button class="btn btn-primary">طباعة</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم المنتجات -->
+            <div class="section" id="products">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>إدارة المنتجات</h2>
+                        <button class="btn btn-primary">إضافة منتج جديد</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>الصورة</th>
+                                        <th>اسم المنتج</th>
+                                        <th>الفئة</th>
+                                        <th>السعر</th>
+                                        <th>المخزون</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><img src="https://via.placeholder.com/40" alt="Product" style="border-radius: 4px;"></td>
+                                        <td>أرز بسمتي - 5 كجم</td>
+                                        <td>أرز وحبوب</td>
+                                        <td>30 ر.س</td>
+                                        <td>45</td>
+                                        <td><span class="badge badge-success">متوفر</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><img src="https://via.placeholder.com/40" alt="Product" style="border-radius: 4px;"></td>
+                                        <td>زيت زيتون - 2 لتر</td>
+                                        <td>زيوت</td>
+                                        <td>35 ر.س</td>
+                                        <td>32</td>
+                                        <td><span class="badge badge-success">متوفر</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><img src="https://via.placeholder.com/40" alt="Product" style="border-radius: 4px;"></td>
+                                        <td>سكر - 2 كجم</td>
+                                        <td>مواد غذائية</td>
+                                        <td>15 ر.س</td>
+                                        <td>28</td>
+                                        <td><span class="badge badge-success">متوفر</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم العملاء -->
+            <div class="section" id="customers">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>إدارة العملاء</h2>
+                        <button class="btn btn-primary">إضافة عميل جديد</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>الاسم</th>
+                                        <th>الهاتف</th>
+                                        <th>البريد الإلكتروني</th>
+                                        <th>الفواتير</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>أحمد محمد</td>
+                                        <td>0551234567</td>
+                                        <td>ahmed@example.com</td>
+                                        <td>15 فاتورة</td>
+                                        <td><span class="badge badge-success">نشط</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>سعيد عبدالله</td>
+                                        <td>0557654321</td>
+                                        <td>saied@example.com</td>
+                                        <td>8 فواتير</td>
+                                        <td><span class="badge badge-warning">مدين</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>فاطمة علي</td>
+                                        <td>0551122334</td>
+                                        <td>fatima@example.com</td>
+                                        <td>12 فاتورة</td>
+                                        <td><span class="badge badge-success">نشط</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم الفواتير -->
+            <div class="section" id="invoices">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>الفواتير</h2>
+                        <div>
+                            <button class="btn btn-primary">فاتورة جديدة</button>
+                            <button class="btn btn-success">تصدير</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>رقم الفاتورة</th>
+                                        <th>التاريخ</th>
+                                        <th>العميل</th>
+                                        <th>المبلغ</th>
+                                        <th>طريقة الدفع</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>#12345</td>
+                                        <td>12/05/2023</td>
+                                        <td>أحمد محمد</td>
+                                        <td>350 ر.س</td>
+                                        <td>نقدي</td>
+                                        <td><span class="badge badge-success">مسددة</span></td>
+                                        <td>
+                                            <button class="btn btn-primary"><i class="fas fa-eye"></i></button>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#12344</td>
+                                        <td>11/05/2023</td>
+                                        <td>سعيد عبدالله</td>
+                                        <td>720 ر.س</td>
+                                        <td>آجل</td>
+                                        <td><span class="badge badge-warning">مدينة</span></td>
+                                        <td>
+                                            <button class="btn btn-primary"><i class="fas fa-eye"></i></button>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>#12343</td>
+                                        <td>10/05/2023</td>
+                                        <td>فاطمة علي</td>
+                                        <td>240 ر.س</td>
+                                        <td>بطاقة ائتمان</td>
+                                        <td><span class="badge badge-success">مسددة</span></td>
+                                        <td>
+                                            <button class="btn btn-primary"><i class="fas fa-eye"></i></button>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم الموظفين -->
+            <div class="section" id="employees">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>إدارة الموظفين</h2>
+                        <button class="btn btn-primary">إضافة موظف جديد</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>الاسم</th>
+                                        <th>المسمى الوظيفي</th>
+                                        <th>الهاتف</th>
+                                        <th>الراتب</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>خالد أحمد</td>
+                                        <td>مدير مبيعات</td>
+                                        <td>0551234567</td>
+                                        <td>5,000 ر.س</td>
+                                        <td><span class="badge badge-success">نشط</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>محمد علي</td>
+                                        <td>كاشير</td>
+                                        <td>0557654321</td>
+                                        <td>3,500 ر.س</td>
+                                        <td><span class="badge badge-success">نشط</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>سارة عبدالله</td>
+                                        <td>محاسبة</td>
+                                        <td>0551122334</td>
+                                        <td>4,200 ر.س</td>
+                                        <td><span class="badge badge-success">نشط</span></td>
+                                        <td>
+                                            <button class="btn btn-warning"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم التقارير -->
+            <div class="section" id="reports">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>التقارير والإحصائيات</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>تقارير المبيعات</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>الفترة</label>
+                                            <select class="form-control">
+                                                <option>اليوم</option>
+                                                <option>أسبوع</option>
+                                                <option>شهر</option>
+                                                <option>سنة</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary">عرض التقرير</button>
+                                        <button class="btn btn-success">تصدير PDF</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>تقارير العملاء</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>نوع التقرير</label>
+                                            <select class="form-control">
+                                                <option>الفواتير غير المسددة</option>
+                                                <option>أفضل العملاء</option>
+                                                <option>حركة العملاء</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary">عرض التقرير</button>
+                                        <button class="btn btn-success">تصدير PDF</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>تقارير المخزون</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>نوع التقرير</label>
+                                            <select class="form-control">
+                                                <option>منتوش منتهية الصلاحية</option>
+                                                <option>منتوش قاربت على الانتهاء</option>
+                                                <option>حركة المخزون</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary">عرض التقرير</button>
+                                        <button class="btn btn-success">تصدير PDF</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>تقارير الموظفين</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>نوع التقرير</label>
+                                            <select class="form-control">
+                                                <option>إنتاجية الموظفين</option>
+                                                <option>رواتب الموظفين</option>
+                                                <option>سجل الحضور</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary">عرض التقرير</button>
+                                        <button class="btn btn-success">تصدير PDF</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- قسم الإعدادات -->
+            <div class="section" id="settings">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>إعدادات النظام</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>إعدادات المتجر</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>اسم المتجر</label>
+                                            <input type="text" class="form-control" value="الهادي ماركت">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>هاتف المتجر</label>
+                                            <input type="text" class="form-control" value="0123456789">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>عنوان المتجر</label>
+                                            <textarea class="form-control">شارع الملك فهد، الرياض</textarea>
+                                        </div>
+                                        <button class="btn btn-primary">حفظ التغييرات</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>إعدادات الفواتير</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>بادئة رقم الفاتورة</label>
+                                            <input type="text" class="form-control" value="#">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>الضرائب (%)</label>
+                                            <input type="number" class="form-control" value="15">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>عملة المتجر</label>
+                                            <select class="form-control">
+                                                <option>ريال سعودي (ر.س)</option>
+                                                <option>دولار ($)</option>
+                                                <option>يورو (€)</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary">حفظ التغييرات</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>النسخ الاحتياطي</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <p>قم بعمل نسخة احتياطية من بيانات النظام بشكل دوري</p>
+                                        <button class="btn btn-success">إنشاء نسخة احتياطية</button>
+                                        <button class="btn btn-primary">استعادة نسخة</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>إعدادات المستخدمين</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>صلاحيات المستخدمين</label>
+                                            <select class="form-control">
+                                                <option>مدير النظام</option>
+                                                <option>مشرف</option>
+                                                <option>مستخدم عادي</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-primary">حفظ التغييرات</button>
+                                        <button class="btn btn-warning">تغيير كلمة المرور</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- حالة الاتصال -->
+    <div class="connection-status online">
+        <i class="fas fa-wifi"></i> متصل بالإنترنت
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // تبديل الأقسام
+            const menuItems = document.querySelectorAll('.sidebar-menu li');
+            const sections = document.querySelectorAll('.section');
+            
+            menuItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (this.id === 'logoutBtn') {
+                        if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                            alert('تم تسجيل الخروج بنجاح');
+                            // هنا يمكن توجيه المستخدم إلى صفحة تسجيل الدخول
+                        }
+                        return;
+                    }
+                    
+                    // إزالة النشاط من جميع العناصر
+                    menuItems.forEach(i => i.classList.remove('active'));
+                    sections.forEach(s => s.classList.remove('active'));
+                    
+                    // إضافة النشاط للعنصر الحالي
+                    this.classList.add('active');
+                    
+                    // إظهار القسم المناسب
+                    const sectionId = this.getAttribute('data-section');
+                    document.getElementById(sectionId).classList.add('active');
+                });
+            });
+            
+            // محاكاة حالة الاتصال
+            setInterval(() => {
+                const status = document.querySelector('.connection-status');
+                const isOnline = Math.random() > 0.2; // 80% اتصال, 20% انقطاع
+                
+                if (isOnline) {
+                    status.classList.remove('offline');
+                    status.classList.add('online');
+                    status.innerHTML = '<i class="fas fa-wifi"></i> متصل بالإنترنت';
+                } else {
+                    status.classList.remove('online');
+                    status.classList.add('offline');
+                    status.innerHTML = '<i class="fas fa-wifi-slash"></i> غير متصل';
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
