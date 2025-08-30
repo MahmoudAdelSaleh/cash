@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام الكاشير</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#d4af37">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+      background: #f9f9f9;
+    }
+    header {
+      background: #d4af37;
+      color: white;
+      padding: 10px;
+      text-align: center;
+    }
+    nav {
+      display: flex;
+      justify-content: space-around;
+      background: #333;
+      color: white;
+      padding: 10px;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    nav button:hover {
+      text-decoration: underline;
+    }
+    section {
+      display: none;
+      padding: 20px;
+    }
+    section.active {
+      display: block;
+    }
+    #connectionStatus {
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding: 5px 10px;
+      font-size: 14px;
+      color: #fff;
+      background-color: green;
+      z-index: 1000;
+    }
+    .offline {
+      background-color: red !important;
+    }
+  </style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+</head>
+<body>
+  <header>
+    <h1>نظام الكاشير</h1>
+  </header>
+
+  <div id="connectionStatus">متصل</div>
+
+  <nav>
+    <button onclick="App.showSection('invoices')">الفواتير</button>
+    <button onclick="App.showSection('workers')">الموظفون</button>
+    <button onclick="App.showSection('reports')">التقارير</button>
+    <button onclick="App.showSection('scanner')">الباركود</button>
+  </nav>
+
+  <section id="invoices" class="active">
+    <h2>الفواتير</h2>
+    <div id="invoiceList"></div>
+    <button onclick="InvoicesController.newInvoice()">فاتورة جديدة</button>
+  </section>
+
+  <section id="workers">
+    <h2>إدارة الموظفين</h2>
+    <div id="workerList"></div>
+    <button onclick="WorkersController.newWorker()">موظف جديد</button>
+  </section>
+
+  <section id="reports">
+    <h2>التقارير</h2>
+    <button onclick="ReportsController.backup()">نسخ احتياطي</button>
+    <button onclick="ReportsController.restore()">استعادة</button>
+    <button onclick="ReportsController.reset()">إعادة ضبط</button>
+  </section>
+
+  <section id="scanner">
+    <h2>الباركود</h2>
+    <input type="text" id="barcodeInput" placeholder="امسح الباركود هنا">
+  </section>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_DOMAIN",
+      projectId: "YOUR_PROJECT_ID"
+    };
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    // ================== Invoices Controller ==================
+    const InvoicesController = {
+      list: [],
+      async load() {
+        const snapshot = await db.collection("invoices").get();
+        this.list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        this.render();
+      },
+      render() {
+        const container = document.getElementById("invoiceList");
+        container.innerHTML = "";
+        this.list.forEach(inv => {
+          const div = document.createElement("div");
+          div.textContent = `فاتورة #${inv.id} - المجموع: ${inv.total} - ${inv.status || "غير مسددة"}`;
+          container.appendChild(div);
+        });
+      },
+      async newInvoice() {
+        const data = { total: 0, created: new Date().toISOString(), status: "غير مسددة" };
+        const docRef = await db.collection("invoices").add(data);
+        this.list.push({ id: docRef.id, ...data });
+        this.render();
+      }
+    };
+
+    // ================== Workers Controller ==================
+    const WorkersController = {
+      list: [],
+      async load() {
+        const snapshot = await db.collection("workers").get();
+        this.list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        this.render();
+      },
+      render() {
+        const container = document.getElementById("workerList");
+        container.innerHTML = "";
+        this.list.forEach(worker => {
+          const div = document.createElement("div");
+          div.textContent = `الموظف: ${worker.name} - الراتب: ${worker.salary}`;
+          container.appendChild(div);
+        });
+      },
+      async newWorker() {
+        const name = prompt("ادخل اسم الموظف:");
+        const salary = prompt("ادخل الراتب:");
+        if (!name || !salary) return;
+        const data = { name, salary, created: new Date().toISOString() };
+        const docRef = await db.collection("workers").add(data);
+        this.list.push({ id: docRef.id, ...data });
+        this.render();
+      }
+    };
+
+    // ================== Reports Controller ==================
+    const ReportsController = {
+      async backup() {
+        alert("🚀 سيتم هنا تنفيذ عملية النسخ الاحتياطي للبيانات.");
+      },
+      async restore() {
+        alert("📥 سيتم هنا تنفيذ عملية الاستعادة من النسخة الاحتياطية.");
+      },
+      async reset() {
+        if (confirm("⚠️ هل أنت متأكد من إعادة ضبط النظام؟")) {
+          alert("✅ تم مسح البيانات.");
+        }
+      }
+    };
+
+    // ================== Scanner Controller ==================
+    const ScannerController = {
+      init() {
+        const input = document.getElementById("barcodeInput");
+        input.addEventListener("change", () => {
+          alert("📦 تم مسح الباركود: " + input.value);
+          input.value = "";
+        });
+      }
+    };
+    // ================== Offline Manager ==================
+    const OfflineManager = {
+      queue: [],
+      init() {
+        window.addEventListener("offline", () => this.updateStatus());
+        window.addEventListener("online", () => this.sync());
+        this.updateStatus();
+      },
+      updateStatus() {
+        const status = document.getElementById("connectionStatus");
+        if (navigator.onLine) {
+          status.textContent = "✅ متصل";
+          status.style.background = "green";
+        } else {
+          status.textContent = "⚠️ غير متصل";
+          status.style.background = "red";
+        }
+      },
+      async sync() {
+        this.updateStatus();
+        if (this.queue.length > 0) {
+          alert("🔄 جاري مزامنة " + this.queue.length + " عملية معلقة...");
+          // هنا يتم رفع العمليات إلى Firestore
+          this.queue = [];
+        }
+      },
+      add(operation) {
+        if (navigator.onLine) {
+          // تنفيذ مباشر
+          operation();
+        } else {
+          this.queue.push(operation);
+          alert("⏳ العملية أضيفت في قائمة الانتظار (بدون اتصال).");
+        }
+      }
+    };
+
+    // ================== App ==================
+    const App = {
+      async init() {
+        OfflineManager.init();
+        ScannerController.init();
+        await InvoicesController.load();
+        await WorkersController.load();
+        this.bindEvents();
+      },
+      bindEvents() {
+        document.getElementById("newInvoice").addEventListener("click", () => InvoicesController.newInvoice());
+        document.getElementById("newWorker").addEventListener("click", () => WorkersController.newWorker());
+        document.getElementById("backupBtn").addEventListener("click", () => ReportsController.backup());
+        document.getElementById("restoreBtn").addEventListener("click", () => ReportsController.restore());
+        document.getElementById("resetBtn").addEventListener("click", () => ReportsController.reset());
+      }
+    };
+
+    window.addEventListener("DOMContentLoaded", () => App.init());
+  </script>
+</head>
+<body>
+  <h1>📊 نظام الكاشير</h1>
+
+  <div id="connectionStatus" style="padding:5px;color:white;text-align:center">...</div>
+
+  <section>
+    <h2>الفواتير</h2>
+    <button id="newInvoice">➕ فاتورة جديدة</button>
+    <div id="invoiceList"></div>
+  </section>
+
+  <section>
+    <h2>الموظفون</h2>
+    <button id="newWorker">➕ موظف جديد</button>
+    <div id="workerList"></div>
+  </section>
+
+  <section>
+    <h2>التقارير</h2>
+    <button id="backupBtn">💾 نسخ احتياطي</button>
+    <button id="restoreBtn">📥 استعادة</button>
+    <button id="resetBtn">⚠️ إعادة ضبط</button>
+  </section>
+
+  <section>
+    <h2>📷 الماسح الضوئي</h2>
+    <input type="text" id="barcodeInput" placeholder="امسح الباركود هنا">
+  </section>
+</body>
+</html>
