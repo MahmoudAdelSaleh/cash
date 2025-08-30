@@ -784,4 +784,415 @@ const ScannerController = {
     }
 };
 // #endregion
+// #region Workers Controller
+const WorkersController = {
+    render: () => {
+        DOM.workersList.innerHTML = appState.workers.map(worker => {
+            // حساب إجمالي السلف
+            const workerAdvances = appState.advances.filter(a => a.workerId === worker.id);
+            const totalAdvances = workerAdvances.reduce((sum, advance) => sum + parseFloat(advance.amount || 0), 0);
+            
+            // حساب إجمالي الإجازات
+            const workerVacations = appState.vacations.filter(v => v.workerId === worker.id);
+            
+            return `
+                <div class="worker-card">
+                    <div class="worker-details">
+                        <h4>${worker.name}</h4>
+                        <p>هاتف: ${worker.phone} | عنوان: ${worker.address}</p>
+                        <p>الراتب الأساسي: ${worker.salary} ج.م</p>
+                        <p>إجمالي السلف: ${totalAdvances.toFixed(2)} ج.م</p>
+                        <p>عدد الإجازات: ${workerVacations.length}</p>
+                    </div>
+                    <div class="worker-actions">
+                        <button class="btn-small btn-warning edit-worker-btn" data-id="${worker.id}"><i class="fas fa-edit"></i></button>
+                        <button class="btn-small btn-info add-advance-btn" data-id="${worker.id}"><i class="fas fa-money-bill-wave"></i> سلفة</button>
+                        <button class="btn-small btn-info add-vacation-btn" data-id="${worker.id}"><i class="fas fa-calendar-alt"></i> إجازة</button>
+                        <button class="btn-small btn-danger delete-worker-btn" data-id="${worker.id}"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    },
+    save: async () => {
+        const workerData = {
+            name: DOM.workerNameInput.value.trim(),
+            phone: DOM.workerPhoneInput.value.trim(),
+            address: DOM.workerAddressInput.value.trim(),
+            salary: parseFloat(DOM.workerSalaryInput.value) || 0,
+            createdAt: serverTimestamp()
+        };
+        
+        if (!workerData.name || !workerData.phone) {
+            Helpers.showNotification("يرجى إدخال اسم العامل ورقم الهاتف.");
+            return;
+        }
+        
+        try {
+            if (appState.editingWorkerId) {
+                await window.updateDocument("workers", appState.editingWorkerId, workerData);
+                Helpers.showNotification("تم تعديل بيانات العامل بنجاح.");
+            } else {
+                const docRef = doc(db, "workers", workerData.phone);
+                await updateDoc(docRef, workerData, { merge: true });
+                Helpers.showNotification("تم إضافة العامل بنجاح.");
+            }
+            WorkersController.clearForm();
+        } catch (error) {
+            console.error("Error saving worker:", error);
+            Helpers.showNotification("حدث خطأ أثناء حفظ بيانات العامل.");
+        }
+    },
+    edit: (id) => {
+        const worker = appState.workers.find(w => w.id === id);
+        if (!worker) return;
+        appState.editingWorkerId = id;
+        DOM.workerNameInput.value = worker.name;
+        DOM.workerPhoneInput.value = worker.phone;
+        DOM.workerAddressInput.value = worker.address || '';
+        DOM.workerSalaryInput.value = worker.salary || 0;
+        DOM.saveWorkerBtn.innerHTML = '<i class="fas fa-edit"></i> تعديل العامل';
+    },
+    delete: async (id) => {
+        if (confirm("هل أنت متأكد من حذف هذا العامل؟")) {
+            await window.deleteDocument("workers", id);
+            Helpers.showNotification("تم حذف العامل بنجاح.");
+        }
+    },
+    clearForm: () => {
+        DOM.workerNameInput.value = "";
+        DOM.workerPhoneInput.value = "";
+        DOM.workerAddressInput.value = "";
+        DOM.workerSalaryInput.value = "";
+        appState.editingWorkerId = null;
+        DOM.saveWorkerBtn.innerHTML = '<i class="fas fa-save"></i> حفظ العامل';
+    },
+    addAdvance: (workerId) => {
+        appState.selectedWorkerId = workerId;
+        DOM.advanceAmount.value = "";
+        DOM.advanceNotes.value = "";
+        Helpers.openModal(DOM.advanceModal);
+    },
+    saveAdvance: async () => {
+        const advanceData = {
+            workerId: appState.selectedWorkerId,
+            amount: parseFloat(DOM.advanceAmount.value) || 0,
+            notes: DOM.advanceNotes.value.trim(),
+            date: serverTimestamp()
+        };
+        
+        if (advanceData.amount <= 0) {
+            Helpers.showNotification("يرجى إدخال مبلغ صحيح للسلفة.");
+            return;
+        }
+        
+        try {
+            await addDoc(collection(db, "advances"), advanceData);
+            Helpers.showNotification("تم إضافة السلفة بنجاح.");
+            Helpers.closeModal(DOM.advanceModal);
+        } catch (error) {
+            console.error("Error saving advance:", error);
+            Helpers.showNotification("حدث خطأ أثناء حفظ السلفة.");
+        }
+    },
+    addVacation: (workerId) => {
+        appState.selectedWorkerId = workerId;
+        const today = new Date().toISOString().split('T')[0];
+        DOM.vacationStartDate.value = today;
+        DOM.vacationEndDate.value = today;
+        DOM.vacationNotes.value = "";
+        Helpers.openModal(DOM.vacationModal);
+    },
+    saveVacation: async () => {
+        const vacationData = {
+            workerId: appState.selectedWorkerId,
+            startDate: DOM.vacationStartDate.value,
+            endDate: DOM.vacationEndDate.value,
+            notes: DOM.vacationNotes.value.trim(),
+            days: Helpers.calculateVacationDays(DOM.vacationStartDate.value, DOM.vacationEndDate.value),
+            createdAt: serverTimestamp()
+        };
+        
+        if (!vacationData.startDate || !vacationData.endDate) {
+            Helpers.showNotification("يرجى إدخال تاريخ البدء وتاريخ الانتهاء.");
+            return;
+        }
+        
+                    if (new Date(vacationData.startDate) > new Date(vacationData.endDate)) {
+                Helpers.showNotification("تاريخ البدء يجب أن يكون قبل تاريخ الانتهاء.");
+                return;
+            }
+            
+            try {
+                await addDoc(collection(db, "vacations"), vacationData);
+                Helpers.showNotification("تم إضافة الإجازة بنجاح.");
+                Helpers.closeModal(DOM.vacationModal);
+            } catch (error) {
+                console.error("Error saving vacation:", error);
+                Helpers.showNotification("حدث خطأ أثناء حفظ الإجازة.");
+            }
+        }
+    }
+};
+// #endregion
 
+// #region Advances Controller
+const AdvancesController = {
+    render: () => {
+        const advancesWithWorkers = appState.advances.map(advance => {
+            const worker = appState.workers.find(w => w.id === advance.workerId);
+            return {
+                ...advance,
+                workerName: worker ? worker.name : 'غير معروف'
+            };
+        });
+        
+        DOM.advancesList.innerHTML = advancesWithWorkers.map(advance => {
+            const advanceDate = advance.date ? new Date(advance.date.seconds * 1000).toLocaleDateString('ar-EG') : 'غير محدد';
+            
+            return `
+                <div class="advance-item">
+                    <div class="advance-details">
+                        <h4>${advance.workerName}</h4>
+                        <p>المبلغ: ${advance.amount.toFixed(2)} ج.م</p>
+                        <p>التاريخ: ${advanceDate}</p>
+                        <p>ملاحظات: ${advance.notes || 'لا توجد ملاحظات'}</p>
+                    </div>
+                    <div class="advance-actions">
+                        <button class="btn-small btn-danger delete-advance-btn" data-id="${advance.id}">
+                            <i class="fas fa-trash-alt"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    },
+    delete: async (id) => {
+        if (confirm("هل أنت متأكد من حذف هذه السلفة؟")) {
+            await window.deleteDocument("advances", id);
+            Helpers.showNotification("تم حذف السلفة بنجاح.");
+        }
+    }
+};
+// #endregion
+
+// #region Vacations Controller
+const VacationsController = {
+    render: () => {
+        const vacationsWithWorkers = appState.vacations.map(vacation => {
+            const worker = appState.workers.find(w => w.id === vacation.workerId);
+            return {
+                ...vacation,
+                workerName: worker ? worker.name : 'غير معروف'
+            };
+        });
+        
+        DOM.vacationsList.innerHTML = vacationsWithWorkers.map(vacation => {
+            const startDate = new Date(vacation.startDate).toLocaleDateString('ar-EG');
+            const endDate = new Date(vacation.endDate).toLocaleDateString('ar-EG');
+            const createdDate = vacation.createdAt ? new Date(vacation.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : 'غير محدد';
+            
+            return `
+                <div class="vacation-item">
+                    <div class="vacation-details">
+                        <h4>${vacation.workerName}</h4>
+                        <p>من: ${startDate} إلى: ${endDate}</p>
+                        <p>عدد الأيام: ${vacation.days}</p>
+                        <p>تاريخ التسجيل: ${createdDate}</p>
+                        <p>ملاحظات: ${vacation.notes || 'لا توجد ملاحظات'}</p>
+                    </div>
+                    <div class="vacation-actions">
+                        <button class="btn-small btn-danger delete-vacation-btn" data-id="${vacation.id}">
+                            <i class="fas fa-trash-alt"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    },
+    delete: async (id) => {
+        if (confirm("هل أنت متأكد من حذف هذه الإجازة؟")) {
+            await window.deleteDocument("vacations", id);
+            Helpers.showNotification("تم حذف الإجازة بنجاح.");
+        }
+    }
+};
+// #endregion
+
+// #region Event Listeners
+const setupEventListeners = () => {
+    // إدارة العاملين
+    DOM.saveWorkerBtn.addEventListener('click', WorkersController.save);
+    DOM.cancelWorkerBtn.addEventListener('click', WorkersController.clearForm);
+    
+    // السلف
+    DOM.saveAdvanceBtn.addEventListener('click', WorkersController.saveAdvance);
+    DOM.cancelAdvanceBtn.addEventListener('click', () => Helpers.closeModal(DOM.advanceModal));
+    
+    // الإجازات
+    DOM.saveVacationBtn.addEventListener('click', WorkersController.saveVacation);
+    DOM.cancelVacationBtn.addEventListener('click', () => Helpers.closeModal(DOM.vacationModal));
+    
+    // التفويج بالحدث للعناصر الديناميكية
+    DOM.workersList.addEventListener('click', (e) => {
+        if (e.target.closest('.edit-worker-btn')) {
+            const id = e.target.closest('.edit-worker-btn').dataset.id;
+            WorkersController.edit(id);
+        }
+        if (e.target.closest('.delete-worker-btn')) {
+            const id = e.target.closest('.delete-worker-btn').dataset.id;
+            WorkersController.delete(id);
+        }
+        if (e.target.closest('.add-advance-btn')) {
+            const id = e.target.closest('.add-advance-btn').dataset.id;
+            WorkersController.addAdvance(id);
+        }
+        if (e.target.closest('.add-vacation-btn')) {
+            const id = e.target.closest('.add-vacation-btn').dataset.id;
+            WorkersController.addVacation(id);
+        }
+    });
+    
+    DOM.advancesList.addEventListener('click', (e) => {
+        if (e.target.closest('.delete-advance-btn')) {
+            const id = e.target.closest('.delete-advance-btn').dataset.id;
+            AdvancesController.delete(id);
+        }
+    });
+    
+    DOM.vacationsList.addEventListener('click', (e) => {
+        if (e.target.closest('.delete-vacation-btn')) {
+            const id = e.target.closest('.delete-vacation-btn').dataset.id;
+            VacationsController.delete(id);
+        }
+    });
+};
+// #endregion
+
+// #region Initialize App
+const initApp = async () => {
+    try {
+        // جلب البيانات الأولية
+        await Promise.all([
+            window.loadCollection("workers"),
+            window.loadCollection("advances"),
+            window.loadCollection("vacations")
+        ]);
+        
+        // عرض البيانات
+        WorkersController.render();
+        AdvancesController.render();
+        VacationsController.render();
+        
+        // إعداد مستمعي الأحداث
+        setupEventListeners();
+        
+        Helpers.showNotification("تم تحميل التطبيق بنجاح!", "success");
+    } catch (error) {
+        console.error("Error initializing app:", error);
+        Helpers.showNotification("حدث خطأ أثناء تحميل التطبيق.");
+    }
+};
+
+// تهيئة التطبيق عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', initApp);
+// #endregion
+<!-- نهاية container الرئيسي -->
+</div>
+
+<!-- القوائم المنسدلة للإحصائيات -->
+<div class="dropdowns-container">
+    <select id="monthFilter" class="form-control">
+        <option value="">كل الشهور</option>
+        <option value="0">يناير</option>
+        <option value="1">فبراير</option>
+        <!-- باقي الأشهر -->
+    </select>
+    
+    <select id="yearFilter" class="form-control">
+        <option value="">كل السنوات</option>
+        <option value="2023">2023</option>
+        <option value="2024">2024</option>
+        <!-- باقي السنوات -->
+    </select>
+</div>
+
+<!-- modals -->
+<div class="modal" id="advanceModal">
+    <div class="modal-content">
+        <h3>إضافة سلفة جديدة</h3>
+        <form id="advanceForm">
+            <div class="form-group">
+                <label for="advanceAmount">المبلغ (ج.م)</label>
+                <input type="number" id="advanceAmount" step="0.01" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="advanceNotes">ملاحظات</label>
+                <textarea id="advanceNotes" rows="3"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="saveAdvanceBtn" class="btn btn-primary">حفظ السلفة</button>
+                <button type="button" id="cancelAdvanceBtn" class="btn btn-secondary">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal" id="vacationModal">
+    <div class="modal-content">
+        <h3>إضافة إجازة جديدة</h3>
+        <form id="vacationForm">
+            <div class="form-group">
+                <label for="vacationStartDate">تاريخ البدء</label>
+                <input type="date" id="vacationStartDate" required>
+            </div>
+            <div class="form-group">
+                <label for="vacationEndDate">تاريخ الانتهاء</label>
+                <input type="date" id="vacationEndDate" required>
+            </div>
+            <div class="form-group">
+                <label for="vacationNotes">ملاحظات</label>
+                <textarea id="vacationNotes" rows="3"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="saveVacationBtn" class="btn btn-primary">حفظ الإجازة</button>
+                <button type="button" id="cancelVacationBtn" class="btn btn-secondary">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- منطقة الإشعارات -->
+<div id="notificationArea" class="notification-area"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- البرنامج النصي الرئيسي -->
+<script>
+// تهيئة Firebase
+const firebaseConfig = {
+    apiKey: "your_api_key",
+    authDomain: "your_project_id.firebaseapp.com",
+    projectId: "your_project_id",
+    storageBucket: "your_project_id.appspot.com",
+    messagingSenderId: "your_sender_id",
+    appId: "your_app_id"
+};
+
+// تهيئة Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// كود JavaScript الذي قمت بإرساله سابقاً يذهب هنا
+// [يتم وضع جميع دوال JavaScript السابقة هنا]
+
+// بدء التطبيق عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    initApp();
+});
+</script>
+
+</body>
+</html>
