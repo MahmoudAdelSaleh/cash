@@ -1,1173 +1,295 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة متكامل - مع ماسح الباركود</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <title>التحقق من المنتجات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #2c3e50;
-            --secondary: #3498db;
-            --success: #2ecc71;
-            --danger: #e74c3c;
-            --warning: #f39c12;
-            --info: #1abc9c;
-            --light: #ecf0f1;
-            --dark: #2c3e50;
-            --gray: #95a5a6;
-            --sidebar-width: 250px;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
         body {
-            background-color: #f5f7fa;
-            color: #333;
-            line-height: 1.6;
-            display: flex;
-            min-height: 100vh;
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
         }
-        
-        /* الشريط الجانبي المحسن */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(to bottom, var(--primary), #1a2530);
-            color: white;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            right: 0;
-            padding: 20px 0;
+        .autocomplete-list {
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            z-index: 10;
+            max-height: 200px;
             overflow-y: auto;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-        
-        .logo {
-            text-align: center;
-            padding: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
-        }
-        
-        .logo h2 {
-            color: white;
-            font-size: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        
-        .menu-item {
-            padding: 15px 25px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-            border-right: 4px solid transparent;
-            position: relative;
-        }
-        
-        .menu-item:hover, .menu-item.active {
-            background: rgba(255,255,255,0.1);
-            border-right: 4px solid var(--secondary);
-        }
-        
-        .menu-item i {
-            width: 20px;
-            text-align: center;
-            font-size: 18px;
-        }
-        
-        .menu-badge {
-            position: absolute;
-            left: 20px;
-            background: var(--danger);
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-        }
-        
-        /* المحتوى الرئيسي */
-        .main-content {
-            flex: 1;
-            margin-right: var(--sidebar-width);
-            padding: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            background: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            position: sticky;
-            top: 10px;
-            z-index: 100;
-        }
-        
-        .page-title {
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 24px;
-        }
-        
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            position: relative;
-        }
-        
-        .user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--secondary), var(--primary));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        
-        .notification-icon {
-            position: relative;
-            cursor: pointer;
-            font-size: 20px;
-            color: var(--gray);
-        }
-        
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            background: var(--danger);
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-        }
-        
-        /* بطاقات الإحصائيات المحسنة */
-        .cards-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
             width: 100%;
-            height: 4px;
         }
-        
-        .sales::before { background: linear-gradient(to right, var(--success), #27ae60); }
-        .products::before { background: linear-gradient(to right, var(--secondary), #2980b9); }
-        .customers::before { background: linear-gradient(to right, #9b59b6, #8e44ad); }
-        .employees::before { background: linear-gradient(to right, var(--warning), #e67e22); }
-        
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            font-size: 24px;
+        .autocomplete-list-item {
+            padding: 0.5rem;
+            cursor: pointer;
+            text-align: right;
         }
-        
-        .sales .stat-icon { background: rgba(46, 204, 113, 0.15); color: var(--success); }
-        .products .stat-icon { background: rgba(52, 152, 219, 0.15); color: var(--secondary); }
-        .customers .stat-icon { background: rgba(155, 89, 182, 0.15); color: #9b59b6; }
-        .employees .stat-icon { background: rgba(241, 196, 15, 0.15); color: var(--warning); }
-        
-        .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            margin: 10px 0;
-            color: var(--dark);
+        .autocomplete-list-item:hover {
+            background-color: #f3f4f6;
         }
-        
-        .stat-title {
-            color: var(--gray);
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-        
-        .stat-change {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-        
-        .change-up { color: var(--success); }
-        .change-down { color: var(--danger); }
-        
-        /* الجداول المحسنة */
         .table-container {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
             overflow-x: auto;
         }
-        
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th, td {
-            padding: 15px;
-            text-align: right;
-            border-bottom: 1px solid #eee;
-        }
-        
-        th {
-            background: #f8f9fa;
-            color: var(--dark);
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-        }
-        
-        tr:hover {
-            background: #f8f9fa;
-        }
-        
-        /* الأزرار المحسنة */
-        .btn {
-            padding: 12px 18px;
+        .product-image {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
             border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
         }
-        
-        .btn-primary { background: linear-gradient(to right, var(--secondary), #2980b9); color: white; }
-        .btn-success { background: linear-gradient(to right, var(--success), #27ae60); color: white; }
-        .btn-danger { background: linear-gradient(to right, var(--danger), #c0392b); color: white; }
-        .btn-warning { background: linear-gradient(to right, var(--warning), #e67e22); color: white; }
-        
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        
-        /* أشكال أخرى محسنة */
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        
-        .badge-success { background: rgba(46, 204, 113, 0.15); color: var(--success); }
-        .badge-warning { background: rgba(241, 196, 15, 0.15); color: var(--warning); }
-        .badge-danger { background: rgba(231, 76, 60, 0.15); color: var(--danger); }
-        
-        /* البحث والتصفية */
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .search-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-        
-        .filter-select {
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background: white;
-            min-width: 150px;
-        }
-        
-        /* رسم بياني بسيط */
-        .chart-container {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
-        }
-        
-        .chart {
-            display: flex;
-            align-items: flex-end;
-            height: 200px;
-            gap: 10px;
-            padding: 20px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .chart-bar {
-            flex: 1;
-            background: linear-gradient(to top, var(--secondary), #2980b9);
-            border-radius: 5px 5px 0 0;
-            position: relative;
-            transition: height 0.5s ease;
-        }
-        
-        .chart-label {
-            text-align: center;
-            padding: 10px 0;
-            font-size: 12px;
-            color: var(--gray);
-        }
-        
-        /* ماسح الباركود */
-        .scanner-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-            z-index: 10000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-        
-        .scanner-box {
-            width: 300px;
-            height: 300px;
-            background: #000;
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            border: 2px solid white;
-        }
-        
-        .scanner-actions {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        
-        /* إدارة النسخ الاحتياطي */
-        .backup-section {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            margin-bottom: 30px;
-        }
-        
-        .backup-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .backup-card {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        /* متجاوب */
-        @media (max-width: 992px) {
-            .sidebar {
-                width: 70px;
-            }
-            
-            .sidebar .menu-text, .sidebar .menu-badge {
-                display: none;
-            }
-            
-            .main-content {
-                margin-right: 70px;
-            }
-            
-            .logo h2 {
-                font-size: 16px;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .cards-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-            
-            .user-info {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-        
-        /* تأثيرات للعناصر */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* القائمة المنسدلة للإشعارات */
-        .dropdown {
-            position: relative;
-        }
-        
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            width: 300px;
-            z-index: 1000;
-            display: none;
-        }
-        
-        .dropdown-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .dropdown-item:hover {
-            background: #f8f9fa;
-        }
-        
-        .dropdown-toggle:hover + .dropdown-menu,
-        .dropdown-menu:hover {
-            display: block;
-        }
-        
-        /* عناصر إضافية */
-        .hidden {
-            display: none;
-        }
-        
-        .text-center {
-            text-align: center;
-        }
-        
-        .mt-20 {
-            margin-top: 20px;
-        }
-        
-        .mb-20 {
-            margin-bottom: 20px;
+        .selected-image {
+            outline: 3px solid #3b82f6;
         }
     </style>
 </head>
-<body>
-    <!-- الشريط الجانبي -->
-    <div class="sidebar">
-        <div class="logo">
-            <h2><i class="fas fa-store"></i> <span>نظام الإدارة</span></h2>
-        </div>
-        
-        <div class="menu-item active" data-section="dashboard">
-            <i class="fas fa-home"></i>
-            <span class="menu-text">لوحة التحكم</span>
-        </div>
-        
-        <div class="menu-item" data-section="pos">
-            <i class="fas fa-cash-register"></i>
-            <span class="menu-text">نقطة البيع</span>
-            <span class="menu-badge">3</span>
-        </div>
-        
-        <div class="menu-item" data-section="products">
-            <i class="fas fa-box"></i>
-            <span class="menu-text">إدارة المنتجات</span>
-        </div>
-        
-        <div class="menu-item" data-section="invoices">
-            <i class="fas fa-file-invoice"></i>
-            <span class="menu-text">الفواتير</span>
-            <span class="menu-badge">5</span>
-        </div>
-        
-        <div class="menu-item" data-section="customers">
-            <i class="fas fa-users"></i>
-            <span class="menu-text">العملاء</span>
-        </div>
-        
-        <div class="menu-item" data-section="reports">
-            <i class="fas fa-chart-line"></i>
-            <span class="menu-text">التقارير</span>
-        </div>
-        
-        <div class="menu-item" data-section="backup">
-            <i class="fas fa-database"></i>
-            <span class="menu-text">النسخ الاحتياطي</span>
-        </div>
-        
-        <div class="menu-item" data-section="settings">
-            <i class="fas fa-cog"></i>
-            <span class="menu-text">الإعدادات</span>
-        </div>
-        
-        <div class="menu-item">
-            <i class="fas fa-sign-out-alt"></i>
-            <span class="menu-text">تسجيل الخروج</span>
-        </div>
-    </div>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-xl text-center">
+        <h1 class="text-3xl font-bold mb-4 text-gray-800">التحقق من المنتجات</h1>
+        <p class="text-gray-600 mb-6">اختر صورة، ابحث عن المنتج، ثم قم بتأكيد الإضافة.</p>
 
-    <!-- المحتوى الرئيسي -->
-    <div class="main-content">
-        <div class="header">
-            <h1 class="page-title"><i class="fas fa-home"></i> لوحة التحكم الرئيسية</h1>
-            <div class="user-info">
-                <div class="dropdown">
-                    <div class="notification-icon dropdown-toggle">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge">3</span>
-                    </div>
-                    <div class="dropdown-menu">
-                        <div class="dropdown-item">
-                            <i class="fas fa-shopping-cart text-success"></i>
-                            <div>
-                                <div>طلب جديد #125</div>
-                                <small>منذ 5 دقائق</small>
-                            </div>
-                        </div>
-                        <div class="dropdown-item">
-                            <i class="fas fa-exclamation-circle text-warning"></i>
-                            <div>
-                                <div>منتج على وشك النفاد</div>
-                                <small>منذ ساعة</small>
-                            </div>
-                        </div>
-                        <div class="dropdown-item">
-                            <i class="fas fa-user-plus text-info"></i>
-                            <div>
-                                <div>عميل جديد مسجل</div>
-                                <small>منذ يوم</small>
-                            </div>
-                        </div>
-                    </div>
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- قائمة الصور -->
+            <div class="w-full lg:w-1/2 table-container h-96 overflow-y-auto border rounded-lg p-2">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-700 sticky top-0">
+                            <th class="p-2 border-r border-gray-300">صورة</th>
+                            <th class="p-2">اسم الملف</th>
+                        </tr>
+                    </thead>
+                    <tbody id="imageTableBody">
+                        <!-- سيتم إضافة الصور هنا -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- نموذج البحث والتأكيد -->
+            <div class="w-full lg:w-1/2 space-y-4 text-right">
+                <div class="relative">
+                    <label for="nameInput" class="block font-medium text-gray-700">اسم المنتج</label>
+                    <input type="text" id="nameInput" class="w-full px-4 py-2 mt-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" placeholder="ابدأ بالكتابة..." autocomplete="off">
+                    <div id="suggestionsBox" class="autocomplete-list rounded-b-md shadow-lg hidden"></div>
                 </div>
                 
-                <div class="user-avatar">م</div>
                 <div>
-                    <div>مدير النظام</div>
-                    <small>admin@example.com</small>
+                    <label for="barcodeInput" class="block font-medium text-gray-700">الباركود</label>
+                    <input type="text" id="barcodeInput" class="w-full px-4 py-2 mt-1 border rounded-md bg-gray-200 text-right" readonly>
                 </div>
+                
+                <div class="mt-4">
+                    <p class="text-gray-700 font-medium mb-2">صورة المنتج المحددة:</p>
+                    <img id="selectedImagePreview" src="" alt="صورة مختارة" class="mx-auto product-image hidden">
+                </div>
+
+                <button id="addProductButton" class="w-full bg-blue-500 text-white font-bold py-2 px-6 rounded-md shadow-md hover:bg-blue-600 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    تأكيد وإضافة
+                </button>
             </div>
         </div>
 
-        <!-- قسم لوحة التحكم -->
-        <div id="dashboard-section">
-            <!-- بطاقات الإحصائيات -->
-            <div class="cards-container">
-                <div class="stat-card sales fade-in">
-                    <div class="stat-icon">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                    <div class="stat-value">8,570 ج.م</div>
-                    <div class="stat-title">إجمالي المبيعات اليوم</div>
-                    <div class="stat-change change-up">
-                        <i class="fas fa-arrow-up"></i> 15% زيادة عن الأمس
-                    </div>
-                </div>
-                
-                <div class="stat-card products fade-in">
-                    <div class="stat-icon">
-                        <i class="fas fa-box"></i>
-                    </div>
-                    <div class="stat-value">154</div>
-                    <div class="stat-title">المنتجات في المخزن</div>
-                    <div class="stat-change change-down">
-                        <i class="fas fa-arrow-down"></i> 5 منتجات قليلة المخزون
-                    </div>
-                </div>
-                
-                <div class="stat-card customers fade-in">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-value">32</div>
-                    <div class="stat-title">عملاء جدد هذا الشهر</div>
-                    <div class="stat-change change-up">
-                        <i class="fas fa-arrow-up"></i> 10% زيادة عن الشهر الماضي
-                    </div>
-                </div>
-                
-                <div class="stat-card employees fade-in">
-                    <div class="stat-icon">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
-                    <div class="stat-value">8</div>
-                    <div class="stat-title">عدد الموظفين</div>
-                    <div class="stat-change">
-                        <i class="fas fa-minus"></i> بدون تغيير
-                    </div>
-                </div>
-            </div>
-
-            <!-- رسم بياني للمبيعات -->
-            <div class="chart-container fade-in">
-                <h2><i class="fas fa-chart-bar"></i> إحصائيات المبيعات الأسبوعية</h2>
-                <div class="chart">
-                    <div class="chart-bar" style="height: 80%;"></div>
-                    <div class="chart-bar" style="height: 60%;"></div>
-                    <div class="chart-bar" style="height: 90%;"></div>
-                    <div class="chart-bar" style="height: 40%;"></div>
-                    <div class="chart-bar" style="height: 70%;"></div>
-                    <div class="chart-bar" style="height: 85%;"></div>
-                    <div class="chart-bar" style="height: 75%;"></div>
-                </div>
-                <div class="chart-labels" style="display: flex; justify-content: space-between;">
-                    <div class="chart-label">السبت</div>
-                    <div class="chart-label">الأحد</div>
-                    <div class="chart-label">الإثنين</div>
-                    <div class="chart-label">الثلاثاء</div>
-                    <div class="chart-label">الأربعاء</div>
-                    <div class="chart-label">الخميس</div>
-                    <div class="chart-label">الجمعة</div>
-                </div>
-            </div>
-
-            <!-- أحدث المنتجات -->
-            <div class="table-container fade-in">
-                <div class="table-header">
-                    <h2><i class="fas fa-box"></i> أحدث المنتجات</h2>
-                    <button class="btn btn-primary" id="load-products-btn"><i class="fas fa-upload"></i> تحميل المنتجات</button>
-                </div>
-                
-                <table id="products-table">
-                    <thead>
-                        <tr>
-                            <th>الصورة</th>
-                            <th>اسم المنتج</th>
-                            <th>السعر</th>
-                            <th>المخزون</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="6" class="text-center">لا توجد منتجات، قم بتحميل المنتجات أولاً</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- أحدث الفواتير -->
-            <div class="table-container fade-in">
-                <div class="table-header">
-                    <h2><i class="fas fa-file-invoice"></i> أحدث الفواتير</h2>
-                    <button class="btn btn-primary"><i class="fas fa-plus"></i> فاتورة جديدة</button>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>رقم الفاتورة</th>
-                            <th>العميل</th>
-                            <th>التاريخ</th>
-                            <th>المبلغ</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>#INV-2023-001</td>
-                            <td>أحمد محمد</td>
-                            <td>15/11/2023</td>
-                            <td>1,250 ج.م</td>
-                            <td><span class="badge badge-success">مدفوعة</span></td>
-                            <td>
-                                <button class="btn" style="padding: 5px;"><i class="fas fa-print"></i></button>
-                                <button class="btn" style="padding: 5px;"><i class="fas fa-eye"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#INV-2023-002</td>
-                            <td>سعيد عبدالله</td>
-                            <td>14/11/2023</td>
-                            <td>3,420 ج.م</td>
-                            <td><span class="badge badge-warning">قيد الانتظار</span></td>
-                            <td>
-                                <button class="btn" style="padding: 5px;"><i class="fas fa-print"></i></button>
-                                <button class="btn" style="padding: 5px;"><i class="fas fa-eye"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#INV-2023-003</td>
-                            <td>فاطمة علي</td>
-                            <td>13/11/2023</td>
-                            <td>850 ج.م</td>
-                            <td><span class="badge badge-success">مدفوعة</span></td>
-                            <td>
-                                <button class="btn" style="padding: 5px;"><i class="fas fa-print"></i></button>
-                                <button class="btn" style="padding: 5px;"><i class="fas fa-eye"></i></button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+        <div id="resultTableContainer" class="table-container mt-8 hidden">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 text-right">المنتجات المعتمدة</h2>
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-200 text-gray-700">
+                        <th class="p-2 border border-gray-300">صورة</th>
+                        <th class="p-2 border border-gray-300">اسم المنتج</th>
+                        <th class="p-2 border border-gray-300">الباركود</th>
+                        <th class="p-2 border border-gray-300">اسم الصورة الجديدة</th>
+                    </tr>
+                </thead>
+                <tbody id="resultTableBody">
+                    <!-- سيتم إضافة المنتجات المعتمدة هنا -->
+                </tbody>
+            </table>
         </div>
 
-        <!-- قسم النسخ الاحتياطي -->
-        <div id="backup-section" class="hidden">
-            <div class="backup-section">
-                <h2><i class="fas fa-database"></i> إدارة النسخ الاحتياطي</h2>
-                <p>من هنا يمكنك إنشاء نسخة احتياطية من بياناتك أو استعادة بيانات من نسخة سابقة.</p>
-                
-                <div class="backup-options">
-                    <div class="backup-card">
-                        <div class="stat-icon" style="margin: 0 auto 15px;">
-                            <i class="fas fa-download"></i>
-                        </div>
-                        <h3>إنشاء نسخة احتياطية</h3>
-                        <p>حفظ جميع البيانات في ملف يمكنك استعادته لاحقًا</p>
-                        <button class="btn btn-primary mt-20" id="create-backup-btn">
-                            <i class="fas fa-download"></i> إنشاء نسخة
-                        </button>
-                    </div>
-                    
-                    <div class="backup-card">
-                        <div class="stat-icon" style="margin: 0 auto 15px;">
-                            <i class="fas fa-upload"></i>
-                        </div>
-                        <h3>استعادة نسخة احتياطية</h3>
-                        <p>تحميل بيانات من نسخة احتياطية سابقة</p>
-                        <input type="file" id="restore-file" accept=".json" class="hidden">
-                        <button class="btn btn-warning mt-20" id="restore-backup-btn">
-                            <i class="fas fa-upload"></i> استعادة نسخة
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="mt-20">
-                    <h3>خيارات الاستعادة</h3>
-                    <div class="form-group">
-                        <label>
-                            <input type="radio" name="restore-option" value="merge" checked> دمج البيانات مع البيانات الحالية
-                        </label>
-                        <label>
-                            <input type="radio" name="restore-option" value="replace"> استبدال جميع البيانات الحالية
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- قسم نقطة البيع -->
-        <div id="pos-section" class="hidden">
-            <div class="table-container">
-                <div class="table-header">
-                    <h2><i class="fas fa-cash-register"></i> نقطة البيع</h2>
-                    <div>
-                        <button class="btn btn-success" id="start-scanner-btn">
-                            <i class="fas fa-barcode"></i> مسح الباركود
-                        </button>
-                        <button class="btn btn-primary">
-                            <i class="fas fa-plus"></i> فاتورة جديدة
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="search-box">
-                    <input type="text" class="search-input" placeholder="ابحث بالاسم أو الباركود...">
-                    <button class="btn btn-primary">
-                        <i class="fas fa-search"></i> بحث
-                    </button>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>المنتج</th>
-                            <th>السعر</th>
-                            <th>الكمية</th>
-                            <th>المجموع</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="5" class="text-center">لم يتم إضافة أي منتجات بعد</td>
-                        </tr>
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <th colspan="3">الإجمالي</th>
-                            <th>0 ج.م</th>
-                            <th>
-                                <button class="btn btn-success">
-                                    <i class="fas fa-check"></i> إنهاء البيع
-                                </button>
-                            </th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- ماسح الباركود -->
-    <div id="scanner-container" class="scanner-container hidden">
-        <div class="scanner-box" id="scanner"></div>
-        <div class="scanner-actions">
-            <button class="btn btn-danger" id="close-scanner-btn">
-                <i class="fas fa-times"></i> إغلاق
+        <div class="mt-8 text-center">
+            <button id="exportButton" class="bg-green-500 text-white font-bold py-2 px-6 rounded-md shadow-md hover:bg-green-600 transition duration-300 hidden">
+                تصدير البيانات (JSON)
             </button>
         </div>
+
+        <div id="statusMessage" class="mt-4 text-red-500 text-sm"></div>
+
     </div>
 
-    <!-- عنصر لتحميل ملف JSON -->
-    <input type="file" id="json-file-input" accept=".json" class="hidden">
-
     <script>
-        // بيانات التطبيق
-        const appData = {
-            products: [],
-            invoices: [],
-            customers: [],
-            settings: {
-                currency: 'ج.م'
-            }
-        };
+        const nameInput = document.getElementById('nameInput');
+        const barcodeInput = document.getElementById('barcodeInput');
+        const addProductButton = document.getElementById('addProductButton');
+        const exportButton = document.getElementById('exportButton');
+        const imageTableBody = document.getElementById('imageTableBody');
+        const resultTableBody = document.getElementById('resultTableBody');
+        const resultTableContainer = document.getElementById('resultTableContainer');
+        const suggestionsBox = document.getElementById('suggestionsBox');
+        const statusMessage = document.getElementById('statusMessage');
+        const selectedImagePreview = document.getElementById('selectedImagePreview');
 
-        // تهيئة التطبيق
-        document.addEventListener('DOMContentLoaded', function() {
-            // تحميل البيانات من localStorage إذا موجودة
-            loadFromLocalStorage();
+        let allProducts = [];
+        let confirmedProducts = [];
+        let selectedImage = null;
+
+        // دالة لجلب البيانات من ملف JSON
+        async function fetchProducts() {
+            try {
+                const response = await fetch('p.json');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch p.json. Status: ${response.status}`);
+                }
+                allProducts = await response.json();
+            } catch (error) {
+                console.error('Error loading products data:', error);
+                statusMessage.textContent = 'حدث خطأ في تحميل البيانات. يرجى التأكد من وجود ملف p.json في نفس المسار.';
+            }
+        }
+
+        // دالة لإنشاء قائمة الصور
+        function listImages() {
+            // هذا الجزء سيحتاج إلى تحديث يدويًا أو عبر كود برمجي على الخادم إذا كانت الصور تتغير
+            const imageFilenames = [
+                '00032894022011.jpg', 
+                '00089686120134.jpg', 
+                '00089686120196.jpg', 
+                '00089686120226.jpg'
+            ]; // يجب عليك إدراج أسماء ملفات الصور هنا
+            imageFilenames.forEach(filename => {
+                const row = document.createElement('tr');
+                row.classList.add('cursor-pointer', 'hover:bg-blue-100');
+                const imageUrl = `./images/${filename}`;
+                row.innerHTML = `
+                    <td class="p-2 border-r border-gray-300"><img src="${imageUrl}" class="product-image mx-auto" onerror="this.src='./images/no-image.jpg'"></td>
+                    <td class="p-2">${filename}</td>
+                `;
+                row.addEventListener('click', () => {
+                    const allRows = imageTableBody.querySelectorAll('tr');
+                    allRows.forEach(r => r.classList.remove('selected-image'));
+                    row.classList.add('selected-image');
+                    selectedImage = filename;
+                    selectedImagePreview.src = imageUrl;
+                    selectedImagePreview.classList.remove('hidden');
+                    addProductButton.disabled = !nameInput.value || !barcodeInput.value;
+                });
+                imageTableBody.appendChild(row);
+            });
+        }
+
+        function showSuggestions(query) {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.classList.add('hidden');
             
-            // إعداد مستمعي الأحداث
-            setupEventListeners();
-            
-            // تحديث واجهة المستخدم
-            updateUI();
+            if (query.length < 2) return;
+
+            const filteredProducts = allProducts.filter(product =>
+                product.name.toLowerCase().includes(query.toLowerCase()) || 
+                (product.barcode1 && product.barcode1.includes(query))
+            );
+
+            if (filteredProducts.length > 0) {
+                filteredProducts.forEach(product => {
+                    const item = document.createElement('div');
+                    item.textContent = product.name;
+                    item.classList.add('autocomplete-list-item');
+                    item.dataset.barcode = product.barcode1;
+                    item.dataset.sku = product.sku;
+                    suggestionsBox.appendChild(item);
+                });
+                suggestionsBox.classList.remove('hidden');
+            }
+        }
+
+        function populateFields(product) {
+            nameInput.value = product.name;
+            barcodeInput.value = product.barcode1;
+            skuInput.value = product.sku;
+            addProductButton.disabled = !selectedImage;
+        }
+
+        function addProductToTable(product) {
+            const row = document.createElement('tr');
+            row.classList.add('hover:bg-gray-50');
+            const imageUrl = `./images/${product.image_filename}`;
+
+            row.innerHTML = `
+                <td class="p-2 border border-gray-300"><img src="${imageUrl}" alt="صورة ${product.name}" class="product-image mx-auto" onerror="this.src='./images/no-image.jpg'"></td>
+                <td class="p-2 border border-gray-300">${product.name}</td>
+                <td class="p-2 border border-gray-300">${product.barcode1}</td>
+                <td class="p-2 border border-gray-300">${product.image_filename}</td>
+            `;
+            resultTableBody.appendChild(row);
+        }
+
+        function generateExportJson() {
+            return JSON.stringify(confirmedProducts.map(product => {
+                return {
+                    name: product.name,
+                    barcode1: product.barcode1,
+                    sku: product.sku,
+                    image_filename: `${product.barcode1}.jpg` // تسمية الصورة بالباركود
+                };
+            }), null, 2);
+        }
+
+        // أحداث الاستماع
+        nameInput.addEventListener('input', (e) => {
+            showSuggestions(e.target.value);
         });
 
-        // إعداد مستمعي الأحداث
-        function setupEventListeners() {
-            // التنقل بين الأقسام
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    const section = this.dataset.section;
-                    if (section) {
-                        // إخفاء جميع الأقسام
-                        document.querySelectorAll('[id$="-section"]').forEach(sec => {
-                            sec.classList.add('hidden');
-                        });
-                        
-                        // إظهار القسم المحدد
-                        document.getElementById(`${section}-section`).classList.remove('hidden');
-                        
-                        // تحديث العنوان
-                        const sectionName = this.querySelector('.menu-text').textContent;
-                        document.querySelector('.page-title').innerHTML = `<i class="${this.querySelector('i').className}"></i> ${sectionName}`;
-                    }
-                });
-            });
-            
-            // تحميل المنتجات من ملف JSON
-            document.getElementById('load-products-btn').addEventListener('click', function() {
-                document.getElementById('json-file-input').click();
-            });
-            
-            // معالجة تحميل ملف JSON
-            document.getElementById('json-file-input').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        try {
-                            const data = JSON.parse(e.target.result);
-                            if (data.items && Array.isArray(data.items)) {
-                                appData.products = data.items;
-                                saveToLocalStorage();
-                                updateProductsTable();
-                                showNotification('تم تحميل المنتجات بنجاح', 'success');
-                            } else {
-                                throw new Error('صيغة الملف غير صحيحة');
-                            }
-                        } catch (error) {
-                            showNotification('خطأ في تحميل الملف: ' + error.message, 'error');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            });
-            
-            // إنشاء نسخة احتياطية
-            document.getElementById('create-backup-btn').addEventListener('click', function() {
-                createBackup();
-            });
-            
-            // استعادة نسخة احتياطية
-            document.getElementById('restore-backup-btn').addEventListener('click', function() {
-                document.getElementById('restore-file').click();
-            });
-            
-            // معالجة استعادة النسخة الاحتياطية
-            document.getElementById('restore-file').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        try {
-                            const data = JSON.parse(e.target.result);
-                            const restoreOption = document.querySelector('input[name="restore-option"]:checked').value;
-                            restoreBackup(data, restoreOption);
-                        } catch (error) {
-                            showNotification('خطأ في تحميل النسخة الاحتياطية: ' + error.message, 'error');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            });
-            
-            // فتح وإغلاق ماسح الباركود
-            document.getElementById('start-scanner-btn').addEventListener('click', function() {
-                startBarcodeScanner();
-            });
-            
-            document.getElementById('close-scanner-btn').addEventListener('click', function() {
-                stopBarcodeScanner();
-            });
-        }
-
-        // تحديث واجهة المستخدم
-        function updateUI() {
-            updateProductsTable();
-        }
-
-        // تحديث جدول المنتجات
-        function updateProductsTable() {
-            const tableBody = document.querySelector('#products-table tbody');
-            
-            if (appData.products.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد منتجات، قم بتحميل المنتجات أولاً</td></tr>';
-                return;
-            }
-            
-            tableBody.innerHTML = appData.products.map(product => `
-                <tr>
-                    <td><div style="width: 40px; height: 40px; background: #eee; border-radius: 5px;"></div></td>
-                    <td>${product.name}</td>
-                    <td>${product.price} ج.م</td>
-                    <td>${product.qunt}</td>
-                    <td><span class="badge ${product.status ? 'badge-success' : 'badge-danger'}">${product.status ? 'متوفر' : 'غير متوفر'}</span></td>
-                    <td>
-                        <button class="btn" style="padding: 5px;"><i class="fas fa-edit"></i></button>
-                        <button class="btn" style="padding: 5px;"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        // حفظ البيانات في localStorage
-        function saveToLocalStorage() {
-            localStorage.setItem('appData', JSON.stringify(appData));
-        }
-
-        // تحميل البيانات من localStorage
-        function loadFromLocalStorage() {
-            const savedData = localStorage.getItem('appData');
-            if (savedData) {
-                try {
-                    const parsedData = JSON.parse(savedData);
-                    Object.assign(appData, parsedData);
-                } catch (error) {
-                    console.error('Error loading data from localStorage:', error);
+        suggestionsBox.addEventListener('click', (e) => {
+            if (e.target.dataset.barcode) {
+                const selectedProduct = allProducts.find(p => p.barcode1 === e.target.dataset.barcode);
+                if (selectedProduct) {
+                    populateFields(selectedProduct);
+                    suggestionsBox.classList.add('hidden');
                 }
             }
-        }
+        });
 
-        // إنشاء نسخة احتياطية
-        function createBackup() {
-            const dataStr = JSON.stringify(appData, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            
-            const exportFileDefaultName = `backup-${new Date().toISOString().split('T')[0]}.json`;
-            
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
-            
-            showNotification('تم إنشاء النسخة الاحتياطية بنجاح', 'success');
-        }
+        addProductButton.addEventListener('click', () => {
+            const confirmedProduct = {
+                name: nameInput.value,
+                barcode1: barcodeInput.value,
+                sku: skuInput.value,
+                image_filename: `${barcodeInput.value}.jpg`
+            };
 
-        // استعادة نسخة احتياطية
-        function restoreBackup(data, option) {
-            if (option === 'replace') {
-                // استبدال جميع البيانات
-                Object.keys(appData).forEach(key => {
-                    if (data[key] !== undefined) {
-                        appData[key] = data[key];
-                    }
-                });
+            if (confirmedProduct.name && confirmedProduct.barcode1 && selectedImage) {
+                confirmedProducts.push(confirmedProduct);
+                addProductToTable(confirmedProduct);
+                
+                // إعادة تهيئة النموذج
+                nameInput.value = '';
+                barcodeInput.value = '';
+                skuInput.value = '';
+                selectedImage = null;
+                selectedImagePreview.src = '';
+                selectedImagePreview.classList.add('hidden');
+                addProductButton.disabled = true;
+
+                resultTableContainer.classList.remove('hidden');
+                exportButton.classList.remove('hidden');
             } else {
-                // دمج البيانات
-                Object.keys(data).forEach(key => {
-                    if (Array.isArray(data[key])) {
-                        // إذا كان المفتاح مصفوفة، ندمج العناصر
-                        appData[key] = [...appData[key], ...data[key]];
-                    } else if (typeof data[key] === 'object' && data[key] !== null) {
-                        // إذا كان المفتاح كائن، ندمج الخصائص
-                        appData[key] = {...appData[key], ...data[key]};
-                    } else {
-                        // إذا كان المفتاح قيمة عادية، نستبدلها
-                        appData[key] = data[key];
-                    }
-                });
+                statusMessage.textContent = 'الرجاء اختيار صورة وملء بيانات المنتج بشكل صحيح.';
             }
-            
-            saveToLocalStorage();
-            updateUI();
-            showNotification('تم استعادة النسخة الاحتياطية بنجاح', 'success');
-        }
+        });
 
-        // بدء ماسح الباركود
-        function startBarcodeScanner() {
-            const scannerContainer = document.getElementById('scanner-container');
-            scannerContainer.classList.remove('hidden');
-            
-            // تهيئة ماسح الباركود
-            const html5Qrcode = new Html5Qrcode("scanner");
-            html5Qrcode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                qrCodeMessage => {
-                    // تم مسح الباركود بنجاح
-                    handleScannedBarcode(qrCodeMessage);
-                    html5Qrcode.stop().then(() => {
-                        scannerContainer.classList.add('hidden');
-                    }).catch(err => {
-                        console.error("Failed to stop scanner", err);
-                    });
-                },
-                errorMessage => {
-                    // تجاهل الأخطاء، الاستمرار في المسح
-                }
-            ).catch(err => {
-                console.error("Unable to start scanner", err);
-                scannerContainer.classList.add('hidden');
-                showNotification('تعذر تشغيل الكاميرا، تأكد من السماح بالوصول إلى الكاميرا', 'error');
-            });
-            
-            // حفظ المرجع لكي نتمكن من إيقافه لاحقاً
-            window.currentScanner = html5Qrcode;
-        }
-
-        // إيقاف ماسح الباركود
-        function stopBarcodeScanner() {
-            if (window.currentScanner) {
-                window.currentScanner.stop().then(() => {
-                    document.getElementById('scanner-container').classList.add('hidden');
-                }).catch(err => {
-                    console.error("Failed to stop scanner", err);
-                });
-            } else {
-                document.getElementById('scanner-container').classList.add('hidden');
-            }
-        }
-
-        // معالجة الباركود الممسوح
-        function handleScannedBarcode(barcode) {
-            // البحث عن المنتج باستخدام الباركود
-            const product = appData.products.find(p => 
-                p.barcode1 === barcode || p.barcode2 === barcode || p.sku === barcode
-            );
-            
-            if (product) {
-                showNotification(`تم العثور على المنتج: ${product.name}`, 'success');
-                // هنا يمكنك إضافة المنتج إلى الفاتورة الحالية
-            } else {
-                showNotification('لم يتم العثور على منتج بهذا الباركود', 'error');
-            }
-        }
-
-        // عرض الإشعارات
-        function showNotification(message, type = 'info') {
-            // إنصراف بسيط لعرض الإشعارات
-            alert(message);
-        }
+        exportButton.addEventListener('click', () => {
+            const json = generateExportJson();
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'exported_products.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+        
+        // عند تحميل الصفحة، ابدأ بتحميل البيانات وعرض الصور
+        fetchProducts();
+        listImages();
     </script>
 </body>
 </html>
