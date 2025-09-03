@@ -125,8 +125,8 @@
             nextButton.disabled = (currentPage + 1) * itemsPerPage >= products.length;
         }
 
-        // دالة لجلب الصورة من API باستخدام حل مؤقت
-        function fetchImage(barcode) {
+        // دالة لجلب الصورة من API
+        async function fetchImage(barcode) {
             if (!barcode) return null;
             // استخدام رابط صورة نائب (placeholder)
             return `https://placehold.co/150x150/ffffff/000000?text=${barcode}`;
