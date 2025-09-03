@@ -204,7 +204,7 @@
         function populateFields(product) {
             nameInput.value = product.name;
             barcodeInput.value = product.barcode1;
-            skuInput.value = product.sku;
+            // Removed skuInput.value = product.sku; to simplify
             addProductButton.disabled = !selectedImage;
         }
 
@@ -252,8 +252,8 @@
             const confirmedProduct = {
                 name: nameInput.value,
                 barcode1: barcodeInput.value,
-                sku: skuInput.value,
-                image_filename: `${barcodeInput.value}.jpg`
+                sku: confirmedProducts.find(p => p.barcode1 === barcodeInput.value)?.sku || null, // Preserve SKU if available
+                image_filename: selectedImage // Use the original filename
             };
 
             if (confirmedProduct.name && confirmedProduct.barcode1 && selectedImage) {
@@ -263,7 +263,6 @@
                 // إعادة تهيئة النموذج
                 nameInput.value = '';
                 barcodeInput.value = '';
-                skuInput.value = '';
                 selectedImage = null;
                 selectedImagePreview.src = '';
                 selectedImagePreview.classList.add('hidden');
@@ -277,7 +276,15 @@
         });
 
         exportButton.addEventListener('click', () => {
-            const json = generateExportJson();
+            const json = JSON.stringify(confirmedProducts.map(product => {
+                return {
+                    name: product.name,
+                    barcode1: product.barcode1,
+                    sku: product.sku,
+                    image_filename: product.image_filename
+                };
+            }), null, 2);
+            
             const blob = new Blob([json], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
