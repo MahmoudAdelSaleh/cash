@@ -43,6 +43,17 @@
         .selected-image {
             outline: 3px solid #3b82f6;
         }
+        .download-btn {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .download-btn:hover {
+            background-color: #2563eb;
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-8">
@@ -98,19 +109,13 @@
                         <th class="p-2 border border-gray-300">صورة</th>
                         <th class="p-2 border border-gray-300">اسم المنتج</th>
                         <th class="p-2 border border-gray-300">الباركود</th>
-                        <th class="p-2 border border-gray-300">اسم الصورة الجديدة</th>
+                        <th class="p-2 border border-gray-300">تنزيل</th>
                     </tr>
                 </thead>
                 <tbody id="resultTableBody">
                     <!-- سيتم إضافة المنتجات المعتمدة هنا -->
                 </tbody>
             </table>
-        </div>
-
-        <div class="mt-8 text-center">
-            <button id="exportButton" class="bg-green-500 text-white font-bold py-2 px-6 rounded-md shadow-md hover:bg-green-600 transition duration-300 hidden">
-                تصدير البيانات (JSON)
-            </button>
         </div>
 
         <div id="statusMessage" class="mt-4 text-red-500 text-sm"></div>
@@ -121,7 +126,6 @@
         const nameInput = document.getElementById('nameInput');
         const barcodeInput = document.getElementById('barcodeInput');
         const addProductButton = document.getElementById('addProductButton');
-        const exportButton = document.getElementById('exportButton');
         const imageTableBody = document.getElementById('imageTableBody');
         const resultTableBody = document.getElementById('resultTableBody');
         const resultTableContainer = document.getElementById('resultTableContainer');
@@ -204,7 +208,6 @@
         function populateFields(product) {
             nameInput.value = product.name;
             barcodeInput.value = product.barcode1;
-            // Removed skuInput.value = product.sku; to simplify
             addProductButton.disabled = !selectedImage;
         }
 
@@ -217,20 +220,20 @@
                 <td class="p-2 border border-gray-300"><img src="${imageUrl}" alt="صورة ${product.name}" class="product-image mx-auto" onerror="this.src='./images/no-image.jpg'"></td>
                 <td class="p-2 border border-gray-300">${product.name}</td>
                 <td class="p-2 border border-gray-300">${product.barcode1}</td>
-                <td class="p-2 border border-gray-300">${product.image_filename}</td>
+                <td class="p-2 border border-gray-300"><button class="download-btn" onclick="downloadImage('${product.image_filename}')">&#x2193;</button></td>
             `;
             resultTableBody.appendChild(row);
         }
-
-        function generateExportJson() {
-            return JSON.stringify(confirmedProducts.map(product => {
-                return {
-                    name: product.name,
-                    barcode1: product.barcode1,
-                    sku: product.sku,
-                    image_filename: `${product.barcode1}.jpg` // تسمية الصورة بالباركود
-                };
-            }), null, 2);
+        
+        // دالة تنزيل الصورة
+        function downloadImage(filename) {
+            const imageUrl = `./images/${filename}`;
+            const link = document.createElement('a');
+            link.href = imageUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // أحداث الاستماع
@@ -252,8 +255,7 @@
             const confirmedProduct = {
                 name: nameInput.value,
                 barcode1: barcodeInput.value,
-                sku: confirmedProducts.find(p => p.barcode1 === barcodeInput.value)?.sku || null, // Preserve SKU if available
-                image_filename: selectedImage // Use the original filename
+                image_filename: selectedImage,
             };
 
             if (confirmedProduct.name && confirmedProduct.barcode1 && selectedImage) {
@@ -269,31 +271,11 @@
                 addProductButton.disabled = true;
 
                 resultTableContainer.classList.remove('hidden');
-                exportButton.classList.remove('hidden');
             } else {
                 statusMessage.textContent = 'الرجاء اختيار صورة وملء بيانات المنتج بشكل صحيح.';
             }
         });
 
-        exportButton.addEventListener('click', () => {
-            const json = JSON.stringify(confirmedProducts.map(product => {
-                return {
-                    name: product.name,
-                    barcode1: product.barcode1,
-                    sku: product.sku,
-                    image_filename: product.image_filename
-                };
-            }), null, 2);
-            
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'exported_products.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-        
         // عند تحميل الصفحة، ابدأ بتحميل البيانات وعرض الصور
         fetchProducts();
         listImages();
