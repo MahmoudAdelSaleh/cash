@@ -86,7 +86,6 @@
         // دالة لجلب البيانات من ملف JSON
         async function fetchProducts() {
             try {
-                // اسم الملف الآن هو p.json
                 const response = await fetch('p.json');
                 if (!response.ok) {
                     throw new Error(`Failed to fetch p.json. Status: ${response.status}`);
@@ -126,22 +125,47 @@
             nextButton.disabled = (currentPage + 1) * itemsPerPage >= products.length;
         }
 
-        // دالة لجلب الصورة من API
+        // دالة لجلب الصورة من API باستخدام Gemini Search
         async function fetchImage(barcode) {
             if (!barcode) return null;
             try {
-                // استخدام وكيل لتجاوز قيود CORS
-                const proxyUrl = 'https://cors-anywhere.herokuapp.com/'; 
-                const apiUrl = `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`;
-                const response = await fetch(proxyUrl + apiUrl);
-                const data = await response.json();
-                if (data.items && data.items.length > 0 && data.items[0].images && data.items[0].images.length > 0) {
-                    return data.items[0].images[0];
+                const userQuery = `Find a high-resolution image of the product with the barcode ${barcode}. Return only the direct image URL, no text.`;
+                const systemPrompt = "You are an AI assistant that finds direct URLs for product images based on user queries. Respond with the direct URL only, and nothing else.";
+                const apiKey = "" 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const imageUrl = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+                // Basic validation for the URL
+                if (imageUrl && (imageUrl.startsWith('http') || imageUrl.startsWith('https'))) {
+                    return imageUrl;
+                } else {
+                    console.warn(`No valid image URL found for barcode ${barcode}.`);
+                    return null;
                 }
             } catch (error) {
                 console.error('Fetch error for barcode ' + barcode + ':', error);
+                return null;
             }
-            return null;
         }
 
         searchAllButton.addEventListener('click', async () => {
